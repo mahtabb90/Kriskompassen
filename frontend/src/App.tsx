@@ -5,9 +5,9 @@ function App() {
     <main className="min-h-screen bg-slate-50 p-8">
       <h1 className="flex items-center gap-3 text-4xl font-bold text-blue-900">
         <img
-          src="/icon-512.png"
-          alt=""
-          className="h-10 w-10"
+          src="/kriskompassen-logo.png"
+          alt="Kriskompassen logo"
+          className="h-12 w-auto sm:h-16"
         />
 
         KrisKompassen
