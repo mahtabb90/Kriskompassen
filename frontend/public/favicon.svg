@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">KrisKompassen favicon</title>
+  <desc id="desc">A dark green compass with a red and green needle on a warm off-white rounded square.</desc>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="92" fill="#F6F5F2"/>
+
+  <!-- Compass ring -->
+  <circle cx="256" cy="256" r="184"
+          fill="none"
+          stroke="#0B5746"
+          stroke-width="30"/>
+
+  <!-- Cardinal ticks -->
+  <g fill="#0B5746">
+    <rect x="247" y="70" width="18" height="48" rx="9"/>
+    <rect x="247" y="394" width="18" height="48" rx="9"/>
+    <rect x="70" y="247" width="48" height="18" rx="9"/>
+    <rect x="394" y="247" width="48" height="18" rx="9"/>
+  </g>
+
+  <!-- Compass needle -->
+  <!-- Southwest / green half -->
+  <polygon points="256,256 170,355 286,283" fill="#0B5746"/>
+
+  <!-- Northeast / red half -->
+  <polygon points="256,256 355,157 286,283" fill="#EF473B"/>
+
+  <!-- Center hub -->
+  <circle cx="271" cy="271" r="20" fill="#FFFFFF"/>
+</svg>
