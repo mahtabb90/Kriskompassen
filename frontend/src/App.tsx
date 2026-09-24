@@ -1,4 +1,4 @@
-import IndexedDbTest from "./pages/IndexedDbTest"
+// import IndexedDbTest from "./pages/IndexedDbTest"
 
 function App() {
   return (
@@ -16,7 +16,7 @@ function App() {
       <p className="mt-2 text-slate-600">
         Din kompass när krisen kommer.
       </p>
-      <IndexedDbTest />
+      {/* <IndexedDbTest /> */}
     </main>
   )
 }
