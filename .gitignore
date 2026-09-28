@@ -29,6 +29,5 @@ dist-ssr
 *.sw?
 
 # AI agent instructions and settings
-AGENTS.md
 CLAUDE.md
 .claude/
