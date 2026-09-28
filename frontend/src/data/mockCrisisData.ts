@@ -1,4 +1,4 @@
-import type { CrisisItem } from "../db/db"
+import type { CrisisItem } from "../types/crisis"
 
 /**
  * Placeholder crisis items used during development in place of a real data source.
