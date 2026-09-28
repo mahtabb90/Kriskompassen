@@ -11,7 +11,7 @@ function App() {
       <h1 className="flex items-center gap-3 text-4xl font-bold text-blue-900">
         <img
           src="/kriskompassen-logo.png"
-          alt="Kriskompassen logo"
+          alt="KrisKompassen logo"
           className="h-12 w-auto sm:h-16"
         />
 
