@@ -1,6 +1,11 @@
 import { useState } from "react"
 import { db } from "../db/db"
 
+/**
+ * Development-only page for manually verifying that IndexedDB reads, writes and deletes work.
+ *
+ * Not part of the app's planned navigation; remove once real crisis data flows are in place.
+ */
 function IndexedDbTest() {
   const [message, setMessage] = useState("")
 

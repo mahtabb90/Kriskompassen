@@ -1,5 +1,10 @@
 import IndexedDbTest from "./pages/IndexedDbTest"
 
+/**
+ * Application root.
+ *
+ * Currently renders the IndexedDB test harness in place of the planned page layout and navigation.
+ */
 function App() {
   return (
     <main className="min-h-screen bg-slate-50 p-8">
