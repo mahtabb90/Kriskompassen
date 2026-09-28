@@ -15,7 +15,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 
 ## 1. Project
 
-- Kriskompassen is a Progressive Web App (PWA) that helps the general public quickly find clear local information during emergencies and major disruptions.
+- KrisKompassen is a Progressive Web App (PWA) that helps the general public quickly find clear local information during emergencies and major disruptions.
 - It answers three questions: *What has happened? What should I do? Where should I go?*
 - Planned scope: Swedish public warning messages (VMA) and local information about floods, gas leaks, contaminated drinking water, etc.
 - Users can save important information locally and read it offline.
@@ -58,27 +58,28 @@ Backend (decided, not yet scaffolded):
 .
 ├── AGENTS.md            # this file
 ├── README.md            # project overview (English)
+├── documentation-baseline.md  # JSDoc and code comment rules for frontend/TypeScript code
 ├── backend/             # FastAPI (planned)
 │   ├── src/             # empty placeholder (.gitkeep); new backend code goes here
-│   └── tests/           # pytest tests (planned)
+│   └── tests/           # pytest tests (planned, not created)
 └── frontend/            # Vite + React + TypeScript PWA
     ├── public/          # static assets and PWA icons
-    ├── e2e/             # Playwright tests (planned)
+    ├── e2e/             # Playwright tests (planned, not created)
     ├── index.html       # HTML entry (lang="sv")
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
     └── src/
         ├── components/  # reusable UI components
         ├── data/        # mock data (mockCrisisData.ts)
-        ├── db/          # Dexie database and CrisisItem type (db.ts)
+        ├── db/          # Dexie database (db.ts)
         ├── pages/       # page-level components
         ├── services/    # data/storage logic (offlineService.ts)
-        └── types/       # shared TypeScript types
+        └── types/       # shared TypeScript types (crisis.ts: CrisisItem)
 ```
 
 - New frontend code goes under `frontend/src/` in the matching folder above.
 - Frontend unit and component tests live next to the file they test: `Foo.test.tsx` beside `Foo.tsx`.
 - New backend code goes under `backend/src/`, tests under `backend/tests/`. TODO(team): the internal layout of `backend/src/` is decided when the backend is scaffolded.
-- Several files in `components/`, `pages/` and `types/` are empty placeholders. Fill them in; do not delete them without asking.
+- Several files in `components/` and `pages/` are empty placeholders. Fill them in; do not delete them without asking.
 
 ## 4. Commands
 
@@ -186,14 +187,24 @@ Ticked by the human before the PR is posted, never by an agent.
 Frontend conventions visible in the existing code:
 
 - TypeScript with strict unused checks (`noUnusedLocals`, `noUnusedParameters`, `erasableSyntaxOnly`, `verbatimModuleSyntax`).
-- Use `import type` / `type` modifiers for type-only imports (for example `import { db, type CrisisItem }`).
+- Use `import type` / `type` modifiers for type-only imports (for example `import Dexie, { type Table } from "dexie"`).
 - Write function components declared with `function Name() {}`, followed by `export default Name`.
 - Use one component per file. Component files use PascalCase (`HomePage.tsx`, `CrisisCard.tsx`).
 - Services export named `async` functions (see `services/offlineService.ts`).
 - Style with Tailwind utility classes in `className`. There are no separate CSS files beyond `index.css`.
 - Put IndexedDB access in `db/` and `services/`, not in UI components. (`IndexedDbTest.tsx` is a test page and an exception.)
-- Formatting is decided by Prettier once it is set up. Until then, follow the dominant style: no semicolons, double quotes.
+- Formatting is decided by Prettier once it is set up (planned setting: `printWidth` 100). Until then, follow the dominant style: no semicolons, double quotes.
+- The current inconsistency (single quotes in `main.tsx` and `eslint.config.js`) is resolved when Prettier is set up in a separate task. Do not reformat code manually before then.
 - `npm run lint` must pass.
+
+Documentation (frontend/TypeScript):
+
+- All frontend code must follow `documentation-baseline.md` (JSDoc and code comments). Key rules:
+  - JSDoc is required on exported functions, components, services and types whose purpose or contract is not obvious from the name and signature. Describe purpose, `@param`, `@returns`, side effects and `@throws` as relevant.
+  - Do not repeat TypeScript types in JSDoc: write `@param name Description`, not `@param {string} name`.
+  - Inline comments explain why, not what. No filler comments, commented-out code, author tags, dates, or ticket references/IDs (also not in TODOs).
+  - Comments describe current behaviour. Update or remove them in the same change as the code they describe.
+- The baseline does not apply to the backend. Backend code follows the backend conventions below.
 
 Backend conventions (apply once the backend exists):
 
@@ -302,6 +313,7 @@ Anything done that was not in the plan is listed separately under "Not in plan".
 - Existing tests for the changed code are updated and pass. New logic has tests once a test runner is set up.
 - No secrets, no stray debug code, no unused files.
 - Code comments and docs are in English. UI text is in Swedish.
+- Frontend code follows `documentation-baseline.md`.
 - Docs (README or this file) are updated if behaviour, commands or structure changed.
 - AGENTS.md matches the current state of the repo (see section 0).
 - The PR targets `dev` and is approved by another developer.
