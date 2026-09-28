@@ -1,4 +1,5 @@
-import { db, type CrisisItem } from "../db/db"
+import { db } from "../db/db"
+import type { CrisisItem } from "../types/crisis"
 
 /**
  * Marks a crisis item as saved for offline access and writes it to IndexedDB.
