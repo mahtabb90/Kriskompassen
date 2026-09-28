@@ -1,5 +1,9 @@
 import type { CrisisItem } from "../db/db"
 
+/**
+ * Placeholder crisis items used during development in place of a real data source.
+ * Replace with live data once the crisis information API is available.
+ */
 export const mockCrisisData: CrisisItem[] = [
   {
     id: "important-numbers",

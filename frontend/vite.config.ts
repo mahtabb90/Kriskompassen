@@ -10,6 +10,8 @@ export default defineConfig({
     tailwindcss(),
 
     VitePWA({
+      // Activates a new service worker as soon as it's ready, so users get updated
+      // app files on the next load instead of being stuck on a stale offline cache.
       registerType: "autoUpdate",
 
       manifest: {
