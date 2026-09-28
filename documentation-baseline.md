@@ -114,7 +114,7 @@ for (const user of users) {
 - [ ] No filler, commented-out code.
 - [ ] Comments match the current code.
 - [ ] Everything is written in English.
-- [ ] No git commands executed by AI.
+- [ ] AI agents ran read-only git commands only (`git status`, `git log`, `git diff`, `git branch -a`). All other git handling was done by a human.
 
 
 ### 7. Requirement for future changes
