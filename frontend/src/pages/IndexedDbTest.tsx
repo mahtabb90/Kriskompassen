@@ -67,7 +67,9 @@ function IndexedDbTest() {
         </button>
       </div>
 
-      <p role="status" className="mt-6">{message}</p>
+      <p role="status" className="mt-6">
+        {message}
+      </p>
     </section>
   )
 }

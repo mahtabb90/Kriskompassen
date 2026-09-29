@@ -33,7 +33,8 @@ function AppLayout() {
         focused === main ||
         !main.contains(focused) ||
         getComputedStyle(navigation).position !== "fixed"
-      ) return
+      )
+        return
 
       const visibleBottom = navigation.getBoundingClientRect().top - 8
       const focusedBottom = focused.getBoundingClientRect().bottom
@@ -49,9 +50,10 @@ function AppLayout() {
     }
 
     const updateNavigationSpace = () => {
-      const height = getComputedStyle(navigation).position === "fixed"
-        ? Math.ceil(navigation.getBoundingClientRect().height)
-        : 0
+      const height =
+        getComputedStyle(navigation).position === "fixed"
+          ? Math.ceil(navigation.getBoundingClientRect().height)
+          : 0
 
       root.style.setProperty("--navigation-height", `${height}px`)
       scheduleFocusCheck()

@@ -18,8 +18,7 @@ export default defineConfig({
         name: "KrisKompassen",
         short_name: "KrisKompassen",
 
-        description:
-          "Krisinformation tillgänglig online och offline",
+        description: "Krisinformation tillgänglig online och offline",
 
         theme_color: "#ffffff",
         background_color: "#ffffff",

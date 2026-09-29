@@ -30,9 +30,7 @@ export async function removeOffline(id: string) {
  * @returns Items with `savedOffline` set to true, or an empty array if none are saved.
  */
 export async function getOfflineItems() {
-  return db.crisisItems
-    .filter(item => item.savedOffline)
-    .toArray()
+  return db.crisisItems.filter((item) => item.savedOffline).toArray()
 }
 
 /**

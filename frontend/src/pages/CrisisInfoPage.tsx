@@ -14,9 +14,7 @@ function CrisisInfoPage() {
           Krisinformation
         </h1>
 
-        <p className="mt-4 text-slate-600">
-          Ingen krisinformation tillgänglig just nu.
-        </p>
+        <p className="mt-4 text-slate-600">Ingen krisinformation tillgänglig just nu.</p>
       </section>
     )
   }

@@ -5,7 +5,9 @@ function HomePage() {
         Hem
       </h1>
       <p className="mt-4 max-w-prose text-lg leading-relaxed text-slate-700">
-        KrisKompassen är en webbapplikation under utveckling som är utformad för att hjälpa människor att snabbt hitta tydlig och relevant lokal information vid nödsituationer och större samhällsstörningar.
+        KrisKompassen är en webbapplikation under utveckling som är utformad för att hjälpa
+        människor att snabbt hitta tydlig och relevant lokal information vid nödsituationer och
+        större samhällsstörningar.
       </p>
     </section>
   )

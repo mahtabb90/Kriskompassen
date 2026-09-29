@@ -15,9 +15,7 @@ function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/crisis" element={<CrisisInfoPage />} />
-          {import.meta.env.DEV && (
-            <Route path="/dev/indexeddb" element={<IndexedDbTest />} />
-          )}
+          {import.meta.env.DEV && <Route path="/dev/indexeddb" element={<IndexedDbTest />} />}
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
