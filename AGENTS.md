@@ -58,7 +58,7 @@ Backend (decided, not yet scaffolded):
 ```
 .
 ├── AGENTS.md            # this file
-├── README.md            # project overview (English)
+├── README.md            # outward-facing project overview (English)
 ├── documentation-baseline.md  # JSDoc and code comment rules for frontend/TypeScript code
 ├── backend/             # FastAPI (planned)
 │   ├── src/             # empty placeholder (.gitkeep); new backend code goes here
@@ -208,6 +208,13 @@ Navigation and accessibility:
 - Target WCAG 2.2 AA with at least 48 by 48 CSS pixel navigation targets, 3px focus outlines and a non-colour active indicator. Verify keyboard use, zoom/reflow and actual screen-reader output; do not infer conformance from an accessibility tree alone.
 - Keep UI and accessible names in Swedish. Use English comments and documentation as specified in section 6.
 
+Documentation audience and placement:
+
+- `README.md` is outward-facing: write for users, external visitors and stakeholders. Describe the project's purpose, current capabilities, user-relevant limitations and high-level project context.
+- Keep development guides, implementation details, component contracts, internal routes, developer commands and test/verification procedures out of README. A code change does not automatically require a README update.
+- Put development instructions and conventions in `AGENTS.md` or an existing developer-facing document. Keep code contracts and implementation rationale in JSDoc and comments according to `documentation-baseline.md`. Record task-specific verification steps and results in the task report or PR description.
+- Update README when the public description of the project or its user-facing behaviour changes. Update the relevant developer documentation when internal behaviour, commands or structure change.
+
 Documentation (frontend/TypeScript):
 
 - All frontend code must follow `documentation-baseline.md` (JSDoc and code comments). Key rules:
@@ -325,6 +332,6 @@ Anything done that was not in the plan is listed separately under "Not in plan".
 - No secrets, no stray debug code, no unused files.
 - Code comments and docs are in English. UI text is in Swedish.
 - Frontend code follows `documentation-baseline.md`.
-- Docs (README or this file) are updated if behaviour, commands or structure changed.
+- README reflects changes to the outward-facing project description, capabilities and user-relevant limitations. Internal behaviour, command and structure changes are documented in `AGENTS.md` or the relevant developer documentation, not automatically in README.
 - AGENTS.md matches the current state of the repo (see section 0).
 - The PR targets `dev` and is approved by another developer.
