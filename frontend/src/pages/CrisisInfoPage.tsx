@@ -14,9 +14,9 @@ function CrisisInfoPage() {
           Krisinformation
         </h1>
 
-        <p className="mt-4 text-slate-600">
-          Ingen krisinformation tillgänglig just nu.
-        </p>
+        <div className="mt-6 rounded-2xl border border-blue-200/80 bg-white p-6 text-slate-600 shadow-sm sm:p-8">
+          <p>Ingen krisinformation tillgänglig just nu.</p>
+        </div>
       </section>
     )
   }
@@ -27,7 +27,7 @@ function CrisisInfoPage() {
         Krisinformation
       </h1>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-6 sm:grid-cols-2">
         {mockCrisisData.map((item) => (
           <CrisisCard key={item.id} item={item} />
         ))}
