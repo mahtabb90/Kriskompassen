@@ -37,17 +37,32 @@ The project is in an early stage of development.
 
 Our initial focus is to establish the project structure and a working development-to-deployment workflow. Features, including offline support, will be developed incrementally based on priorities and feedback.
 
+The current version includes a home page and a list of crisis preparedness summaries.
+Detailed articles and live alerts are not yet available.
+
 ## 🛠️ Tech stack
 
 | Technology | Purpose |
 | --- | --- |
 | React | Building the user interface |
+| React Router | Navigation between pages |
 | TypeScript | Adding static typing to the application |
 | Vite | Development server and production builds |
 | Tailwind CSS | Styling the user interface |
 | IndexedDB | Storing saved crisis information locally in the browser |
 | Dexie | Simplifying access to IndexedDB |
 | vite-plugin-pwa | PWA integration and service worker generation |
+
+## Navigation and accessibility
+
+The app has two main pages: **Hem** (Home) and **Krisinformation** (Crisis information).
+The navigation adapts to phones and larger screens and clearly marks the current page.
+
+Keyboard navigation includes a link to skip directly to the page content and visible focus
+indicators. Pages have descriptive headings and titles.
+
+Accessibility remains an ongoing goal. Compatibility with screen readers and other assistive
+technology has not yet been fully verified.
 
 ## 📱 PWA and offline access
 
@@ -70,6 +85,8 @@ Information that users choose to save offline is stored locally in the browser u
 When an internet connection is available, information can be retrieved and refreshed from external sources.
 
 Offline access is limited to previously cached app files and saved information. New information and updates require an internet connection.
+
+Known limitation: the header logo may be missing when the app is used offline.
 
 ## 👥 Team
 

@@ -98,7 +98,7 @@ for (const user of users) {
 ### 5. Configuration files
 
 - Add a comment only where a setting's reason is not obvious, for example why a rule is disabled or a compiler option is set.
-- Only use comments in formats that support them (JS/TS configs, `tsconfig.json`, YAML and similar). Do not put comments in strict JSON such as `package.json`. Explain such choices in the README or this guide instead.
+- Only use comments in formats that support them (JS/TS configs, `tsconfig.json`, YAML and similar). Do not put comments in strict JSON such as `package.json`. Explain such choices in `AGENTS.md` or an existing developer-facing document. Keep README focused on the outward-facing project overview.
 
 ### 6. Accuracy and review
 

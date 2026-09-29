@@ -20,7 +20,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Planned scope: Swedish public warning messages (VMA) and local information about floods, gas leaks, contaminated drinking water, etc.
 - Users can save important information locally and read it offline.
 - Target users: the general public in Sweden. No login or user accounts are planned.
-- Status: early development. The UI currently shows a title and an IndexedDB test page (`frontend/src/pages/IndexedDbTest.tsx`).
+- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`) and a not-found page. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
 
 ## 2. Tech stack
 
@@ -29,6 +29,7 @@ Frontend versions are taken from `frontend/package-lock.json`.
 | Area | Technology | Version |
 | --- | --- | --- |
 | UI | React / React DOM | 19.3.0 |
+| Routing | React Router (`react-router-dom`) | 7.18.4 |
 | Language | TypeScript | 6.0.3 |
 | Build/dev server | Vite (+ `@vitejs/plugin-react` 6.1.1) | 8.3.0 |
 | Styling | Tailwind CSS (via `@tailwindcss/vite`) | 4.3.3 |
@@ -57,7 +58,7 @@ Backend (decided, not yet scaffolded):
 ```
 .
 ├── AGENTS.md            # this file
-├── README.md            # project overview (English)
+├── README.md            # outward-facing project overview (English)
 ├── documentation-baseline.md  # JSDoc and code comment rules for frontend/TypeScript code
 ├── backend/             # FastAPI (planned)
 │   ├── src/             # empty placeholder (.gitkeep); new backend code goes here
@@ -68,10 +69,10 @@ Backend (decided, not yet scaffolded):
     ├── index.html       # HTML entry (lang="sv")
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
     └── src/
-        ├── components/  # reusable UI components
+        ├── components/  # AppLayout, Header, BottomNavigation, CrisisCard and placeholders
         ├── data/        # mock data (mockCrisisData.ts)
         ├── db/          # Dexie database (db.ts)
-        ├── pages/       # page-level components
+        ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders
         ├── services/    # data/storage logic (offlineService.ts)
         └── types/       # shared TypeScript types (crisis.ts: CrisisItem)
 ```
@@ -80,6 +81,7 @@ Backend (decided, not yet scaffolded):
 - Frontend unit and component tests live next to the file they test: `Foo.test.tsx` beside `Foo.tsx`.
 - New backend code goes under `backend/src/`, tests under `backend/tests/`. TODO(team): the internal layout of `backend/src/` is decided when the backend is scaffolded.
 - Several files in `components/` and `pages/` are empty placeholders. Fill them in; do not delete them without asking.
+- `App.tsx` registers routes inside the shared `AppLayout`. Crisis detail routes are not implemented; existing `/crisis/:id` card links currently render `NotFoundPage`.
 
 ## 4. Commands
 
@@ -196,6 +198,22 @@ Frontend conventions visible in the existing code:
 - Formatting is decided by Prettier once it is set up (planned setting: `printWidth` 100). Until then, follow the dominant style: no semicolons, double quotes.
 - The current inconsistency (single quotes in `main.tsx` and `eslint.config.js`) is resolved when Prettier is set up in a separate task. Do not reformat code manually before then.
 - `npm run lint` must pass.
+
+Navigation and accessibility:
+
+- Keep one `BrowserRouter` and one shared `AppLayout`. The layout owns the header, primary navigation, skip link, single `main` landmark, document title and route focus management.
+- Each routed page supplies one `h1` with `id="page-heading"` and `tabIndex={-1}`. The layout derives the document title from that heading and focuses it on pathname changes, including back/forward navigation. Initial loads and hash-only changes preserve browser focus.
+- Add public links to the typed `navigationItems` list in `BottomNavigation.tsx` and register their routes in `App.tsx`. Navigation currently uses exact matching; keep the same DOM links across screen sizes.
+- The navigation is fixed at the bottom below `48rem` viewport width when the viewport is at least `30rem` high; otherwise it stays above the content in normal flow. `AppLayout` measures it with `ResizeObserver` and maintains `--navigation-height` for content and scroll spacing.
+- Target WCAG 2.2 AA with at least 48 by 48 CSS pixel navigation targets, 3px focus outlines and a non-colour active indicator. Verify keyboard use, zoom/reflow and actual screen-reader output; do not infer conformance from an accessibility tree alone.
+- Keep UI and accessible names in Swedish. Use English comments and documentation as specified in section 6.
+
+Documentation audience and placement:
+
+- `README.md` is outward-facing: write for users, external visitors and stakeholders. Describe the project's purpose, current capabilities, user-relevant limitations and high-level project context.
+- Keep development guides, implementation details, component contracts, internal routes, developer commands and test/verification procedures out of README. A code change does not automatically require a README update.
+- Put development instructions and conventions in `AGENTS.md` or an existing developer-facing document. Keep code contracts and implementation rationale in JSDoc and comments according to `documentation-baseline.md`. Record task-specific verification steps and results in the task report or PR description.
+- Update README when the public description of the project or its user-facing behaviour changes. Update the relevant developer documentation when internal behaviour, commands or structure change.
 
 Documentation (frontend/TypeScript):
 
@@ -314,6 +332,6 @@ Anything done that was not in the plan is listed separately under "Not in plan".
 - No secrets, no stray debug code, no unused files.
 - Code comments and docs are in English. UI text is in Swedish.
 - Frontend code follows `documentation-baseline.md`.
-- Docs (README or this file) are updated if behaviour, commands or structure changed.
+- README reflects changes to the outward-facing project description, capabilities and user-relevant limitations. Internal behaviour, command and structure changes are documented in `AGENTS.md` or the relevant developer documentation, not automatically in README.
 - AGENTS.md matches the current state of the repo (see section 0).
 - The PR targets `dev` and is approved by another developer.

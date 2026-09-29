@@ -9,8 +9,8 @@ import { mockCrisisData } from "../data/mockCrisisData"
 function CrisisInfoPage() {
   if (mockCrisisData.length === 0) {
     return (
-      <section className="mx-auto max-w-4xl px-4 py-8">
-        <h1 className="text-3xl font-bold text-blue-900">
+      <section>
+        <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
           Krisinformation
         </h1>
 
@@ -22,8 +22,8 @@ function CrisisInfoPage() {
   }
 
   return (
-    <section className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-3xl font-bold text-blue-900">
+    <section>
+      <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
         Krisinformation
       </h1>
 
