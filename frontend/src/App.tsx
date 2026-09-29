@@ -1,36 +1,26 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom"
+import AppLayout from "./components/AppLayout"
 import CrisisInfoPage from "./pages/CrisisInfoPage"
+import HomePage from "./pages/HomePage"
 import IndexedDbTest from "./pages/IndexedDbTest"
+import NotFoundPage from "./pages/NotFoundPage"
 
 /**
- * Renders the application root and provides routing support.
- *
- * Currently renders the IndexedDB test harness in place of the planned page layout.
+ * Registers public pages and the development-only storage test within the shared layout.
  */
 function App() {
   return (
-
     <BrowserRouter>
-      <main className="min-h-screen bg-slate-50 p-8">
-        <h1 className="flex items-center gap-3 text-4xl font-bold text-blue-900">
-          <img
-            src="/kriskompassen-logo.png"
-            alt="Kriskompassen logo"
-            className="h-12 w-auto sm:h-16"
-          />
-
-          KrisKompassen
-        </h1>
-
-        <p className="mt-2 text-slate-600">
-          Din kompass när krisen kommer.
-        </p>
-
-        <Routes>
-          <Route path="/" element={<IndexedDbTest />} />
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<HomePage />} />
           <Route path="/crisis" element={<CrisisInfoPage />} />
-        </Routes>
-      </main>
+          {import.meta.env.DEV && (
+            <Route path="/dev/indexeddb" element={<IndexedDbTest />} />
+          )}
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
     </BrowserRouter>
   )
 }

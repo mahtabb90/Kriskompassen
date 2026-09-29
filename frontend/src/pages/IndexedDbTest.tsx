@@ -4,7 +4,7 @@ import { db } from "../db/db"
 /**
  * Development-only page for manually verifying that IndexedDB reads, writes and deletes work.
  *
- * Not part of the app's planned navigation; remove once real crisis data flows are in place.
+ * Available at /dev/indexeddb in development builds, outside the public navigation.
  */
 function IndexedDbTest() {
   const [message, setMessage] = useState("")
@@ -39,36 +39,36 @@ function IndexedDbTest() {
   }
 
   return (
-    <main className="p-8">
-      <h1 className="mb-6 text-2xl font-bold">
-        IndexedDB Test
+    <section>
+      <h1 id="page-heading" tabIndex={-1} className="mb-6 text-3xl font-bold text-blue-900">
+        IndexedDB-test
       </h1>
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <button
           onClick={saveTestData}
-          className="rounded bg-green-600 px-4 py-2 text-white"
+          className="min-h-12 rounded-lg bg-green-800 px-4 py-3 text-white"
         >
           Spara
         </button>
 
         <button
           onClick={readTestData}
-          className="rounded bg-blue-600 px-4 py-2 text-white"
+          className="min-h-12 rounded-lg bg-blue-900 px-4 py-3 text-white"
         >
           Läs
         </button>
 
         <button
           onClick={deleteTestData}
-          className="rounded bg-red-600 px-4 py-2 text-white"
+          className="min-h-12 rounded-lg bg-red-800 px-4 py-3 text-white"
         >
           Ta bort
         </button>
       </div>
 
-      <p className="mt-6">{message}</p>
-    </main>
+      <p role="status" className="mt-6">{message}</p>
+    </section>
   )
 }
 
