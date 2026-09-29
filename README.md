@@ -3,7 +3,7 @@
       alt="Kriskompassen" width="220">
 </p>
 
-<h1 align="center">Kriskompassen</h1>
+<h1 align="center">KrisKompassen</h1>
 
 <p align="center">
   <strong>Clear guidance when it matters most — online and offline.</strong>
