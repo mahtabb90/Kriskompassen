@@ -2,7 +2,7 @@
   <img src="frontend/public/ed80a672-8822-462b-b059-99cbfd843e2b.png" alt="Kriskompassen" width="300">
 </p>
 
-<h1 align="center">KrisKompassen</h1>
+<h1 align="center">Kriskompassen</h1>
 
 <p align="center">
   <strong>Clear guidance when it matters most — online and offline.</strong>
