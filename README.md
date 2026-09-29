@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="frontend/public/ed80a672-8822-462b-b059-99cbfd843e2b.png" alt="Kriskompassen" width="300">
+  <img src="frontend/public/kriskompassen-logo.png"
+      alt="Kriskompassen" width="220">
 </p>
 
 <h1 align="center">Kriskompassen</h1>
