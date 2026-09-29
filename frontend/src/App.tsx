@@ -9,6 +9,7 @@ import IndexedDbTest from "./pages/IndexedDbTest"
  */
 function App() {
   return (
+
     <BrowserRouter>
       <main className="min-h-screen bg-slate-50 p-8">
         <h1 className="flex items-center gap-3 text-4xl font-bold text-blue-900">
