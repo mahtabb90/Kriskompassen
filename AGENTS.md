@@ -36,7 +36,7 @@ Frontend versions are taken from `frontend/package-lock.json`.
 | Local storage | Dexie (IndexedDB) | 4.4.6 |
 | PWA | vite-plugin-pwa | 1.3.0 |
 | Linting | ESLint + typescript-eslint 8.70.0 | 10.10.0 |
-| Formatting | Prettier | not yet installed |
+| Formatting | Prettier (+ `eslint-config-prettier` 10.1.8) | 3.9.9 |
 | Unit/component tests | Vitest + React Testing Library | not yet installed |
 | E2E tests | Playwright (Node/TypeScript) | not yet installed |
 | Runtime | Node.js (required by Vite) | ^20.19.0 or >=22.12.0 |
@@ -92,7 +92,7 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 | Install | `npm ci` (use the lock file) | `pip install -r requirements.txt -r requirements-dev.txt` *(planned)* |
 | Dev server | `npm run dev` | `uvicorn` *(planned; exact command set at scaffold time)* |
 | Lint | `npm run lint` | `ruff check .` *(planned)* |
-| Format | `npm run format` *(planned, Prettier)* | `ruff format .` *(planned)* |
+| Format | `npm run format` (check only: `npm run format:check`) | `ruff format .` *(planned)* |
 | Typecheck | `npx tsc -b` (also runs as part of `build`) | n/a |
 | Test | `npm run test` *(planned, Vitest)* | `pytest` *(planned)* |
 | E2E | `npm run test:e2e` *(planned, Playwright)* | n/a |
@@ -150,6 +150,7 @@ Closes #
 | Check               | Command             | Result |
 | ------------------- | ------------------- | ------ |
 | Frontend lint       | `npm run lint`      |        |
+| Frontend format     | `npm run format:check` |     |
 | Frontend typecheck  | `npx tsc -b`        |        |
 | Frontend unit tests | `npm run test`      |        |
 | E2E tests           | `npm run test:e2e`  |        |
@@ -167,7 +168,7 @@ Closes #
 Ticked by the human before the PR is posted, never by an agent.
 - [ ] Branch follows the naming convention and the PR targets `dev`
 - [ ] I have read every changed line and can explain it
-- [ ] Lint, typecheck and build pass
+- [ ] Lint, format check, typecheck and build pass
 - [ ] Unit and component tests pass, and new logic has tests
 - [ ] E2E tests pass, or the change does not affect a user flow
 - [ ] The feature works offline, or offline does not apply
@@ -195,8 +196,8 @@ Frontend conventions visible in the existing code:
 - Services export named `async` functions (see `services/offlineService.ts`).
 - Style with Tailwind utility classes in `className`. There are no separate CSS files beyond `index.css`.
 - Put IndexedDB access in `db/` and `services/`, not in UI components. (`IndexedDbTest.tsx` is a test page and an exception.)
-- Formatting is decided by Prettier once it is set up (planned setting: `printWidth` 100). Until then, follow the dominant style: no semicolons, double quotes.
-- The current inconsistency (single quotes in `main.tsx` and `eslint.config.js`) is resolved when Prettier is set up in a separate task. Do not reformat code manually before then.
+- Prettier decides formatting (`frontend/.prettierrc`: no semicolons, double quotes, `printWidth` 100). `npm run format:check` must pass.
+- `endOfLine` is `"auto"` because Windows clones with `core.autocrlf=true` have CRLF working trees while the repo stores LF; `"lf"` would fail the check after every checkout.
 - `npm run lint` must pass.
 
 Navigation and accessibility:
@@ -241,7 +242,7 @@ Decided tooling:
 | Frontend E2E | Playwright (Node/TypeScript) | `frontend/e2e/` |
 | Backend | pytest | `backend/tests/` |
 
-- None of the tools are installed yet. Until they are, new code must at least pass `npm run lint` and `npm run build`. Describe how it was checked manually.
+- None of the tools are installed yet. Until they are, new code must at least pass `npm run lint`, `npm run format:check` and `npm run build`. Describe how it was checked manually.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
 - Keep E2E small: a few critical user flows, including at least one offline scenario.
 
@@ -297,7 +298,7 @@ Every task starts with a checklist and ends with a checklist. The two are compar
 1. Work on one task at a time and keep changes small and focused on that task.
 2. Do not make changes that were not requested. Mention unrelated issues instead of fixing them.
 3. Update the tests that cover the changed code (section 8).
-4. Before saying you are done, run lint, build and the tests that exist. Do not mark an item done if it failed or was skipped.
+4. Before saying you are done, run lint, format check, build and the tests that exist. Do not mark an item done if it failed or was skipped.
 
 **When finished: the result as a checklist.** Every item from the plan appears again, ticked or explicitly not done, plus what the human needs next:
 
@@ -305,6 +306,7 @@ Every task starts with a checklist and ends with a checklist. The two are compar
 ## Done
 - [x] <each plan item, ticked or marked "not done: reason">
 - [x] Lint: <actual result>
+- [x] Format check: <actual result>
 - [x] Build: <actual result>
 - [x] Tests: <actual result, or "not run: reason">
 
@@ -327,7 +329,7 @@ Anything done that was not in the plan is listed separately under "Not in plan".
 
 - The change does what the task asked, nothing more.
 - The "Done" checklist matches the approved plan, and every unticked item has a reason.
-- Lint, typecheck and build pass. Tests pass once a runner exists.
+- Lint, format check, typecheck and build pass. Tests pass once a runner exists.
 - Existing tests for the changed code are updated and pass. New logic has tests once a test runner is set up.
 - No secrets, no stray debug code, no unused files.
 - Code comments and docs are in English. UI text is in Swedish.
