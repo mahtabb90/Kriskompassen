@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/kriskompassen-logo.png" alt="Kriskompassen" width="300">
+  <img src="frontend/public/ed80a672-8822-462b-b059-99cbfd843e2b.png" alt="Kriskompassen" width="300">
 </p>
 
 <h1 align="center">KrisKompassen</h1>
@@ -18,7 +18,7 @@
 
 ## 🧭 About the project
 
-Kriskompassen is a web application in development, designed to help people quickly find clear and relevant local information during emergencies and major disruptions.
+KrisKompassen is a web application in development, designed to help people quickly find clear and relevant local information during emergencies and major disruptions.
 
 Our goal is to bring local crisis information together in one place, helping people answer three essential questions:
 
@@ -50,7 +50,7 @@ Our initial focus is to establish the project structure and a working developmen
 
 ## 📱 PWA and offline access
 
-Kriskompassen is being developed as a **Progressive Web App (PWA)**, with installation and offline access as core goals.
+KrisKompassen is being developed as a **Progressive Web App (PWA)**, with installation and offline access as core goals.
 
 On supported browsers and devices, users will be able to install the app on their phone or computer.
 
@@ -72,7 +72,7 @@ Offline access is limited to previously cached app files and saved information. 
 
 ## 👥 Team
 
-Kriskompassen is developed by:
+KrisKompassen is developed by:
 
 - Viktor
 - Mahtab
