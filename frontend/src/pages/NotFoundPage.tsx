@@ -7,8 +7,8 @@ function NotFoundPage() {
         Sidan kunde inte hittas
       </h1>
       <p className="mt-4 max-w-prose leading-relaxed text-slate-700">
-        Adressen finns inte eller sidan är ännu inte tillgänglig. Du kan gå till startsidan
-        eller läsa vår krisinformation.
+        Adressen finns inte eller sidan är ännu inte tillgänglig. Du kan gå till startsidan eller
+        läsa vår krisinformation.
       </p>
       <div className="mt-6 flex flex-wrap gap-3">
         <Link

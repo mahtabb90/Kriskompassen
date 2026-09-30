@@ -12,15 +12,13 @@ export const mockCrisisData: CrisisItem[] = [
   {
     id: "food-in-crisis",
     title: "Mat i kris",
-    description:
-      "Ha tillräckligt med mat hemma för att hushållet ska kunna klara sig vid en kris.",
+    description: "Ha tillräckligt med mat hemma för att hushållet ska kunna klara sig vid en kris.",
     content:
       "Ha mat hemma så att hushållet kan klara sig i minst en vecka utan att handla. " +
       "Välj mat som ger tillräckligt med energi, kan tillagas snabbt, kräver lite " +
       "vatten, kan ätas utan tillagning och kan förvaras i rumstemperatur.",
     source: "Krisinformation.se",
-    sourceUrl:
-      "https://www.krisinformation.se/forbered-dig/hemberedskap/mat-vid-kris/",
+    sourceUrl: "https://www.krisinformation.se/forbered-dig/hemberedskap/mat-vid-kris/",
     fetchedAt: "2026-09-28T15:04:37.079Z",
     savedOffline: false,
   },
@@ -28,15 +26,13 @@ export const mockCrisisData: CrisisItem[] = [
   {
     id: "drinking-water-in-crisis",
     title: "Dricksvatten i kris",
-    description:
-      "Förbered dricksvatten så att hushållet klarar avbrott i vattenförsörjningen.",
+    description: "Förbered dricksvatten så att hushållet klarar avbrott i vattenförsörjningen.",
     content:
       "Rent dricksvatten är livsnödvändigt. Räkna med minst tre liter per vuxen och " +
       "dygn och planera gärna för tre till fem liter per person och dygn. Förvara " +
       "extra vatten i dunkar eller flaskor. Koka vattnet om det kan vara förorenat.",
     source: "Krisinformation.se",
-    sourceUrl:
-      "https://www.krisinformation.se/forbered-dig/hemberedskap/vatten-vid-kris/",
+    sourceUrl: "https://www.krisinformation.se/forbered-dig/hemberedskap/vatten-vid-kris/",
     fetchedAt: "2026-09-28T15:04:37.079Z",
     savedOffline: false,
   },
@@ -44,16 +40,14 @@ export const mockCrisisData: CrisisItem[] = [
   {
     id: "medication-in-crisis",
     title: "Läkemedel i kris",
-    description:
-      "Ha beredskap för läkemedel och förbrukningsartiklar som behövs regelbundet.",
+    description: "Ha beredskap för läkemedel och förbrukningsartiklar som behövs regelbundet.",
     content:
       "Socialstyrelsen rekommenderar en månads beredskap för personer som under " +
       "längre tid använder receptbelagda läkemedel eller förbrukningsartiklar som " +
       "skrivs ut av hälso- och sjukvården. Använd de äldsta läkemedlen först så att " +
       "de inte blir för gamla.",
     source: "Krisinformation.se",
-    sourceUrl:
-      "https://www.krisinformation.se/forbered-dig/hemberedskap/lakemedel-vid-kris/",
+    sourceUrl: "https://www.krisinformation.se/forbered-dig/hemberedskap/lakemedel-vid-kris/",
     fetchedAt: "2026-09-28T15:04:37.079Z",
     savedOffline: false,
   },
@@ -69,8 +63,7 @@ export const mockCrisisData: CrisisItem[] = [
       "värmekällor kan användas, men hantera eld och bränsle försiktigt och tänk " +
       "på ventilation och brandsäkerhet.",
     source: "Krisinformation.se",
-    sourceUrl:
-      "https://www.krisinformation.se/forbered-dig/hemberedskap/varme-vid-kris/",
+    sourceUrl: "https://www.krisinformation.se/forbered-dig/hemberedskap/varme-vid-kris/",
     fetchedAt: "2026-09-28T15:04:37.079Z",
     savedOffline: false,
   },
@@ -78,16 +71,14 @@ export const mockCrisisData: CrisisItem[] = [
   {
     id: "communication-in-crisis",
     title: "Kommunikation i kris",
-    description:
-      "Förbered flera sätt att få viktig information och hålla kontakt under en kris.",
+    description: "Förbered flera sätt att få viktig information och hålla kontakt under en kris.",
     content:
       "Vid en kris behöver du kunna få information om vad som händer och hur du ska " +
       "agera. Sveriges Radio P4 är en viktig informationskanal. Ha gärna en radio " +
       "som fungerar utan elnät, en papperslista med viktiga telefonnummer, " +
       "extrabatteri eller powerbank och möjlighet att ladda telefonen i bilen.",
     source: "Krisinformation.se",
-    sourceUrl:
-      "https://www.krisinformation.se/forbered-dig/hemberedskap/kommunikation-vid-kris/",
+    sourceUrl: "https://www.krisinformation.se/forbered-dig/hemberedskap/kommunikation-vid-kris/",
     fetchedAt: "2026-09-28T15:04:37.079Z",
     savedOffline: false,
   },
