@@ -42,16 +42,16 @@ Detailed articles and live alerts are not yet available.
 
 ## 🛠️ Tech stack
 
-| Technology | Purpose |
-| --- | --- |
-| React | Building the user interface |
-| React Router | Navigation between pages |
-| TypeScript | Adding static typing to the application |
-| Vite | Development server and production builds |
-| Tailwind CSS | Styling the user interface |
-| IndexedDB | Storing saved crisis information locally in the browser |
-| Dexie | Simplifying access to IndexedDB |
-| vite-plugin-pwa | PWA integration and service worker generation |
+| Technology      | Purpose                                                 |
+| --------------- | ------------------------------------------------------- |
+| React           | Building the user interface                             |
+| React Router    | Navigation between pages                                |
+| TypeScript      | Adding static typing to the application                 |
+| Vite            | Development server and production builds                |
+| Tailwind CSS    | Styling the user interface                              |
+| IndexedDB       | Storing saved crisis information locally in the browser |
+| Dexie           | Simplifying access to IndexedDB                         |
+| vite-plugin-pwa | PWA integration and service worker generation           |
 
 ## Navigation and accessibility
 
@@ -86,8 +86,6 @@ When an internet connection is available, information can be retrieved and refre
 
 Offline access is limited to previously cached app files and saved information. New information and updates require an internet connection.
 
-Known limitation: the header logo may be missing when the app is used offline.
-
 ## 👥 Team
 
 KrisKompassen is developed by:
@@ -121,4 +119,4 @@ This repository is the home for the project's source code and documentation.
 
 ---
 
-*Documentation is updated as the project evolves.*
+_Documentation is updated as the project evolves._

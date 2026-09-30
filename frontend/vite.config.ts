@@ -14,6 +14,9 @@ export default defineConfig({
       // app files on the next load instead of being stuck on a stale offline cache.
       registerType: "autoUpdate",
 
+      // The header logo is separate from the manifest icons cached automatically.
+      includeAssets: ["kriskompassen-logo.png"],
+
       manifest: {
         name: "KrisKompassen",
         short_name: "KrisKompassen",
