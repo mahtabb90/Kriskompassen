@@ -24,9 +24,7 @@ function CrisisCard({ item }: CrisisCardProps) {
       </div>
       <div className="flex flex-1 flex-col p-6 sm:p-7">
         <h2 className="text-xl font-bold text-blue-900">{item.title}</h2>
-        <p className="mt-3 text-base leading-relaxed text-slate-600">
-          {item.description}
-        </p>
+        <p className="mt-3 text-base leading-relaxed text-slate-600">{item.description}</p>
       </div>
     </Link>
   )

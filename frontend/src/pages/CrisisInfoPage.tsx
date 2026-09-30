@@ -14,11 +14,9 @@ function CrisisInfoPage() {
           Krisinformation
         </h1>
 
-
         <div className="mt-6 rounded-2xl border border-blue-200/80 bg-white p-6 text-slate-600 shadow-sm sm:p-8">
           <p>Ingen krisinformation tillgänglig just nu.</p>
         </div>
-
       </section>
     )
   }
