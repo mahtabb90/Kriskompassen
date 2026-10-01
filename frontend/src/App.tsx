@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import AppLayout from "./components/AppLayout"
+import DetailedCrisisCard from "./components/DetailedCrisisCard"
 import CrisisInfoPage from "./pages/CrisisInfoPage"
 import HomePage from "./pages/HomePage"
 import IndexedDbTest from "./pages/IndexedDbTest"
@@ -15,6 +16,7 @@ function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/crisis" element={<CrisisInfoPage />} />
+          <Route path="/crisis/:id" element={<DetailedCrisisCard />} />
           {import.meta.env.DEV && <Route path="/dev/indexeddb" element={<IndexedDbTest />} />}
           <Route path="*" element={<NotFoundPage />} />
         </Route>
