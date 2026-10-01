@@ -1,16 +1,11 @@
 import Dexie, { type Table } from "dexie"
+import type { CrisisItem } from "../types/crisis"
 
-export interface CrisisItem {
-  id: string
-  title: string
-  description: string
-  content: string
-  source: string
-  sourceUrl?: string
-  fetchedAt: string
-  savedOffline: boolean
-}
-
+/**
+ * Dexie wrapper for the app's local database.
+ *
+ * Defines the IndexedDB schema used to store crisis information for offline access.
+ */
 class KrisKompassenDatabase extends Dexie {
   crisisItems!: Table<CrisisItem, string>
 
@@ -23,4 +18,5 @@ class KrisKompassenDatabase extends Dexie {
   }
 }
 
+/** Shared database instance used throughout the app to read and write crisis information. */
 export const db = new KrisKompassenDatabase()

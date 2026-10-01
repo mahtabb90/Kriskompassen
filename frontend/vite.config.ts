@@ -10,14 +10,18 @@ export default defineConfig({
     tailwindcss(),
 
     VitePWA({
+      // Activates a new service worker as soon as it's ready, so users get updated
+      // app files on the next load instead of being stuck on a stale offline cache.
       registerType: "autoUpdate",
+
+      // The header logo is separate from the manifest icons cached automatically.
+      includeAssets: ["kriskompassen-logo.png"],
 
       manifest: {
         name: "KrisKompassen",
         short_name: "KrisKompassen",
 
-        description:
-          "Krisinformation tillgänglig online och offline",
+        description: "Krisinformation tillgänglig online och offline",
 
         theme_color: "#ffffff",
         background_color: "#ffffff",

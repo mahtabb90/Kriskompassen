@@ -1,8 +1,9 @@
 <p align="center">
-  <img src="frontend/public/ed80a672-8822-462b-b059-99cbfd843e2b.png" alt="Kriskompassen" width="300">
+  <img src="frontend/public/kriskompassen-logo.png"
+      alt="Kriskompassen" width="220">
 </p>
 
-<h1 align="center">Kriskompassen</h1>
+<h1 align="center">KrisKompassen</h1>
 
 <p align="center">
   <strong>Clear guidance when it matters most — online and offline.</strong>
@@ -18,7 +19,7 @@
 
 ## 🧭 About the project
 
-Kriskompassen is a web application in development, designed to help people quickly find clear and relevant local information during emergencies and major disruptions.
+KrisKompassen is a web application in development, designed to help people quickly find clear and relevant local information during emergencies and major disruptions.
 
 Our goal is to bring local crisis information together in one place, helping people answer three essential questions:
 
@@ -36,21 +37,36 @@ The project is in an early stage of development.
 
 Our initial focus is to establish the project structure and a working development-to-deployment workflow. Features, including offline support, will be developed incrementally based on priorities and feedback.
 
+The current version includes a home page and a list of crisis preparedness summaries.
+Detailed articles and live alerts are not yet available.
+
 ## 🛠️ Tech stack
 
-| Technology | Purpose |
-| --- | --- |
-| React | Building the user interface |
-| TypeScript | Adding static typing to the application |
-| Vite | Development server and production builds |
-| Tailwind CSS | Styling the user interface |
-| IndexedDB | Storing saved crisis information locally in the browser |
-| Dexie | Simplifying access to IndexedDB |
-| vite-plugin-pwa | PWA integration and service worker generation |
+| Technology      | Purpose                                                 |
+| --------------- | ------------------------------------------------------- |
+| React           | Building the user interface                             |
+| React Router    | Navigation between pages                                |
+| TypeScript      | Adding static typing to the application                 |
+| Vite            | Development server and production builds                |
+| Tailwind CSS    | Styling the user interface                              |
+| IndexedDB       | Storing saved crisis information locally in the browser |
+| Dexie           | Simplifying access to IndexedDB                         |
+| vite-plugin-pwa | PWA integration and service worker generation           |
+
+## Navigation and accessibility
+
+The app has two main pages: **Hem** (Home) and **Krisinformation** (Crisis information).
+The navigation adapts to phones and larger screens and clearly marks the current page.
+
+Keyboard navigation includes a link to skip directly to the page content and visible focus
+indicators. Pages have descriptive headings and titles.
+
+Accessibility remains an ongoing goal. Compatibility with screen readers and other assistive
+technology has not yet been fully verified.
 
 ## 📱 PWA and offline access
 
-Kriskompassen is being developed as a **Progressive Web App (PWA)**, with installation and offline access as core goals.
+KrisKompassen is being developed as a **Progressive Web App (PWA)**, with installation and offline access as core goals.
 
 On supported browsers and devices, users will be able to install the app on their phone or computer.
 
@@ -72,7 +88,7 @@ Offline access is limited to previously cached app files and saved information. 
 
 ## 👥 Team
 
-Kriskompassen is developed by:
+KrisKompassen is developed by:
 
 - Viktor
 - Mahtab
@@ -103,4 +119,4 @@ This repository is the home for the project's source code and documentation.
 
 ---
 
-*Documentation is updated as the project evolves.*
+_Documentation is updated as the project evolves._
