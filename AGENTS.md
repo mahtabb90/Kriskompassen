@@ -20,7 +20,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Planned scope: Swedish public warning messages (VMA) and local information about floods, gas leaks, contaminated drinking water, etc.
 - Users can save important information locally and read it offline.
 - Target users: the general public in Sweden. No login or user accounts are planned.
-- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`) and a not-found page. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
+- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
 
 ## 2. Tech stack
 
@@ -69,7 +69,7 @@ Backend (decided, not yet scaffolded):
     ├── index.html       # HTML entry (lang="sv")
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
     └── src/
-        ├── components/  # AppLayout, Header, BottomNavigation, CrisisCard and placeholders
+        ├── components/  # AppLayout, Header, BottomNavigation, CrisisCard, DetailedCrisisCard, OfflineToggle (save/remove offline control) and placeholders
         ├── data/        # mock data (mockCrisisData.ts)
         ├── db/          # Dexie database (db.ts)
         ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders
@@ -81,7 +81,7 @@ Backend (decided, not yet scaffolded):
 - Frontend unit and component tests live next to the file they test: `Foo.test.tsx` beside `Foo.tsx`.
 - New backend code goes under `backend/src/`, tests under `backend/tests/`. TODO(team): the internal layout of `backend/src/` is decided when the backend is scaffolded.
 - Several files in `components/` and `pages/` are empty placeholders. Fill them in; do not delete them without asking.
-- `App.tsx` registers routes inside the shared `AppLayout`. Crisis detail routes are not implemented; existing `/crisis/:id` card links currently render `NotFoundPage`.
+- `App.tsx` registers routes inside the shared `AppLayout`. The `/crisis/:id` route renders `DetailedCrisisCard` from the mock data and shows a not-found message for unknown IDs. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`.
 
 ## 4. Commands
 
