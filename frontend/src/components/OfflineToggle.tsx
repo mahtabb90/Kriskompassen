@@ -4,6 +4,7 @@ import type { CrisisItem } from "../types/crisis"
 
 interface OfflineToggleProps {
   item: CrisisItem
+  onToggle?: (saved: boolean) => void
 }
 
 /**
@@ -14,8 +15,10 @@ interface OfflineToggleProps {
  * Success and error messages are announced through live regions.
  *
  * @param item The crisis item to save or remove. Its full content is stored when saving.
+ * @param onToggle Called with the new saved state after a save or remove succeeds. Not called
+ * when the storage operation fails.
  */
-function OfflineToggle({ item }: OfflineToggleProps) {
+function OfflineToggle({ item, onToggle }: OfflineToggleProps) {
   const [saved, setSaved] = useState<boolean | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirmation, setConfirmation] = useState("")
@@ -58,6 +61,7 @@ function OfflineToggle({ item }: OfflineToggleProps) {
           ? `"${item.title}" har sparats för offlineåtkomst.`
           : `"${item.title}" har tagits bort från offlinelagringen.`
       )
+      onToggle?.(saving)
     } catch {
       setError(
         saving

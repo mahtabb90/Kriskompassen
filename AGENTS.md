@@ -20,7 +20,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Planned scope: Swedish public warning messages (VMA) and local information about floods, gas leaks, contaminated drinking water, etc.
 - Users can save important information locally and read it offline.
 - Target users: the general public in Sweden. No login or user accounts are planned.
-- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
+- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`), an offline list of saved crisis information (`/offline`), an offline detail page (`/offline/:id`) and a not-found page. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
 - A FastAPI backend and a reusable frontend service can fetch VMA from Krisinformation.se. The UI still uses mock crisis information; live VMA display and recurring updates are not implemented.
 
 ## 2. Tech stack
@@ -89,7 +89,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
         ├── config/      # central backend address and VMA request timeout
         ├── data/        # mock data (mockCrisisData.ts)
         ├── db/          # Dexie database (db.ts)
-        ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders
+        ├── pages/       # HomePage, CrisisInfoPage, OfflinePage, NotFoundPage, IndexedDbTest and placeholders
         ├── services/    # offline storage, VMA fetching and response validation
         └── types/       # shared crisis and VMA TypeScript types
 ```
@@ -98,7 +98,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 - Frontend unit and component tests live next to the file they test: `Foo.test.tsx` beside `Foo.tsx`.
 - New backend code goes under `backend/src/`: routers and dependency providers in `api/`, settings and application errors in `core/`, Pydantic models in `models/`, and upstream I/O in `services/`. Tests belong in `backend/tests/`.
 - Several files in `components/` and `pages/` are empty placeholders. Fill them in; do not delete them without asking.
-- `App.tsx` registers routes inside the shared `AppLayout`. The `/crisis/:id` route renders `DetailedCrisisCard` from the mock data and shows a not-found message for unknown IDs. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`.
+- `App.tsx` registers routes inside the shared `AppLayout`. The `/crisis/:id` route renders `DetailedCrisisCard` from the mock data and shows a not-found message for unknown IDs. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`. `OfflinePage` (`/offline`) lists items from `getOfflineItems()`, and `DetailedCrisisCard` with `isOffline` (`/offline/:id`) reads a single saved item through `getOfflineItem(id)`. No navigation link or connection detection enters these routes yet.
 
 ## 4. Commands
 
