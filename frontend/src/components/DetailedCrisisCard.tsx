@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom"
 import { mockCrisisData } from "../data/mockCrisisData"
+import OfflineToggle from "./OfflineToggle"
 
 /**
  * Renders detailed information for the selected crisis item.
@@ -12,14 +13,9 @@ function DetailedCrisisCard() {
   if (!item) {
     return (
       <section>
-        <h1 className="text-3xl font-bold text-blue-900">
-          Krisinformationen hittades inte
-        </h1>
+        <h1 className="text-3xl font-bold text-blue-900">Krisinformationen hittades inte</h1>
 
-        <Link
-          to="/crisis"
-          className="mt-6 inline-block font-medium text-blue-900 underline"
-        >
+        <Link to="/crisis" className="mt-6 inline-block font-medium text-blue-900 underline">
           ← Tillbaka till krisinformation
         </Link>
       </section>
@@ -34,18 +30,17 @@ function DetailedCrisisCard() {
       </div>
 
       <div className="p-6 sm:p-8">
-        <Link
-          to="/crisis"
-          className="mb-6 inline-block font-medium text-blue-900 underline"
-        >
+        <Link to="/crisis" className="mb-6 inline-block font-medium text-blue-900 underline">
           ← Tillbaka till krisinformation
         </Link>
 
         <h1 className="text-3xl font-bold text-blue-900">{item.title}</h1>
 
-        <p className="mt-6 text-base leading-relaxed text-slate-700">
-          {item.content}
-        </p>
+        <p className="mt-6 text-base leading-relaxed text-slate-700">{item.content}</p>
+
+        <div className="mt-8">
+          <OfflineToggle item={item} />
+        </div>
 
         <div className="mt-8 border-t border-slate-200 pt-6">
           <p className="text-sm text-slate-600">
