@@ -74,9 +74,7 @@ function OfflineToggle({ item }: OfflineToggleProps) {
   return (
     <div className="flex flex-col gap-3">
       <p className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <span aria-hidden="true">
-          {saved === null ? "…" : saved ? "✓" : "○"}
-        </span>
+        <span aria-hidden="true">{saved === null ? "…" : saved ? "✓" : "○"}</span>
         {saved === null ? "Kontrollerar sparad status…" : saved ? "Sparad offline" : "Inte sparad"}
       </p>
 
