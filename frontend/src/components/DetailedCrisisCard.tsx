@@ -23,7 +23,7 @@ function DetailedCrisisCard() {
   }
 
   return (
-    <article className="rounded-2xl border border-blue-200/80 bg-white shadow-sm">
+    <article className="overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm">
       <div className="flex h-1.5 w-full" aria-hidden="true">
         <span className="h-full flex-1 bg-blue-900" />
         <span className="h-full w-8 bg-amber-400" />

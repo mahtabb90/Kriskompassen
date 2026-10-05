@@ -93,7 +93,7 @@ function AppLayout() {
   return (
     <div
       className={
-        "min-h-dvh bg-slate-50 text-slate-800 " +
+        "min-h-dvh bg-[#D7E2EF] text-slate-800 " +
         "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
       }
     >
