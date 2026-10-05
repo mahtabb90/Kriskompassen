@@ -34,6 +34,20 @@ export async function getOfflineItems() {
 }
 
 /**
+ * Returns one crisis item that is saved for offline access.
+ *
+ * @param id ID of the item to read.
+ * @returns The stored item, or undefined if it does not exist locally or its `savedOffline`
+ * value is not true.
+ * @throws If IndexedDB cannot be read.
+ */
+export async function getOfflineItem(id: string) {
+  const item = await db.crisisItems.get(id)
+
+  return item?.savedOffline === true ? item : undefined
+}
+
+/**
  * Checks whether a crisis item is saved for offline access.
  *
  * @param id ID of the item to check.
