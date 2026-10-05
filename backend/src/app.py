@@ -35,7 +35,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application = FastAPI(
         title="KrisKompassen API",
         version="0.1.0",
-        description="Retrieves Swedish VMA information from Krisinformation.se.",
+        description="Retrieves VMA information from Sveriges Radio with source attribution.",
         lifespan=lifespan,
     )
     application.state.settings = app_settings

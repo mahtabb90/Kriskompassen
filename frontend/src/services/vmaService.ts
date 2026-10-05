@@ -1,5 +1,6 @@
 import { apiConfig } from "../config/apiConfig"
-import type { VmaRecord, VmaRequestErrorCode } from "../types/vma"
+import type { VmaRequestErrorCode, VmaResult } from "../types/vma"
+import { mapVmaMessages } from "./vmaMapper"
 import { validateVmaResponse } from "./vmaResponseValidator"
 
 /**
@@ -29,7 +30,7 @@ export class VmaRequestError extends Error {
  * Sends no credentials. Each call has its own abort controller and a timeout that includes reading
  * the response body. Does not retry, cache, or convert failures to empty results.
  *
- * @returns Unvalidated JSON, including an empty array if that is what the backend returns.
+ * @returns Unvalidated JSON, including the envelope around a successful empty alerts list.
  * @throws {VmaRequestError} For network failures, non-successful HTTP status, timeout or invalid JSON.
  */
 export async function fetchVmaResponse(): Promise<unknown> {
@@ -76,12 +77,19 @@ export async function fetchVmaResponse(): Promise<unknown> {
 }
 
 /**
- * Fetches VMA records and validates their container through the separate response validator.
+ * Fetches, validates and maps VMA messages while preserving partial-response diagnostics.
  *
- * @returns Structurally validated records, or an empty array after a successful empty response.
+ * @returns Shared presentation models and counts/issues for excluded or rejected records.
+ * A successful empty upstream response returns an empty messages list and zero counts.
  * @throws {VmaRequestError} If fetching or decoding the response fails.
- * @throws {VmaResponseValidationError} If the decoded response has an unexpected structure.
+ * @throws {VmaResponseValidationError} For an invalid container or only malformed records.
  */
-export async function fetchVmas(): Promise<VmaRecord[]> {
-  return validateVmaResponse(await fetchVmaResponse())
+export async function fetchVmas(): Promise<VmaResult> {
+  const { records, ...diagnostics } = validateVmaResponse(await fetchVmaResponse())
+  const evaluatedAt = Date.now()
+  return {
+    messages: mapVmaMessages(records, diagnostics.source, evaluatedAt),
+    evaluatedAt: new Date(evaluatedAt).toISOString(),
+    ...diagnostics,
+  }
 }
