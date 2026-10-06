@@ -1,6 +1,11 @@
-function Header() {
+/**
+ * Renders the shared brand header, reserving the top device inset when no VMA notice owns it.
+ *
+ * @param reserveTopInset Whether the header is the first visible region in the page.
+ */
+function Header({ reserveTopInset = true }: { reserveTopInset?: boolean }) {
   return (
-    <header className="bg-white pt-[env(safe-area-inset-top)]">
+    <header className={"bg-white " + (reserveTopInset ? "pt-[env(safe-area-inset-top)]" : "")}>
       <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="flex flex-wrap items-center gap-3">
           <img src="/kriskompassen-logo.png" alt="" className="h-12 w-12 sm:h-14 sm:w-14" />
