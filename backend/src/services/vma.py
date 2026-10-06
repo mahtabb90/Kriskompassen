@@ -1,4 +1,4 @@
-"""Retrieves JSON from Krisinformation.se without interpreting VMA message fields."""
+"""Retrieves JSON from Sveriges Radio without interpreting CAP message fields."""
 
 import asyncio
 import math
@@ -24,7 +24,7 @@ def _parse_json_float(value: str) -> float:
 async def fetch_vma_response(client: httpx.AsyncClient, settings: Settings) -> object:
     """Fetches one upstream response and decodes JSON within the configured time budget.
 
-    Returns unvalidated JSON, including an empty array when the upstream returns one.
+    Returns unvalidated JSON, including the envelope around an empty alerts list.
     Raises UpstreamError on timeout, transport failure, non-success HTTP, or invalid JSON.
     It neither retries failed requests nor substitutes cached or empty responses.
     """

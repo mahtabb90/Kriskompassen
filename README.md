@@ -43,7 +43,7 @@ and switch between online and offline mode with a visible, keyboard-accessible c
 the internet connection switches the app to offline mode automatically, with an explanation;
 switching back to online mode is always a manual choice.
 
-A backend can retrieve public warning messages from Krisinformation.se. Live warnings are not
+A backend can retrieve public warning messages from Sveriges Radio. Live warnings are not
 yet shown in the app, and information is not updated automatically.
 
 ## 🛠️ Tech stack
@@ -58,7 +58,7 @@ yet shown in the app, and information is not updated automatically.
 | IndexedDB       | Storing saved crisis information locally in the browser |
 | Dexie           | Simplifying access to IndexedDB                         |
 | vite-plugin-pwa | PWA integration and service worker generation           |
-| Python / FastAPI | Retrieving public warnings from Krisinformation.se     |
+| Python / FastAPI | Retrieving public warnings from Sveriges Radio        |
 | Pydantic        | Validating external API response structure              |
 
 ## Navigation and accessibility

@@ -21,7 +21,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Users can save important information locally and read it offline.
 - Target users: the general public in Sweden. No login or user accounts are planned.
 - Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level online/offline mode toggle (`ModeToggle`, backed by `ModeContext`) controls whether `/crisis` and `/crisis/:id` show the bundled mock dataset or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
-- A FastAPI backend and a reusable frontend service can fetch VMA from Krisinformation.se. The UI still uses mock crisis information; live VMA display and recurring updates are not implemented.
+- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. Krisinformation.se is the chosen source for future general news integration; no news service is implemented. The UI still uses mock crisis information; live VMA display and recurring updates are not implemented.
 
 ## 2. Tech stack
 
@@ -38,7 +38,8 @@ Frontend versions are taken from `frontend/package-lock.json`.
 | PWA | vite-plugin-pwa | 1.3.0 |
 | Linting | ESLint + typescript-eslint 8.70.0 | 10.10.0 |
 | Formatting | Prettier (+ `eslint-config-prettier` 10.1.8) | 3.9.9 |
-| Unit/component tests | Vitest + React Testing Library | not yet installed |
+| Unit tests | Vitest | 4.1.11 |
+| Component tests | React Testing Library | not yet installed |
 | E2E tests | Playwright (Node/TypeScript) | not yet installed |
 | Runtime | Node.js (required by Vite) | ^20.19.0 or >=22.12.0 |
 
@@ -53,7 +54,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 | HTTP client | HTTPX | 0.28.1 |
 | ASGI server | Uvicorn | 0.54.0 |
 | Dependencies | `pip` + `requirements.txt` / `requirements-dev.txt` | pinned versions |
-| Tests | pytest | 9.1.1 (configured; no test cases yet) |
+| Tests | pytest | 9.1.1 |
 | Lint/format | Ruff | 0.16.10 |
 
 - Backend setup, API contracts, configuration and manual verification are documented in `backend/DEVELOPMENT.md`.
@@ -77,13 +78,14 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   │   ├── core/       # settings and upstream errors
 │   │   ├── models/     # Pydantic response models
 │   │   └── services/   # upstream fetching and JSON decoding
-│   └── tests/          # pytest location; placeholder only
+│   └── tests/          # pytest API and upstream response tests
 └── frontend/            # Vite + React + TypeScript PWA
     ├── .env.example    # frontend variable names only
     ├── public/          # static assets and PWA icons
     ├── e2e/             # Playwright tests (planned, not created)
     ├── index.html       # HTML entry (lang="sv")
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
+    ├── vitest.config.ts # Node unit tests, without application plugins or .env loading
     └── src/
         ├── components/  # AppLayout, Header, BottomNavigation, CrisisCard, DetailedCrisisCard, OfflineToggle (save/remove), ModeToggle (online/offline switch), ConnectionStatus (connectivity + auto-switch notice)
         ├── config/      # central backend address and VMA request timeout
@@ -91,7 +93,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
         ├── data/        # mock data (mockCrisisData.ts)
         ├── db/          # Dexie database (db.ts)
         ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
-        ├── services/    # offline storage, VMA fetching and response validation
+        ├── services/    # offline storage, VMA fetching, validation and mapping; adjacent unit tests
         └── types/       # shared crisis and VMA TypeScript types
 ```
 
@@ -112,7 +114,7 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 | Lint | `npm run lint` | `ruff check .` |
 | Format | `npm run format` (check only: `npm run format:check`) | `ruff format .` (check only: `ruff format --check .`) |
 | Typecheck | `npx tsc -b` (also runs as part of `build`) | n/a |
-| Test | `npm run test` *(planned, Vitest)* | `pytest` (configured; no test cases yet) |
+| Test | `npm run test` (Vitest, single run) | `pytest` |
 | E2E | `npm run test:e2e` *(planned, Playwright)* | n/a |
 | Build | `npm run build` | n/a |
 | Preview build | `npm run preview` | n/a |
@@ -214,6 +216,8 @@ Frontend conventions visible in the existing code:
 - Write function components declared with `function Name() {}`, followed by `export default Name`.
 - Use one component per file. Component files use PascalCase (`HomePage.tsx`, `CrisisCard.tsx`).
 - I/O services export named `async` functions (see `services/offlineService.ts` and `services/vmaService.ts`). Pure response validators remain synchronous.
+- `fetchVmas()` returns `VmaResult`: shared messages, provider/API metadata, feed/evaluation times and validation diagnostics. Fetching, per-record validation and mapping stay separate. The source is SR's object envelope with `timestamp` and `alerts`, not the previous assumed Krisinformation news shape. Only Actual/Public Alert, Update and Cancel records are exposed; Swedish `sv-SE` blocks are selected. Technical tests and exercises are excluded.
+- VMA models distinguish CAP message IDs from incident IDs and retain complete references. Cancel records may lack title/content because `info: null` is valid. Mapping applies expiry and same-feed Update/Cancel references; unknown validity is explicit. No history is retained between requests. See `backend/DEVELOPMENT.md` for lifecycle and future attribution rules.
 - Style with Tailwind utility classes in `className`. There are no separate CSS files beyond `index.css`.
 - Put IndexedDB access in `db/` and `services/`, not in UI components. (`IndexedDbTest.tsx` is a test page and an exception.)
 - Prettier decides formatting (`frontend/.prettierrc`: no semicolons, double quotes, `printWidth` 100). `npm run format:check` must pass.
@@ -251,7 +255,7 @@ Backend conventions:
 - Pydantic models for request and response bodies.
 - Ruff decides formatting and lint rules. `ruff check .` and `ruff format --check .` must pass.
 - The application factory in `src/app.py` creates a shared HTTPX client through FastAPI lifespan. Routers obtain it through dependency injection; upstream fetching and response validation remain separate.
-- `GET /api/v1/vmas` returns a JSON object list, including `[]` after a successful empty response. The Pydantic model validates the container and JSON values only; individual VMA fields remain unvalidated. Consumers must validate those fields before presentation.
+- `GET /api/v1/vmas` returns `{timestamp, alerts, source}` from SR's VMA API. Pydantic validates the timezone-bearing timestamp and strict JSON alerts list, preserving malformed entries for frontend classification. The backend supplies source/API attribution independently of upstream data, including empty feeds. Public API metadata strips credentials, query parameters and fragments. Individual records must be validated before presentation.
 - Upstream failures use the documented `error.code` / `error.message` envelope and HTTP 502 or 504. Never turn failures into a successful empty result. VMA responses use `Cache-Control: no-store`.
 - Backend settings use the `KRISKOMPASSEN_` environment prefix. Frontend backend address and request timeout live in `frontend/src/config/apiConfig.ts`. See `backend/DEVELOPMENT.md` for defaults, CORS and the official API evidence.
 
@@ -266,8 +270,8 @@ Decided tooling:
 | Frontend E2E | Playwright (Node/TypeScript) | `frontend/e2e/` |
 | Backend | pytest | `backend/tests/` |
 
-- Frontend test tools are not installed yet. Until they are, new frontend code must at least pass `npm run lint`, `npm run format:check` and `npm run build`. Describe how it was checked manually.
-- Backend pytest is configured, but `backend/tests/` contains only a placeholder. The approved initial VMA integration uses manual scenario verification instead of automated test cases. This exception is limited to that implementation; it does not waive the existing-test rules below or the requirement to test future backend logic.
+- Vitest is installed for Node unit tests in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library, `fake-indexeddb` and Playwright remain planned and are not installed.
+- Frontend VMA tests cover validation, mapping and transport with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Synthetic fixtures keep the suites independent of live API availability; manual checks against SR's official examples complement them.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
 - Keep E2E small: a few critical user flows, including at least one offline scenario.
 
@@ -285,7 +289,8 @@ Decided tooling:
 - Do not read, print or edit `.env` files. Document new variables by name only in `frontend/.env.example` or `backend/.env.example`. Backend settings read process environment variables and do not automatically load `.env` files.
 - Anything in the frontend (including `VITE_*` env vars) ends up in the public bundle. Never put API keys or secrets there.
 - Data in IndexedDB is readable on the user's device. Do not store sensitive personal data there.
-- Treat data from external sources (VMA, etc.) as untrusted. Do not render it as raw HTML. Validate it in the backend with Pydantic before passing it on.
+- Treat data from external sources (VMA, etc.) as untrusted. Do not render it as raw HTML. Validate the feed envelope with Pydantic and individual records in the frontend before presentation.
+- VMA responses carry provider and API attribution for the future UI. The usage review in `backend/DEVELOPMENT.md` supports intended onward publication, but current VMA-specific terms remain unconfirmed. Clarify terms with SR before public release or adding persistent/offline VMA storage; this integration adds no such storage.
 
 ## 10. Ask before you do any of this
 
