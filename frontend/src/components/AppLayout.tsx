@@ -79,15 +79,34 @@ function AppLayout() {
   }, [])
 
   useLayoutEffect(() => {
-    const heading = mainRef.current?.querySelector<HTMLHeadingElement>("#page-heading")
-    document.title = heading ? `${heading.textContent?.trim()} | KrisKompassen` : "KrisKompassen"
+    const main = mainRef.current
+    if (!main) return
 
-    if (previousPathname.current !== pathname) {
-      previousPathname.current = pathname
-      // Keep the header and navigation in place when the heading is already visible.
-      heading?.focus({ preventScroll: true })
-      heading?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" })
+    // A descendant's own state update (e.g. offline-mode content replacing a "loading"
+    // heading once it arrives from IndexedDB) can swap in an entirely new heading element
+    // — not just change its text — without re-rendering AppLayout. So this re-queries for
+    // whichever #page-heading currently exists on every subtree mutation, rather than
+    // watching one captured node that may already have been removed.
+    const syncTitle = () => {
+      const heading = main.querySelector<HTMLHeadingElement>("#page-heading")
+      document.title = heading ? `${heading.textContent?.trim()} | KrisKompassen` : "KrisKompassen"
     }
+    syncTitle()
+
+    const observer = new MutationObserver(syncTitle)
+    observer.observe(main, { characterData: true, childList: true, subtree: true })
+
+    return () => observer.disconnect()
+  }, [pathname])
+
+  useLayoutEffect(() => {
+    if (previousPathname.current === pathname) return
+    previousPathname.current = pathname
+
+    const heading = mainRef.current?.querySelector<HTMLHeadingElement>("#page-heading")
+    // Keep the header and navigation in place when the heading is already visible.
+    heading?.focus({ preventScroll: true })
+    heading?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" })
   }, [pathname])
 
   return (

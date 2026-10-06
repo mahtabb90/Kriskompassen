@@ -38,7 +38,10 @@ The project is in an early stage of development.
 Our initial focus is to establish the project structure and a working development-to-deployment workflow. Features, including offline support, will be developed incrementally based on priorities and feedback.
 
 The current version includes a home page, crisis preparedness summaries and detailed articles
-based on example information. Users can save and remove articles locally for offline access.
+based on example information. Users can save and remove articles locally for offline access,
+and switch between online and offline mode with a visible, keyboard-accessible control. Losing
+the internet connection switches the app to offline mode automatically, with an explanation;
+switching back to online mode is always a manual choice.
 
 A backend can retrieve public warning messages from Krisinformation.se. Live warnings are not
 yet shown in the app, and information is not updated automatically.

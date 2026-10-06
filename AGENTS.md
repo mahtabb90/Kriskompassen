@@ -20,7 +20,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Planned scope: Swedish public warning messages (VMA) and local information about floods, gas leaks, contaminated drinking water, etc.
 - Users can save important information locally and read it offline.
 - Target users: the general public in Sweden. No login or user accounts are planned.
-- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`), an offline list of saved crisis information (`/offline`), an offline detail page (`/offline/:id`) and a not-found page. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
+- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level online/offline mode toggle (`ModeToggle`, backed by `ModeContext`) controls whether `/crisis` and `/crisis/:id` show the bundled mock dataset or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
 - A FastAPI backend and a reusable frontend service can fetch VMA from Krisinformation.se. The UI still uses mock crisis information; live VMA display and recurring updates are not implemented.
 
 ## 2. Tech stack
@@ -85,11 +85,12 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── index.html       # HTML entry (lang="sv")
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
     └── src/
-        ├── components/  # AppLayout, Header, BottomNavigation, CrisisCard, DetailedCrisisCard, OfflineToggle (save/remove offline control) and placeholders
+        ├── components/  # AppLayout, Header, BottomNavigation, CrisisCard, DetailedCrisisCard, OfflineToggle (save/remove), ModeToggle (online/offline switch), ConnectionStatus (connectivity + auto-switch notice)
         ├── config/      # central backend address and VMA request timeout
+        ├── context/     # ModeContext.tsx (ModeProvider) + modeContext.ts (context object, Mode type, useMode hook — split to satisfy react-refresh/only-export-components)
         ├── data/        # mock data (mockCrisisData.ts)
         ├── db/          # Dexie database (db.ts)
-        ├── pages/       # HomePage, CrisisInfoPage, OfflinePage, NotFoundPage, IndexedDbTest and placeholders
+        ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
         ├── services/    # offline storage, VMA fetching and response validation
         └── types/       # shared crisis and VMA TypeScript types
 ```
@@ -97,8 +98,8 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 - New frontend code goes under `frontend/src/` in the matching folder above.
 - Frontend unit and component tests live next to the file they test: `Foo.test.tsx` beside `Foo.tsx`.
 - New backend code goes under `backend/src/`: routers and dependency providers in `api/`, settings and application errors in `core/`, Pydantic models in `models/`, and upstream I/O in `services/`. Tests belong in `backend/tests/`.
-- Several files in `components/` and `pages/` are empty placeholders. Fill them in; do not delete them without asking.
-- `App.tsx` registers routes inside the shared `AppLayout`. The `/crisis/:id` route renders `DetailedCrisisCard` from the mock data and shows a not-found message for unknown IDs. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`. `OfflinePage` (`/offline`) lists items from `getOfflineItems()`, and `DetailedCrisisCard` with `isOffline` (`/offline/:id`) reads a single saved item through `getOfflineItem(id)`. No navigation link or connection detection enters these routes yet.
+- Several files in `components/` and `pages/` are empty placeholders (`SettingsPage.tsx`). Fill them in; do not delete them without asking.
+- `App.tsx` wraps the router in `ModeProvider` and registers routes inside the shared `AppLayout`. There are no separate offline routes: `CrisisInfoPage` (`/crisis`) and `DetailedCrisisCard` (`/crisis/:id`) both read `useMode()` and switch data source — the bundled mock dataset in online mode, `getOfflineItems()`/`getOfflineItem(id)` in offline mode — without the URL changing. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`. If the item shown on `/crisis/:id` is not available in the current mode (mode just switched, or the URL was opened directly), `DetailedCrisisCard` redirects to `/crisis` with an explanation passed via router location state, rather than showing an inline message. `ModeProvider` forces offline mode (with an explanation shown by `ConnectionStatus`) when the browser's `offline` event fires, and never switches back to online automatically — the user does that via `ModeToggle`, which is disabled for online mode while `navigator.onLine` is false.
 
 ## 4. Commands
 
@@ -291,6 +292,7 @@ Decided tooling:
 - Add, remove or upgrade dependencies, or change `package-lock.json` or `requirements*.txt`.
 - Scaffold the backend.
 - Change the Dexie schema in `frontend/src/db/db.ts`. The current schema is `version(1)`, `crisisItems: "id, title, source, fetchedAt, savedOffline"`. Changes need a new version and a migration plan.
+- Reintroduce separate online/offline routes (e.g. `/offline`, `/offline/:id`) or otherwise encode the selected mode in the URL. The team decided online/offline is a shared `ModeContext` read by `/crisis` and `/crisis/:id` instead (see §3) specifically so the URL never changes on a mode switch. If a task description points back toward separate routes, stop and ask, and remind them of this decision, rather than silently reintroducing it.
 - Change the PWA or service worker config (`VitePWA` in `vite.config.ts`, manifest, caching).
 - Create or change any backend database schema.
 - Add or change authentication or authorization.
