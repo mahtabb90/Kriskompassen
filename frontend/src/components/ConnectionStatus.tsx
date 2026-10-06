@@ -1,7 +1,7 @@
 import { useMode } from "../context/modeContext"
 
 /**
- * Shows the browser's actual network connectivity, separate from the selected mode.
+ * Shows the browser-reported network connectivity, separate from the selected mode.
  *
  * Also surfaces a dismissible, visible explanation when the app has just force-switched to
  * offline mode because the connection was lost.
@@ -11,7 +11,7 @@ function ConnectionStatus() {
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="flex items-center gap-2 text-xs text-slate-600">
+      <p className="flex items-center gap-2 text-sm text-slate-600">
         <span
           aria-hidden="true"
           className={`h-2 w-2 rounded-full ${isOnline ? "bg-green-600" : "bg-red-600"}`}
@@ -28,7 +28,7 @@ function ConnectionStatus() {
           <button
             type="button"
             onClick={dismissAutoSwitchNotice}
-            className="min-h-8 min-w-8 font-semibold underline"
+            className="min-h-12 min-w-12 font-semibold underline"
           >
             Stäng
           </button>

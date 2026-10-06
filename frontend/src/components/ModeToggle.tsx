@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from "react"
+import { useId, useRef, type KeyboardEvent } from "react"
 import { useMode, type Mode } from "../context/modeContext"
 
 const OPTIONS: ReadonlyArray<{ value: Mode; label: string }> = [
@@ -17,6 +17,7 @@ const OPTIONS: ReadonlyArray<{ value: Mode; label: string }> = [
 function ModeToggle() {
   const { mode, isOnline, setMode } = useMode()
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const helpTextId = useId()
 
   function isDisabled(value: Mode) {
     return value === "online" && !isOnline
@@ -43,6 +44,7 @@ function ModeToggle() {
       <div
         role="radiogroup"
         aria-label="Läge"
+        aria-describedby={!isOnline ? helpTextId : undefined}
         onKeyDown={handleKeyDown}
         className="inline-flex rounded-xl border border-blue-900 p-1"
       >
@@ -79,7 +81,9 @@ function ModeToggle() {
       </div>
 
       {!isOnline && (
-        <p className="text-xs text-slate-600">Online-läge kräver internetanslutning.</p>
+        <p id={helpTextId} className="text-sm text-slate-600">
+          Online-läge kräver internetanslutning.
+        </p>
       )}
     </div>
   )

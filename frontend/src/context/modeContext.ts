@@ -13,7 +13,7 @@ export interface ModeContextValue {
 export const ModeContext = createContext<ModeContextValue | undefined>(undefined)
 
 /**
- * Reads the current online/offline mode and actual connectivity.
+ * Reads the current online/offline mode and browser-reported connectivity.
  *
  * @throws If used outside a `ModeProvider`.
  */

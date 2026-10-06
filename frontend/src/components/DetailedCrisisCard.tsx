@@ -68,19 +68,6 @@ function DetailedCrisisCard() {
     })
   }, [status, item, mode, navigate])
 
-  if (status === "loading" || !item) {
-    return (
-      <section>
-        <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
-          Läser…
-        </h1>
-        <p role="status" className="sr-only">
-          Läser…
-        </p>
-      </section>
-    )
-  }
-
   if (status === "error") {
     return (
       <section>
@@ -94,6 +81,19 @@ function DetailedCrisisCard() {
         <Link to="/crisis" className="mt-6 inline-block font-medium text-blue-900 underline">
           ← Tillbaka till krisinformation
         </Link>
+      </section>
+    )
+  }
+
+  if (status === "loading" || !item) {
+    return (
+      <section>
+        <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
+          Läser…
+        </h1>
+        <p role="status" className="sr-only">
+          Läser…
+        </p>
       </section>
     )
   }

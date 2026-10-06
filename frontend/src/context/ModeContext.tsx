@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react"
 import { ModeContext, type Mode } from "./modeContext"
 
 /**
- * Tracks the user's selected online/offline mode separately from actual network connectivity.
+ * Tracks the user's selected online/offline mode separately from browser-reported network
+ * connectivity.
  *
  * Starts in offline mode if the browser is already offline on load. Forces offline mode and
  * surfaces an explanation when the connection is lost while online mode was selected. Does not
