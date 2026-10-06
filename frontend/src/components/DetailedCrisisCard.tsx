@@ -116,6 +116,19 @@ function DetailedCrisisCard() {
 
         <p className="mt-6 text-base leading-relaxed text-slate-700">{item.content}</p>
 
+        {isOffline &&
+          (item.savedAt ? (
+            <p className="mt-4 text-sm text-slate-600">
+              <span className="font-medium">Sparad offline:</span>{" "}
+              {new Date(item.savedAt).toLocaleString("sv-SE", {
+                dateStyle: "long",
+                timeStyle: "short",
+              })}
+            </p>
+          ) : (
+            <p className="mt-4 text-sm text-slate-600">Tidpunkt för sparande saknas</p>
+          ))}
+
         <div className="mt-8">
           <OfflineToggle item={item} />
         </div>
