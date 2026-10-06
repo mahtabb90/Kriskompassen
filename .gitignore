@@ -13,6 +13,7 @@ dist-ssr
 *.local
 
 # Python environments and generated files
+venv/
 .venv/
 __pycache__/
 *.py[cod]

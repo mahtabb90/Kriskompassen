@@ -1,32 +1,30 @@
 import { useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
+import { useMode } from "../context/modeContext"
 import { mockCrisisData } from "../data/mockCrisisData"
 import { getOfflineItem } from "../services/offlineService"
 import type { CrisisItem } from "../types/crisis"
 import OfflineToggle from "./OfflineToggle"
 
-interface DetailedCrisisCardProps {
-  isOffline?: boolean
-}
-
 type OfflineDetailState =
-  | { id: string | undefined; status: "ready"; item: CrisisItem | undefined }
-  | { id: string | undefined; status: "error" }
+  { id: string; status: "ready"; item: CrisisItem | undefined } | { id: string; status: "error" }
 
 /**
- * Renders detailed information for the selected crisis item.
+ * Renders detailed information for the selected crisis item in the current mode.
  *
- * By default the item comes from the mock dataset. In offline mode it is read from IndexedDB
- * instead, makes no external requests, and only items saved for offline access are shown.
- *
- * @param isOffline Reads the item from IndexedDB and links back to the offline list.
+ * Online mode reads from the bundled mock dataset; offline mode reads the item from
+ * IndexedDB instead, making no network call. If the item is not available in the current
+ * mode — whether because the mode was just switched or the URL was opened directly — this
+ * redirects to the crisis list with an explanation, rather than showing an inline message.
  */
-function DetailedCrisisCard({ isOffline = false }: DetailedCrisisCardProps) {
+function DetailedCrisisCard() {
   const { id } = useParams()
+  const { mode } = useMode()
+  const navigate = useNavigate()
   const [offlineState, setOfflineState] = useState<OfflineDetailState>()
 
   useEffect(() => {
-    if (!isOffline || !id) return
+    if (mode !== "offline" || !id) return
 
     let cancelled = false
 
@@ -41,80 +39,61 @@ function DetailedCrisisCard({ isOffline = false }: DetailedCrisisCardProps) {
     return () => {
       cancelled = true
     }
-  }, [isOffline, id])
+  }, [mode, id])
 
-  const backPath = isOffline ? "/offline" : "/crisis"
-  const backLabel = isOffline
-    ? "← Tillbaka till sparad krisinformation"
-    : "← Tillbaka till krisinformation"
-  const backLinkClassName = "inline-block font-medium text-blue-900 underline"
+  const onlineItem = id ? mockCrisisData.find((crisis) => crisis.id === id) : undefined
+  // State from a previously viewed item or mode must not be shown for a different one.
+  const currentOffline = mode === "offline" && offlineState?.id === id ? offlineState : undefined
 
-  if (isOffline) {
-    // State from a previously viewed item must not be shown for a different route id.
-    const current = offlineState?.id === id ? offlineState : undefined
+  const status: "loading" | "error" | "ready" =
+    mode === "online" ? "ready" : !currentOffline ? "loading" : currentOffline.status
+  const item =
+    mode === "online"
+      ? onlineItem
+      : currentOffline?.status === "ready"
+        ? currentOffline.item
+        : undefined
 
-    if (!current) {
-      return (
-        <section>
-          <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
-            Läser sparad information…
-          </h1>
-          <p role="status" className="sr-only">
-            Läser sparad information…
-          </p>
-        </section>
-      )
-    }
+  useEffect(() => {
+    if (status !== "ready" || item) return
 
-    if (current.status === "error") {
-      return (
-        <section>
-          <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
-            Det gick inte att läsa den sparade informationen
-          </h1>
-          <p role="alert" className="mt-4 max-w-prose leading-relaxed text-slate-700">
-            Informationen kunde inte läsas från din enhet. Ladda om sidan och försök igen. Om felet
-            kvarstår kan webbläsaren blockera lokal lagring.
-          </p>
-          <Link to={backPath} className={`mt-6 ${backLinkClassName}`}>
-            {backLabel}
-          </Link>
-        </section>
-      )
-    }
+    navigate("/crisis", {
+      replace: true,
+      state: {
+        notice:
+          mode === "online"
+            ? "Den informationen hittades inte."
+            : "Den informationen är inte sparad för offline-åtkomst.",
+      },
+    })
+  }, [status, item, mode, navigate])
 
-    if (!current.item) {
-      return (
-        <section>
-          <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
-            Informationen är inte tillgänglig offline
-          </h1>
-          <p className="mt-4 max-w-prose leading-relaxed text-slate-700">
-            Den här informationen har inte sparats på din enhet och kan därför inte visas utan
-            internetanslutning.
-          </p>
-          <Link to={backPath} className={`mt-6 ${backLinkClassName}`}>
-            {backLabel}
-          </Link>
-        </section>
-      )
-    }
-  }
-
-  const item: CrisisItem | undefined = isOffline
-    ? offlineState?.status === "ready"
-      ? offlineState.item
-      : undefined
-    : mockCrisisData.find((crisis) => crisis.id === id)
-
-  if (!item) {
+  if (status === "error") {
     return (
       <section>
-        <h1 className="text-3xl font-bold text-blue-900">Krisinformationen hittades inte</h1>
-
-        <Link to={backPath} className={`mt-6 ${backLinkClassName}`}>
-          {backLabel}
+        <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
+          Det gick inte att läsa den sparade informationen
+        </h1>
+        <p role="alert" className="mt-4 max-w-prose leading-relaxed text-slate-700">
+          Informationen kunde inte läsas från din enhet. Ladda om sidan och försök igen. Om felet
+          kvarstår kan webbläsaren blockera lokal lagring.
+        </p>
+        <Link to="/crisis" className="mt-6 inline-block font-medium text-blue-900 underline">
+          ← Tillbaka till krisinformation
         </Link>
+      </section>
+    )
+  }
+
+  if (status === "loading" || !item) {
+    return (
+      <section>
+        <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
+          Läser…
+        </h1>
+        <p role="status" className="sr-only">
+          Läser…
+        </p>
       </section>
     )
   }
@@ -127,11 +106,13 @@ function DetailedCrisisCard({ isOffline = false }: DetailedCrisisCardProps) {
       </div>
 
       <div className="p-6 sm:p-8">
-        <Link to={backPath} className={`mb-6 ${backLinkClassName}`}>
-          {backLabel}
+        <Link to="/crisis" className="mb-6 inline-block font-medium text-blue-900 underline">
+          ← Tillbaka till krisinformation
         </Link>
 
-        <h1 className="text-3xl font-bold text-blue-900">{item.title}</h1>
+        <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
+          {item.title}
+        </h1>
 
         <p className="mt-6 text-base leading-relaxed text-slate-700">{item.content}</p>
 
