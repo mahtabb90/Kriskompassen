@@ -116,7 +116,7 @@ function DetailedCrisisCard() {
 
         <p className="mt-6 text-base leading-relaxed text-slate-700">{item.content}</p>
 
-        {isOffline &&
+        {mode === "offline" &&
           (item.savedAt ? (
             <p className="mt-4 text-sm text-slate-600">
               <span className="font-medium">Sparad offline:</span>{" "}
