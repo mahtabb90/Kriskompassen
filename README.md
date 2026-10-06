@@ -40,8 +40,11 @@ Our initial focus is to establish the project structure and a working developmen
 The current version includes a home page, crisis preparedness summaries and detailed articles
 based on example information. Users can save and remove articles locally for offline access.
 
-A backend can retrieve public warning messages from Sveriges Radio. Live warnings are not
-yet shown in the app, and information is not updated automatically.
+A banner can display an active public warning from Sveriges Radio across the app's pages.
+If several warnings are active, it shows the most recent message and indicates that others exist.
+The app reports when it cannot check warning information and offers a retry. It checks for new
+warnings when opened; recurring updates and offline storage of warnings are not implemented.
+Use with the deployed backend remains to be verified.
 
 ## 🛠️ Tech stack
 

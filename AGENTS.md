@@ -21,7 +21,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Users can save important information locally and read it offline.
 - Target users: the general public in Sweden. No login or user accounts are planned.
 - Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`), an offline list of saved crisis information (`/offline`), an offline detail page (`/offline/:id`) and a not-found page. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
-- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. Krisinformation.se is the chosen source for future general news integration; no news service is implemented. The UI still uses mock crisis information; live VMA display and recurring updates are not implemented.
+- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, an indication of additional warnings and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; the crisis articles still use mock data. Recurring network updates and offline VMA storage are not implemented. The banner's integration with the deployed backend remains to be verified.
 
 ## 2. Tech stack
 
@@ -39,7 +39,8 @@ Frontend versions are taken from `frontend/package-lock.json`.
 | Linting | ESLint + typescript-eslint 8.70.0 | 10.10.0 |
 | Formatting | Prettier (+ `eslint-config-prettier` 10.1.8) | 3.9.9 |
 | Unit tests | Vitest | 4.1.11 |
-| Component tests | React Testing Library | not yet installed |
+| Component tests | React Testing Library / DOM Testing Library | 16.3.3 / 10.4.2 |
+| DOM test environment | jsdom | 27.4.0 |
 | E2E tests | Playwright (Node/TypeScript) | not yet installed |
 | Runtime | Node.js (required by Vite) | ^20.19.0 or >=22.12.0 |
 
@@ -65,6 +66,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 .
 ├── AGENTS.md            # this file
 ├── README.md            # outward-facing project overview (English)
+├── DESIGN_SYSTEM.md     # visual tokens, component patterns and accessibility rules
 ├── documentation-baseline.md  # JSDoc and code comment rules for frontend/TypeScript code
 ├── backend/             # FastAPI VMA API
 │   ├── DEVELOPMENT.md  # backend and VMA integration development guide
@@ -85,14 +87,15 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── e2e/             # Playwright tests (planned, not created)
     ├── index.html       # HTML entry (lang="sv")
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
-    ├── vitest.config.ts # Node unit tests, without application plugins or .env loading
+    ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
-        ├── components/  # AppLayout, Header, BottomNavigation, CrisisCard, DetailedCrisisCard, OfflineToggle (save/remove offline control) and placeholders
+        ├── components/  # AppLayout, Header, BottomNavigation, VmaBanner, CrisisCard, DetailedCrisisCard, OfflineToggle and placeholders
         ├── config/      # central backend address and VMA request timeout
         ├── data/        # mock data (mockCrisisData.ts)
         ├── db/          # Dexie database (db.ts)
+        ├── hooks/       # VMA request state and local validity scheduling; adjacent tests
         ├── pages/       # HomePage, CrisisInfoPage, OfflinePage, NotFoundPage, IndexedDbTest and placeholders
-        ├── services/    # offline storage, VMA fetching, validation and mapping; adjacent unit tests
+        ├── services/    # offline storage, VMA fetching, validation, mapping and banner selection; adjacent unit tests
         └── types/       # shared crisis and VMA TypeScript types
 ```
 
@@ -216,8 +219,11 @@ Frontend conventions visible in the existing code:
 - Use one component per file. Component files use PascalCase (`HomePage.tsx`, `CrisisCard.tsx`).
 - I/O services export named `async` functions (see `services/offlineService.ts` and `services/vmaService.ts`). Pure response validators remain synchronous.
 - `fetchVmas()` returns `VmaResult`: shared messages, provider/API metadata, feed/evaluation times and validation diagnostics. Fetching, per-record validation and mapping stay separate. The source is SR's object envelope with `timestamp` and `alerts`, not the previous assumed Krisinformation news shape. Only Actual/Public Alert, Update and Cancel records are exposed; Swedish `sv-SE` blocks are selected. Technical tests and exercises are excluded.
-- VMA models distinguish CAP message IDs from incident IDs and retain complete references. Cancel records may lack title/content because `info: null` is valid. Mapping applies expiry and same-feed Update/Cancel references; unknown validity is explicit. No history is retained between requests. See `backend/DEVELOPMENT.md` for lifecycle and future attribution rules.
+- VMA models distinguish CAP message IDs from incident IDs and retain complete references. Cancel records may lack title/content because `info: null` is valid. Mapping applies expiry and same-feed Update/Cancel references; unknown validity is explicit. No history is merged between requests. See `backend/DEVELOPMENT.md` for lifecycle and attribution rules.
+- `useVmaBanner()` belongs to the persistent `AppLayout`. It fetches once on mount and on manual retry, sharing an in-flight request during StrictMode effect replays. Failures retain the last successful feed with an explicit status notice and last-check time. Local sent/expiry timers and tab visibility re-evaluate the complete feed through the mapper; they never poll the API. No VMA is persisted.
+- `selectVmaBanner()` selects the newest active `sentAt`, breaking ties by ascending CAP ID. Additional active messages get an indication, not a list or switcher. Rejected/excluded records, validation issues and unknown validity produce an incomplete-information notice alongside any usable active warning. `VmaBanner` only presents state and invokes the supplied retry callback; it does not fetch or parse data.
 - Style with Tailwind utility classes in `className`. There are no separate CSS files beyond `index.css`.
+- Follow [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) for visual tokens and component patterns. VMA warning colours use the central `vma-surface`, `vma-foreground`, `vma-border` and `vma-focus` aliases in `index.css`; keep their documented contrast and focus treatment in sync with the implementation.
 - Put IndexedDB access in `db/` and `services/`, not in UI components. (`IndexedDbTest.tsx` is a test page and an exception.)
 - Prettier decides formatting (`frontend/.prettierrc`: no semicolons, double quotes, `printWidth` 100). `npm run format:check` must pass.
 - `endOfLine` is `"auto"` because Windows clones with `core.autocrlf=true` have CRLF working trees while the repo stores LF; `"lf"` would fail the check after every checkout.
@@ -229,6 +235,8 @@ Navigation and accessibility:
 - Each routed page supplies one `h1` with `id="page-heading"` and `tabIndex={-1}`. The layout derives the document title from that heading and focuses it on pathname changes, including back/forward navigation. Initial loads and hash-only changes preserve browser focus.
 - Add public links to the typed `navigationItems` list in `BottomNavigation.tsx` and register their routes in `App.tsx`. Navigation currently uses exact matching; keep the same DOM links across screen sizes.
 - The navigation is fixed at the bottom below `48rem` viewport width when the viewport is at least `30rem` high; otherwise it stays above the content in normal flow. `AppLayout` measures it with `ResizeObserver` and maintains `--navigation-height` for content and scroll spacing.
+- The VMA notice is sticky above the header and limited to 40dvh, with complete text in a keyboard-scrollable region. The layout measures `--vma-banner-height`, reserves top scroll padding and reveals focused main/navigation content between the notice and any fixed bottom bar. Only the first visible region owns the top safe-area inset. VMA live announcements persist across routes; the warning never takes focus when it arrives.
+- Active VMA warnings pair the red/white surface with a visible VMA label and an inline SVG warning triangle. The redundant icon inherits `currentColor`, is hidden from assistive technology and is not focusable. Loading, failure and uncertainty alone use the neutral status surface without a warning icon; they never imply an active warning or an all-clear result.
 - Target WCAG 2.2 AA with at least 48 by 48 CSS pixel navigation targets, 3px focus outlines and a non-colour active indicator. Verify keyboard use, zoom/reflow and actual screen-reader output; do not infer conformance from an accessibility tree alone.
 - Keep UI and accessible names in Swedish. Use English comments and documentation as specified in section 6.
 
@@ -269,8 +277,8 @@ Decided tooling:
 | Frontend E2E | Playwright (Node/TypeScript) | `frontend/e2e/` |
 | Backend | pytest | `backend/tests/` |
 
-- Vitest is installed for Node unit tests in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library, `fake-indexeddb` and Playwright remain planned and are not installed.
-- Frontend VMA tests cover validation, mapping and transport with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Synthetic fixtures keep the suites independent of live API availability; manual checks against SR's official examples complement them.
+- Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. `fake-indexeddb` and Playwright remain planned and are not installed.
+- Frontend VMA tests cover validation, mapping, transport, banner selection, request state, local time transitions and shared layout integration with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Component/hook integration tests replace `fetch` while retaining real validation/mapping, so no backend is required. No test page or mock mode is bundled with the app. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Manual browser layout checks complement these tests; jsdom does not verify real rendering or spoken screen-reader output.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
 - Keep E2E small: a few critical user flows, including at least one offline scenario.
 
@@ -289,7 +297,7 @@ Decided tooling:
 - Anything in the frontend (including `VITE_*` env vars) ends up in the public bundle. Never put API keys or secrets there.
 - Data in IndexedDB is readable on the user's device. Do not store sensitive personal data there.
 - Treat data from external sources (VMA, etc.) as untrusted. Do not render it as raw HTML. Validate the feed envelope with Pydantic and individual records in the frontend before presentation.
-- VMA responses carry provider and API attribution for the future UI. The usage review in `backend/DEVELOPMENT.md` supports intended onward publication, but current VMA-specific terms remain unconfirmed. Clarify terms with SR before public release or adding persistent/offline VMA storage; this integration adds no such storage.
+- VMA responses carry provider and API attribution. The banner links to the provider; API metadata remains available for a future detail view. The usage review in `backend/DEVELOPMENT.md` supports intended onward publication, but current VMA-specific terms remain unconfirmed. Clarify terms with SR before public release or adding persistent/offline VMA storage; this integration adds no such storage.
 
 ## 10. Ask before you do any of this
 
