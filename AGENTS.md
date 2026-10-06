@@ -66,6 +66,9 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 ├── AGENTS.md            # this file
 ├── README.md            # outward-facing project overview (English)
 ├── documentation-baseline.md  # JSDoc and code comment rules for frontend/TypeScript code
+├── .github/
+│   └── workflows/
+│       └── backend-ci.yml  # backend Ruff and pytest on every pull request
 ├── backend/             # FastAPI VMA API
 │   ├── DEVELOPMENT.md  # backend and VMA integration development guide
 │   ├── .python-version # Python 3.13
@@ -117,6 +120,8 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 | E2E | `npm run test:e2e` *(planned, Playwright)* | n/a |
 | Build | `npm run build` | n/a |
 | Preview build | `npm run preview` | n/a |
+
+CI: `.github/workflows/backend-ci.yml` runs the backend lint, format check and test commands on every pull request. No frontend CI exists.
 
 Create the backend environment with Python 3.13 using `python3 -m venv .venv` and activate it with `source .venv/bin/activate`. On Windows PowerShell, use `py -3.13 -m venv .venv` and `.venv\Scripts\Activate.ps1`. See `backend/DEVELOPMENT.md` for environment configuration and manual verification commands.
 
@@ -271,6 +276,7 @@ Decided tooling:
 
 - Vitest is installed for Node unit tests in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library, `fake-indexeddb` and Playwright remain planned and are not installed.
 - Frontend VMA tests cover validation, mapping and transport with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Synthetic fixtures keep the suites independent of live API availability; manual checks against SR's official examples complement them.
+- The backend pytest suite runs in CI on every pull request and must not need network access or environment variables.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
 - Keep E2E small: a few critical user flows, including at least one offline scenario.
 
@@ -299,7 +305,7 @@ Decided tooling:
 - Change the PWA or service worker config (`VitePWA` in `vite.config.ts`, manifest, caching).
 - Create or change any backend database schema.
 - Add or change authentication or authorization.
-- Touch deploy, hosting or CI config. None exists yet.
+- Touch deploy, hosting or CI config (`.github/workflows/`). The only CI is `backend-ci.yml`; no deploy or hosting config exists.
 - Delete, move or rename files.
 - Change TypeScript, ESLint, Prettier, Ruff or build configuration.
 - Remove or skip an existing test.
