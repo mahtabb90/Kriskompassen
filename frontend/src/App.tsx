@@ -1,7 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import AppLayout from "./components/AppLayout"
 import DetailedCrisisCard from "./components/DetailedCrisisCard"
-import { ModeProvider } from "./context/ModeContext"
+import { ModeProvider } from "./context/ModeProvider"
 import CrisisInfoPage from "./pages/CrisisInfoPage"
 import HomePage from "./pages/HomePage"
 import IndexedDbTest from "./pages/IndexedDbTest"
