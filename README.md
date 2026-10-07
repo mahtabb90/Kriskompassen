@@ -47,7 +47,6 @@ A banner can display an active public warning from Sveriges Radio across the app
 If several warnings are active, it shows the most recent message and indicates that others exist.
 The app reports when it cannot check warning information and offers a retry. It checks for new
 warnings when opened; recurring updates and offline storage of warnings are not implemented.
-Use with the deployed backend remains to be verified.
 
 ## 🛠️ Tech stack
 
