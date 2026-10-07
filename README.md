@@ -37,8 +37,14 @@ The project is in an early stage of development.
 
 Our initial focus is to establish the project structure and a working development-to-deployment workflow. Features, including offline support, will be developed incrementally based on priorities and feedback.
 
-The current version includes a home page and a list of crisis preparedness summaries.
-Detailed articles and live alerts are not yet available.
+The current version includes a home page, crisis preparedness summaries and detailed articles
+based on example information. Users can save and remove articles locally for offline access,
+and switch between online and offline mode with a visible, keyboard-accessible control. Losing
+the internet connection switches the app to offline mode automatically, with an explanation;
+switching back to online mode is always a manual choice.
+
+A backend can retrieve public warning messages from Sveriges Radio. Live warnings are not
+yet shown in the app, and information is not updated automatically.
 
 ## 🛠️ Tech stack
 
@@ -52,6 +58,8 @@ Detailed articles and live alerts are not yet available.
 | IndexedDB       | Storing saved crisis information locally in the browser |
 | Dexie           | Simplifying access to IndexedDB                         |
 | vite-plugin-pwa | PWA integration and service worker generation           |
+| Python / FastAPI | Retrieving public warnings from Sveriges Radio        |
+| Pydantic        | Validating external API response structure              |
 
 ## Navigation and accessibility
 

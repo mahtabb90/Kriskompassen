@@ -20,7 +20,8 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Planned scope: Swedish public warning messages (VMA) and local information about floods, gas leaks, contaminated drinking water, etc.
 - Users can save important information locally and read it offline.
 - Target users: the general public in Sweden. No login or user accounts are planned.
-- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`) and a not-found page. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
+- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level online/offline mode toggle (`ModeToggle`, backed by `ModeContext`) controls whether `/crisis` and `/crisis/:id` show the bundled mock dataset or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
+- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. Krisinformation.se is the chosen source for future general news integration; no news service is implemented. The UI still uses mock crisis information; live VMA display and recurring updates are not implemented.
 
 ## 2. Tech stack
 
@@ -37,21 +38,26 @@ Frontend versions are taken from `frontend/package-lock.json`.
 | PWA | vite-plugin-pwa | 1.3.0 |
 | Linting | ESLint + typescript-eslint 8.70.0 | 10.10.0 |
 | Formatting | Prettier (+ `eslint-config-prettier` 10.1.8) | 3.9.9 |
-| Unit/component tests | Vitest + React Testing Library | not yet installed |
+| Unit tests | Vitest | 4.1.11 |
+| Component tests | React Testing Library | not yet installed |
 | E2E tests | Playwright (Node/TypeScript) | not yet installed |
 | Runtime | Node.js (required by Vite) | ^20.19.0 or >=22.12.0 |
 
-Backend (decided, not yet scaffolded):
+Backend versions are pinned in `backend/requirements.txt` and `backend/requirements-dev.txt`:
 
 | Area | Technology | Version |
 | --- | --- | --- |
-| Language | Python | set at scaffold time: the version the pinned FastAPI and Pydantic releases require; record it here and in `.python-version` |
-| Framework | FastAPI | latest stable at scaffold time, pinned |
+| Language | Python | 3.13 (`backend/.python-version`) |
+| Framework | FastAPI | 0.142.2 |
+| Validation | Pydantic | 2.13.5 |
+| Configuration | pydantic-settings | 2.15.0 |
+| HTTP client | HTTPX | 0.28.1 |
+| ASGI server | Uvicorn | 0.54.0 |
 | Dependencies | `pip` + `requirements.txt` / `requirements-dev.txt` | pinned versions |
-| Tests | pytest | |
-| Lint/format | Ruff | |
+| Tests | pytest | 9.1.1 |
+| Lint/format | Ruff | 0.16.10 |
 
-- `backend/` is empty today. Do not scaffold it without an explicit task for it.
+- Backend setup, API contracts, configuration and manual verification are documented in `backend/DEVELOPMENT.md`.
 
 ## 3. Repository structure
 
@@ -60,28 +66,45 @@ Backend (decided, not yet scaffolded):
 ├── AGENTS.md            # this file
 ├── README.md            # outward-facing project overview (English)
 ├── documentation-baseline.md  # JSDoc and code comment rules for frontend/TypeScript code
-├── backend/             # FastAPI (planned)
-│   ├── src/             # empty placeholder (.gitkeep); new backend code goes here
-│   └── tests/           # pytest tests (planned, not created)
+├── .github/
+│   └── workflows/
+│       └── backend-ci.yml  # backend Ruff and pytest on every pull request
+├── backend/             # FastAPI VMA API
+│   ├── DEVELOPMENT.md  # backend and VMA integration development guide
+│   ├── .python-version # Python 3.13
+│   ├── .env.example    # backend variable names only
+│   ├── requirements.txt / requirements-dev.txt  # pinned dependencies
+│   ├── pyproject.toml  # Ruff and pytest configuration
+│   ├── src/
+│   │   ├── app.py      # application factory, lifespan and exported app
+│   │   ├── api/        # routers and dependencies
+│   │   ├── core/       # settings and upstream errors
+│   │   ├── models/     # Pydantic response models
+│   │   └── services/   # upstream fetching and JSON decoding
+│   └── tests/          # pytest API and upstream response tests
 └── frontend/            # Vite + React + TypeScript PWA
+    ├── .env.example    # frontend variable names only
     ├── public/          # static assets and PWA icons
     ├── e2e/             # Playwright tests (planned, not created)
     ├── index.html       # HTML entry (lang="sv")
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
+    ├── vitest.config.ts # Node unit tests, without application plugins or .env loading
     └── src/
-        ├── components/  # AppLayout, Header, BottomNavigation, CrisisCard and placeholders
+        ├── components/  # AppLayout, Header, BottomNavigation, CrisisCard, DetailedCrisisCard, OfflineToggle (save/remove), ModeToggle (online/offline switch), ConnectionStatus (connectivity + auto-switch notice)
+        ├── config/      # central backend address and VMA request timeout
+        ├── context/     # ModeContext.tsx (ModeProvider) + modeContext.ts (context object, Mode type, useMode hook — split to satisfy react-refresh/only-export-components)
         ├── data/        # mock data (mockCrisisData.ts)
         ├── db/          # Dexie database (db.ts)
-        ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders
-        ├── services/    # data/storage logic (offlineService.ts)
-        └── types/       # shared TypeScript types (crisis.ts: CrisisItem)
+        ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
+        ├── services/    # offline storage, VMA fetching, validation and mapping; adjacent unit tests
+        └── types/       # shared crisis and VMA TypeScript types
 ```
 
 - New frontend code goes under `frontend/src/` in the matching folder above.
 - Frontend unit and component tests live next to the file they test: `Foo.test.tsx` beside `Foo.tsx`.
-- New backend code goes under `backend/src/`, tests under `backend/tests/`. TODO(team): the internal layout of `backend/src/` is decided when the backend is scaffolded.
-- Several files in `components/` and `pages/` are empty placeholders. Fill them in; do not delete them without asking.
-- `App.tsx` registers routes inside the shared `AppLayout`. Crisis detail routes are not implemented; existing `/crisis/:id` card links currently render `NotFoundPage`.
+- New backend code goes under `backend/src/`: routers and dependency providers in `api/`, settings and application errors in `core/`, Pydantic models in `models/`, and upstream I/O in `services/`. Tests belong in `backend/tests/`.
+- Several files in `components/` and `pages/` are empty placeholders (`SettingsPage.tsx`). Fill them in; do not delete them without asking.
+- `App.tsx` wraps the router in `ModeProvider` and registers routes inside the shared `AppLayout`. There are no separate offline routes: `CrisisInfoPage` (`/crisis`) and `DetailedCrisisCard` (`/crisis/:id`) both read `useMode()` and switch data source — the bundled mock dataset in online mode, `getOfflineItems()`/`getOfflineItem(id)` in offline mode — without the URL changing. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`. If the item shown on `/crisis/:id` is not available in the current mode (mode just switched, or the URL was opened directly), `DetailedCrisisCard` redirects to `/crisis` with an explanation passed via router location state, rather than showing an inline message. `ModeProvider` forces offline mode (with an explanation shown by `ConnectionStatus`) when the browser's `offline` event fires, and never switches back to online automatically — the user does that via `ModeToggle`, which is disabled for online mode while `navigator.onLine` is false.
 
 ## 4. Commands
 
@@ -89,15 +112,19 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 
 | Task | Frontend | Backend |
 | --- | --- | --- |
-| Install | `npm ci` (use the lock file) | `pip install -r requirements.txt -r requirements-dev.txt` *(planned)* |
-| Dev server | `npm run dev` | `uvicorn` *(planned; exact command set at scaffold time)* |
-| Lint | `npm run lint` | `ruff check .` *(planned)* |
-| Format | `npm run format` (check only: `npm run format:check`) | `ruff format .` *(planned)* |
+| Install | `npm ci` (use the lock file) | `pip install -r requirements.txt -r requirements-dev.txt` |
+| Dev server | `npm run dev` | `uvicorn src.app:app --reload --port 8000` |
+| Lint | `npm run lint` | `ruff check .` |
+| Format | `npm run format` (check only: `npm run format:check`) | `ruff format .` (check only: `ruff format --check .`) |
 | Typecheck | `npx tsc -b` (also runs as part of `build`) | n/a |
-| Test | `npm run test` *(planned, Vitest)* | `pytest` *(planned)* |
+| Test | `npm run test` (Vitest, single run) | `pytest` |
 | E2E | `npm run test:e2e` *(planned, Playwright)* | n/a |
 | Build | `npm run build` | n/a |
 | Preview build | `npm run preview` | n/a |
+
+CI: `.github/workflows/backend-ci.yml` runs the backend lint, format check and test commands on every pull request. No frontend CI exists.
+
+Create the backend environment with Python 3.13 using `python3 -m venv .venv` and activate it with `source .venv/bin/activate`. On Windows PowerShell, use `py -3.13 -m venv .venv` and `.venv\Scripts\Activate.ps1`. See `backend/DEVELOPMENT.md` for environment configuration and manual verification commands.
 
 ## 5. Git
 
@@ -193,7 +220,9 @@ Frontend conventions visible in the existing code:
 - Use `import type` / `type` modifiers for type-only imports (for example `import Dexie, { type Table } from "dexie"`).
 - Write function components declared with `function Name() {}`, followed by `export default Name`.
 - Use one component per file. Component files use PascalCase (`HomePage.tsx`, `CrisisCard.tsx`).
-- Services export named `async` functions (see `services/offlineService.ts`).
+- I/O services export named `async` functions (see `services/offlineService.ts` and `services/vmaService.ts`). Pure response validators remain synchronous.
+- `fetchVmas()` returns `VmaResult`: shared messages, provider/API metadata, feed/evaluation times and validation diagnostics. Fetching, per-record validation and mapping stay separate. The source is SR's object envelope with `timestamp` and `alerts`, not the previous assumed Krisinformation news shape. Only Actual/Public Alert, Update and Cancel records are exposed; Swedish `sv-SE` blocks are selected. Technical tests and exercises are excluded.
+- VMA models distinguish CAP message IDs from incident IDs and retain complete references. Cancel records may lack title/content because `info: null` is valid. Mapping applies expiry and same-feed Update/Cancel references; unknown validity is explicit. No history is retained between requests. See `backend/DEVELOPMENT.md` for lifecycle and future attribution rules.
 - Style with Tailwind utility classes in `className`. There are no separate CSS files beyond `index.css`.
 - Put IndexedDB access in `db/` and `services/`, not in UI components. (`IndexedDbTest.tsx` is a test page and an exception.)
 - Prettier decides formatting (`frontend/.prettierrc`: no semicolons, double quotes, `printWidth` 100). `npm run format:check` must pass.
@@ -225,11 +254,15 @@ Documentation (frontend/TypeScript):
   - Comments describe current behaviour. Update or remove them in the same change as the code they describe.
 - The baseline does not apply to the backend. Backend code follows the backend conventions below.
 
-Backend conventions (apply once the backend exists):
+Backend conventions:
 
 - Type hints on all functions. Docstrings on public functions, classes and modules.
 - Pydantic models for request and response bodies.
 - Ruff decides formatting and lint rules. `ruff check .` and `ruff format --check .` must pass.
+- The application factory in `src/app.py` creates a shared HTTPX client through FastAPI lifespan. Routers obtain it through dependency injection; upstream fetching and response validation remain separate.
+- `GET /api/v1/vmas` returns `{timestamp, alerts, source}` from SR's VMA API. Pydantic validates the timezone-bearing timestamp and strict JSON alerts list, preserving malformed entries for frontend classification. The backend supplies source/API attribution independently of upstream data, including empty feeds. Public API metadata strips credentials, query parameters and fragments. Individual records must be validated before presentation.
+- Upstream failures use the documented `error.code` / `error.message` envelope and HTTP 502 or 504. Never turn failures into a successful empty result. VMA responses use `Cache-Control: no-store`.
+- Backend settings use the `KRISKOMPASSEN_` environment prefix. Frontend backend address and request timeout live in `frontend/src/config/apiConfig.ts`. See `backend/DEVELOPMENT.md` for defaults, CORS and the official API evidence.
 
 ## 8. Testing
 
@@ -242,7 +275,9 @@ Decided tooling:
 | Frontend E2E | Playwright (Node/TypeScript) | `frontend/e2e/` |
 | Backend | pytest | `backend/tests/` |
 
-- None of the tools are installed yet. Until they are, new code must at least pass `npm run lint`, `npm run format:check` and `npm run build`. Describe how it was checked manually.
+- Vitest is installed for Node unit tests in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library, `fake-indexeddb` and Playwright remain planned and are not installed.
+- Frontend VMA tests cover validation, mapping and transport with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Synthetic fixtures keep the suites independent of live API availability; manual checks against SR's official examples complement them.
+- The backend pytest suite runs in CI on every pull request and must not need network access or environment variables.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
 - Keep E2E small: a few critical user flows, including at least one offline scenario.
 
@@ -257,20 +292,22 @@ Decided tooling:
 ## 9. Security
 
 - Never commit secrets. `.env` and `.env.*` are git-ignored (except `.env.example`).
-- Do not read, print or edit `.env` files. Document new variables by name only in `.env.example`, which does not exist yet.
+- Do not read, print or edit `.env` files. Document new variables by name only in `frontend/.env.example` or `backend/.env.example`. Backend settings read process environment variables and do not automatically load `.env` files.
 - Anything in the frontend (including `VITE_*` env vars) ends up in the public bundle. Never put API keys or secrets there.
 - Data in IndexedDB is readable on the user's device. Do not store sensitive personal data there.
-- Treat data from external sources (VMA, etc.) as untrusted. Do not render it as raw HTML. Validate it in the backend with Pydantic before passing it on.
+- Treat data from external sources (VMA, etc.) as untrusted. Do not render it as raw HTML. Validate the feed envelope with Pydantic and individual records in the frontend before presentation.
+- VMA responses carry provider and API attribution for the future UI. The usage review in `backend/DEVELOPMENT.md` supports intended onward publication, but current VMA-specific terms remain unconfirmed. Clarify terms with SR before public release or adding persistent/offline VMA storage; this integration adds no such storage.
 
 ## 10. Ask before you do any of this
 
 - Add, remove or upgrade dependencies, or change `package-lock.json` or `requirements*.txt`.
 - Scaffold the backend.
 - Change the Dexie schema in `frontend/src/db/db.ts`. The current schema is `version(1)`, `crisisItems: "id, title, source, fetchedAt, savedOffline"`. Changes need a new version and a migration plan.
+- Reintroduce separate online/offline routes (e.g. `/offline`, `/offline/:id`) or otherwise encode the selected mode in the URL. The team decided online/offline is a shared `ModeContext` read by `/crisis` and `/crisis/:id` instead (see §3) specifically so the URL never changes on a mode switch. If a task description points back toward separate routes, stop and ask, and remind them of this decision, rather than silently reintroducing it.
 - Change the PWA or service worker config (`VitePWA` in `vite.config.ts`, manifest, caching).
 - Create or change any backend database schema.
 - Add or change authentication or authorization.
-- Touch deploy, hosting or CI config. None exists yet.
+- Touch deploy, hosting or CI config (`.github/workflows/`). The only CI is `backend-ci.yml`; no deploy or hosting config exists.
 - Delete, move or rename files.
 - Change TypeScript, ESLint, Prettier, Ruff or build configuration.
 - Remove or skip an existing test.

@@ -12,6 +12,7 @@ export async function saveOffline(item: CrisisItem) {
   await db.crisisItems.put({
     ...item,
     savedOffline: true,
+    savedAt: new Date().toISOString(),
   })
 }
 
@@ -31,6 +32,20 @@ export async function removeOffline(id: string) {
  */
 export async function getOfflineItems() {
   return db.crisisItems.filter((item) => item.savedOffline).toArray()
+}
+
+/**
+ * Returns one crisis item that is saved for offline access.
+ *
+ * @param id ID of the item to read.
+ * @returns The stored item, or undefined if it does not exist locally or its `savedOffline`
+ * value is not true.
+ * @throws If IndexedDB cannot be read.
+ */
+export async function getOfflineItem(id: string) {
+  const item = await db.crisisItems.get(id)
+
+  return item?.savedOffline === true ? item : undefined
 }
 
 /**
