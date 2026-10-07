@@ -1,8 +1,12 @@
 # Backend and VMA integration
 
 The FastAPI backend fetches VMA from Sveriges Radio's dedicated v3 API. The frontend service
-validates public Swedish CAP records and maps them to a shared presentation model. Presentation,
-polling, persistent storage and deployment are separate work. The UI still uses mock crisis data.
+validates public Swedish CAP records and maps them to a shared presentation model. A shared banner
+shows the most recent active warning. Polling and persistent VMA storage remain separate work;
+general crisis articles still use mock data. Deployed integration remains to be verified.
+
+Use [VERCEL_HANDOFF.md](VERCEL_HANDOFF.md) for project settings, the information to collect during
+temporary Vercel access, Production/Preview scoping and the deployed verification sequence.
 
 ## Separate information sources
 
@@ -68,7 +72,7 @@ terms page is `simon.taubert@sr.se`; ask for the team responsible for `vmaapi.sr
 has been sent and no special permission has been obtained by this implementation.
 
 The implementation performs on-demand fetching only, stores no VMA, preserves source message text
-and supplies attribution for the future UI. These choices do not themselves prove legal permission.
+and supplies attribution for the UI. These choices do not themselves prove legal permission.
 Do not add automatic refresh intervals, long-term fixtures containing real warnings, or logo usage
 on the assumption that public HTTP access grants unrestricted reuse.
 
@@ -89,7 +93,9 @@ are the same. The existing local `.venv` can be reused; Anaconda is not required
 
 Run `npm run dev` from `frontend/` in another terminal. Use `http://localhost:5173` or
 `http://127.0.0.1:5173` for the default CORS configuration. Configure a different exact origin
-if Vite selects another port. No VMA is displayed on the application's pages yet.
+if Vite selects another port. The shared app layout requests VMA once when it mounts and displays
+the most recent active warning. Without an available backend it shows an explicit status notice
+and a retry button; a failed request is never treated as a successful empty response.
 
 ## Configuration
 
@@ -159,6 +165,7 @@ and attribution change.
 | `validateVmaResponse()` | Validate envelope, attribution and consumed CAP fields; report partial failures |
 | `mapVmaMessage()` | Map one validated record at an explicit evaluation time |
 | `mapVmaMessages()` | Also apply Update/Cancel references within the current feed |
+| `reevaluateVmaMessages()` | Reapply the same lifecycle rules to the complete mapped feed at a later time, without I/O |
 | `fetchVmas()` | Compose the steps, returning `VmaResult` with an evaluation timestamp |
 
 `VmaResult` always contains `source`, `feedUpdatedAt`, `evaluatedAt`, `messages`, `issues`,
@@ -204,10 +211,10 @@ to look like a full warning article.
 - There is no cross-request history. Standalone cancellations retain references but cannot
   restore missing article text. Missing references do not justify guessing which earlier record
   ended. Feed disappearance alone is not recorded as a cancellation.
-- Future banners must select `status === "active"` and handle unknown, errors and partial data
-  explicitly. React should render upstream text as plain text, never `dangerouslySetInnerHTML`.
+- The banner selects `status === "active"` and handles unknown, errors and partial data explicitly.
+  React renders upstream text as plain text, never `dangerouslySetInnerHTML`.
 
-### Attribution for the future UI
+### Attribution in the UI
 
 Source metadata is available on both the result and every message, including cancellations:
 
@@ -222,11 +229,61 @@ Source metadata is available on both the result and every message, including can
 }
 ```
 
-A future source section can show **Källa: Sveriges Radio** and **API: Sveriges Radios VMA-API,
-v3**, with links from the model. `details[].senderName` identifies the issuer; `details[].web`
+The banner shows **Källa: Sveriges Radio**, linked through `source.url`. A future detail section
+can also show **API: Sveriges Radios VMA-API, v3**, with links from the model.
+`details[].senderName` identifies the issuer; `details[].web`
 may be a general explanation of VMA and must not be labelled as the original article unless
 that is actually what the link contains. API details can live in the source/detail section so
-the warning itself stays concise. This task adds the data contract, not a visible component.
+the warning itself stays concise.
+
+### Frontend banner behavior and verification without a backend
+
+`AppLayout` owns `useVmaBanner()` so route changes share one request and presentation state.
+The hook calls `fetchVmas()` on mount; React StrictMode effect replays share an in-flight request.
+Manual retry is guarded against concurrent calls. No route change, visibility change or timer
+triggers another network request. Reload the app to fetch newly published warnings after a
+successful check; recurring updates are a separate feature.
+
+`selectVmaBanner()` chooses the active message with the latest CAP `sentAt`, breaking equal
+timestamps by ascending CAP ID. It does not filter by location. The title is `VmaMessage.title`
+(CAP `info.event`), which may be a general VMA label, not an incident-specific news headline.
+When several messages are active the banner indicates that additional VMA exist; it provides
+neither a list nor a switcher or detail route.
+
+The presentation distinguishes these states:
+
+- Initial loading: `Kontrollerar VMA…`.
+- Successful result with no active or uncertain data: no visible notice and no all-clear claim.
+- Failed request: `VMA-status kunde inte kontrolleras.` with `Försök igen`.
+- Rejected/excluded records, validation issues or unknown validity: an incomplete-information
+  notice, with any usable active message still shown. Exclusion counts do not distinguish
+  technical tests from other excluded records, so the UI treats them conservatively.
+- Retrying/failure after a successful check: retain that feed, display the status and last
+  successful check time, and continue evaluating its validity. No VMA is persisted offline.
+
+The hook re-evaluates the entire retained feed at the next `sentAt`/expiry boundary and when a
+tab becomes visible again. This reuses the mapper's expiry and same-feed Update/Cancel rules.
+`lastCheckedAt` remains the time of the successful request; local time checks cannot make data
+appear freshly fetched. Expiry never means that the underlying incident is over.
+
+The sticky notice occupies normal layout space and at most 40dvh. Complete long titles can be
+scrolled inside its keyboard-focusable region. Its measured height updates top scroll padding,
+while the existing mobile navigation measurement reserves bottom space. A stable alert region
+announces a new message; route changes preserve it. Actual screen-reader announcements require
+manual verification, not just DOM assertions.
+
+Run `npm run test` from `frontend/` without a backend. Component/hook tests use React Testing
+Library and jsdom; other unit tests retain the Node environment. Tests replace `fetch`, use the
+real validator/mapper where relevant and freeze time. jsdom 27.4.0 is pinned to preserve the
+project's existing Node requirements. There is no in-app test page or production mock mode.
+
+For manual frontend checks, use temporary browser response fixtures matching the backend
+envelope. Verify active/empty/error/retry/multiple/long-title/expiry cases at desktop and mobile
+sizes, including short landscape screens, keyboard focus, reflow and screen-reader output.
+Remove the temporary fixture setup afterward. It must not be committed or included in a build.
+When the real backend is available, repeat the request/CORS/error checks with fixtures disabled
+and verify an actual active warning if one exists. Report those integration results separately
+from simulated frontend verification.
 
 ## Verification
 
@@ -259,7 +316,9 @@ identified the production and example endpoints. No production warning was avail
 Tests use synthetic SR-shaped fixtures and deterministic times, never live emergency content.
 They cover valid/empty/mixed/invalid feeds, optional fields, Swedish blocks, exclusions,
 cancellations, supersession, expiry, provenance, safe links, transport failures and timeouts.
-Backend tests use HTTPX MockTransport and ASGITransport without contacting SR. No dependencies
+Backend tests use HTTPX MockTransport and ASGITransport without contacting SR. CORS integration
+tests load the origin list from a process environment variable and verify browser-readable
+successes and gateway failures, plus allowed and rejected preflights. No dependencies
 were added for the provider switch. Existing Vitest and pytest tooling is reused.
 
 For manual checking, open `http://localhost:8000/docs` and execute GET `/api/v1/vmas`. Confirm
@@ -273,5 +332,7 @@ console.log(await fetchVmas())
 
 Inspect metadata, diagnostics and statuses. Static examples may have expired relative to today's
 date; do not alter their dates to suggest they are live. Real production messages, when available,
-still merit an end-to-end check. Vercel deployment, live UI, polling and offline VMA storage remain
-outside this implementation.
+still merit an end-to-end check. The banner can be verified with simulated responses without a
+backend; its deployed backend integration remains a separate verification step. The Vercel handoff
+guide and frontend SPA routing configuration prepare that step without deploying either project.
+Polling and offline VMA storage remain outside this implementation.

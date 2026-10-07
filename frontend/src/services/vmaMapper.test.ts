@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { ValidatedVmaRecord } from "../types/vma"
 import { alert, feed, info, now, source } from "./__fixtures__/vma"
-import { mapVmaMessage, mapVmaMessages } from "./vmaMapper"
+import { mapVmaMessage, mapVmaMessages, reevaluateVmaMessages } from "./vmaMapper"
 import { validateVmaResponse } from "./vmaResponseValidator"
 
 function record(overrides: Partial<ValidatedVmaRecord> = {}): ValidatedVmaRecord {
@@ -193,4 +193,49 @@ describe("mapVmaMessages", () => {
       { id: "cancel", references: [referenceTo(original)], status: "inactive" },
     ])
   })
+})
+
+describe("reevaluateVmaMessages", () => {
+  it("reuses the mapper's mixed and expired validity rules without changing the original feed", () => {
+    const firstExpiry = now + 1_000
+    const secondExpiry = now + 2_000
+    const input = record()
+    input.info = [
+      { ...input.info[0], expires: new Date(firstExpiry).toISOString() },
+      { ...input.info[0], expires: new Date(secondExpiry).toISOString() },
+    ]
+    const original = mapVmaMessages([input], source, now)
+    const mixed = reevaluateVmaMessages(original, source, firstExpiry)
+    expect(mixed[0].status).toBe("unknown")
+    expect(reevaluateVmaMessages(mixed, source, secondExpiry)[0]).toMatchObject({
+      status: "inactive",
+      inactiveReason: "expired",
+      content: original[0].content,
+      source,
+    })
+    expect(original[0].status).toBe("active")
+  })
+
+  it.each(["Update", "Cancel"] as const)(
+    "applies a future %s at its sent boundary and does not resurrect its predecessor",
+    (msgType) => {
+      const original = record()
+      const sent = now + 1_000
+      const replacement = record({
+        identifier: "future-replacement",
+        msgType,
+        sent: new Date(sent).toISOString(),
+        references: [referenceTo(original)],
+        info: msgType === "Cancel" ? [] : original.info,
+      })
+      const initial = mapVmaMessages([original, replacement], source, now)
+      expect(initial.map((message) => message.status)).toEqual(["active", "unknown"])
+      const next = reevaluateVmaMessages(initial, source, sent)
+      expect(next[0].inactiveReason).toBe(msgType === "Cancel" ? "cancelled" : "superseded")
+      expect(next[1].status).toBe(msgType === "Cancel" ? "inactive" : "active")
+      const expired = reevaluateVmaMessages(next, source, Date.parse(info.expires))
+      expect(expired.every((message) => message.status === "inactive")).toBe(true)
+      expect(expired[0].inactiveReason).toBe(next[0].inactiveReason)
+    }
+  )
 })
