@@ -62,12 +62,13 @@ export interface ValidatedVmaRecord {
 }
 
 /**
- * Supplies the shared model for future VMA presentation.
+ * Supplies the shared model for VMA presentation.
  *
  * id identifies a CAP message, while incidentIds connect revisions of an incident. Cancellation
  * records have no fabricated title or content; use references to associate earlier messages.
  * Text must be rendered as text, never HTML. Times are ISO 8601 UTC strings. Status is evaluated
- * when the feed is mapped, not continuously. Each info block retains its own expiry and area.
+ * when the feed is mapped; consumers can re-evaluate the complete feed at later times. Each info
+ * block retains its own expiry and area.
  */
 export interface VmaMessage {
   id: string

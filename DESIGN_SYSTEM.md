@@ -23,7 +23,7 @@ Clarity, readability, accessibility, and resilience under stressful conditions t
    The typography relies on a clean, modern system font stack. Avoiding external font dependencies eliminates third-party network requests and supports resilient rendering in offline or degraded network conditions without font asset download bottlenecks or missing glyphs.
 
 5. **Restrained Brand Accents and Functional Animation**
-   Brand accent yellow/amber (`amber-400`) is used in moderation as a decorative brand accent within the signature crisis-information bar. It must not by itself communicate warning severity or urgency. Semantic warning styling must be defined separately when needed. Animations are minimal and functional (150ms transitions), avoiding motion sickness and unnecessary distraction.
+   Brand accent yellow/amber (`amber-400`) is used in moderation as a decorative brand accent within the signature crisis-information bar. It must not by itself communicate warning severity or urgency. VMA warnings use the dedicated semantic palette defined in section 2.4.1. Animations are minimal and functional (150ms transitions), avoiding motion sickness and unnecessary distraction.
 
 ---
 
@@ -84,14 +84,32 @@ To ensure accessible contrast ratios, eliminate visual glare, and provide comfor
 | State | Text Class | Background / Border | Meaning & Usage |
 | --- | --- | --- | --- |
 | **Success / Saved** | `text-green-800` (`#166534`) | `border-green-800` | Confirmation messages (e.g. offline save confirmed). Must pair with an explicit text label and checkmark (`✓`). |
-| **Error / Alert** | `text-red-800` (`#991b1b`) | `border-red-800` | Error messages, storage failure, failed network requests. Must pair with clear instructional copy. |
+| **Error / Alert** | `text-red-800` (`#991b1b`) | `border-red-800` | Error messages, storage failure, failed network requests. Must pair with clear instructional copy. VMA request status follows section 2.4.1 to distinguish a failed check from an active warning. |
 | **Status Pending / Busy** | `text-slate-700` | `opacity-60` | Loading indicators, storage read/write in progress (`…`). |
 
 #### Rule on Warnings and Urgency
-`amber-400` is a brand accent, not a semantic warning colour. It must never be used alone to indicate severity, hazard, or urgency. When semantic warning or urgency indicators (such as crisis severity levels or VMA urgency banners) are introduced in future work:
+`amber-400` is a brand accent, not a semantic warning colour. It must never be used alone to indicate severity, hazard, or urgency. Warning indicators, including the VMA banner, follow these rules:
 - Warning styling must be defined separately as dedicated semantic tokens.
 - Warnings must combine clear visual contrast with explicit text labels and unambiguous iconography.
 - Information must never rely on colour alone.
+
+#### 2.4.1 Active VMA Warning
+
+`VmaBanner` uses a dark red surface and white foreground to distinguish an active public warning from ordinary application content. These semantic aliases are defined centrally with `@theme inline` in `frontend/src/index.css`; components use the aliases rather than hard-coded palette colours.
+
+| Semantic Token | Palette Value | Usage |
+| --- | --- | --- |
+| `--color-vma-surface` | `var(--color-red-900)` | `bg-vma-surface`: the banner and its sticky VMA label. |
+| `--color-vma-foreground` | `var(--color-white)` | `text-vma-foreground`: text, warning icon, source link and retry control. |
+| `--color-vma-border` | `var(--color-red-950)` | `border-vma-border`: a decorative bottom edge, not a control or severity indicator. |
+| `--color-vma-focus` | `var(--color-white)` | The 3px focus outline for the warning region and its controls. |
+
+- **Meaning:** Red/white styling and the warning triangle appear only when an active VMA message is displayed. They do not encode different severity levels.
+- **Icon and label:** A 24×24 CSS pixel inline SVG triangle with an exclamation mark sits beside **"VMA · Viktigt meddelande"**, with an 8px gap. Its 2px rounded stroke uses `currentColor`. The icon does not shrink or require a downloaded asset. It is redundant with the visible label, so it has `aria-hidden="true"` and `focusable="false"` and creates no extra screen-reader announcement or keyboard stop.
+- **Text and layout:** The bold heading is 18px, rising to 20px at `sm`. Titles wrap without truncation. The icon and VMA label remain visible while the banner scrolls internally, with the same opaque warning background. The outer banner stays above the header, is limited to 40dvh and remains keyboard-scrollable.
+- **Links and controls:** Source attribution stays underlined. The compact retry button uses inherited foreground colour, a 1px `border-current`, `rounded-md`, a 14px semibold label and `disabled:opacity-70`. Links and buttons retain at least 48×48 CSS pixel targets. This warning-surface variant preserves legibility without introducing a second button background.
+- **Focus and contrast:** White text, icon strokes, enabled control borders and focus outlines against the installed Tailwind `red-900` value (`oklch(0.396 0.141 25.723)`) have approximately **10.06:1** contrast. The banner's own outline is inset by 4px to remain visible at the viewport edge; control outlines use the standard 4px outward offset. Forced colours use the system `Highlight` outline and allow the icon to inherit the system foreground. Recheck contrast when changing these tokens.
+- **Request states:** Without an active message, loading, failed checks and incomplete information use `bg-slate-100 text-slate-900 border-slate-300` with explicit status text and no warning triangle. A successful empty result hides the banner. A failed check never claims that no VMA exists. If a still-active message is retained after a failed check, its warning styling stays visible alongside the failure text and last successful check time.
 
 ### 2.5 Contrast Targets and Verification
 
@@ -319,6 +337,7 @@ A centralized, prominent focus outline is defined in `frontend/src/index.css`:
 - **Outline Width:** 3px solid deep blue (`#1e3a8a`).
 - **Outline Offset:** 4px spacing between element border and the focus line, preventing clipping against rounded corners.
 - **Visibility:** Uses `:focus-visible` to display rings for keyboard navigation while suppressing them during mouse clicks.
+- **VMA warning surface:** Uses `--color-vma-focus` (white) instead of blue, as defined in section 2.4.1. The scrollable warning region uses a 4px inward offset to keep its outline within the viewport.
 
 ### 8.2 High Contrast / Forced Colors Mode
 
@@ -326,7 +345,9 @@ For users who rely on Windows High Contrast / Forced Colors:
 
 ```css
 @media (forced-colors: active) {
-  :where(a, button, [tabindex]):focus-visible {
+  :where(a, button, [tabindex]):focus-visible,
+  .vma-banner:focus-visible,
+  .vma-banner :focus-visible {
     outline-color: Highlight;
   }
 }
@@ -356,6 +377,9 @@ KrisKompassen performs offline storage operations and network calls that must be
   - Text colour: `text-red-800 font-medium text-sm`.
   - Used for action failures (e.g. storage quota exceeded, device storage blocked).
   - Screen readers announce assertively.
+- **VMA warnings and request status:**
+  - A persistent, visually hidden `role="alert"` announces the selected active VMA and any indication that more warnings exist. The visible icon is excluded from this announcement.
+  - Loading, failure and incomplete-information messages use `role="status"`. Their text inherits the foreground of the warning or neutral status surface defined in section 2.4.1.
 
 ### 9.2 Symbol Representation
 
@@ -366,6 +390,8 @@ Icons used for offline storage status:
 
 All visual icons must be accompanied by explicit text descriptions (`"Sparad offline"`, `"Inte sparad"`, `"Kontrollerar sparad status…"`).
 
+The VMA warning uses an outlined triangle with an exclamation mark beside its explicit VMA label. Use the inline SVG described in section 2.4.1 rather than an emoji, so its shape and contrast remain consistent across platforms.
+
 ---
 
 ## 10. Accessibility Rules Summary (WCAG 2.2 AA Baseline)
@@ -374,10 +400,10 @@ All visual icons must be accompanied by explicit text descriptions (`"Sparad off
 | --- | --- |
 | **1.3.1 Info and Relationships** | Strict landmark hierarchy (`header`, `nav`, `main`), one single `h1` per page, semantic `article` and `section` tags. |
 | **1.4.3 Contrast (Minimum)** | All text/background pairs target >= 4.5:1 (normal text) and >= 3.0:1 (large text/controls). Ratios must be verified upon implementation. |
-| **1.4.1 Use of Color** | States use text labels, icons (`✓`/`○`), underlines, and weight changes. Never colour alone. |
+| **1.4.1 Use of Color** | States use text labels, icons (`✓`/`○` and the VMA warning triangle), underlines, and weight changes. Never colour alone. |
 | **2.1.1 Keyboard Navigation** | All interactive controls reachable and operable by keyboard alone. |
 | **2.4.1 Bypass Blocks** | Prominent skip link (`Hoppa till huvudinnehållet`) at top of DOM. |
-| **2.4.7 Focus Visible** | 3px deep blue outline with 4px offset on `:focus-visible`. High-contrast mode fallback. |
+| **2.4.7 Focus Visible** | 3px deep blue outline with 4px offset on `:focus-visible`; white on the VMA warning surface, inset for its scrollable region. High-contrast mode fallback. |
 | **2.5.8 Target Size (Minimum)** | Exceeds WCAG 2.2 AA (24×24 CSS px) by enforcing KrisKompassen's internal standard of at least 48×48 CSS pixels (`min-h-12 min-w-12`) for improved touch usability, older adults, and high-stress scenarios. |
 | **3.1.1 Language of Page** | `<html lang="sv">`. All user-facing UI text in Swedish. Code documentation in English. |
 | **4.1.3 Status Messages** | `role="status"` and `role="alert"` used for asynchronous feedback. |
