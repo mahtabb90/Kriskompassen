@@ -58,7 +58,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 | Tests | pytest | 9.1.1 |
 | Lint/format | Ruff | 0.16.10 |
 
-- Backend setup, API contracts, configuration and manual verification are documented in `backend/DEVELOPMENT.md`.
+- Backend setup, API contracts, configuration and manual verification are documented in `backend/DEVELOPMENT.md`. `backend/VERCEL_HANDOFF.md` covers separate Vercel projects, environment scopes, the access-window information template and live integration checks.
 
 ## 3. Repository structure
 
@@ -73,6 +73,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │       └── backend-ci.yml  # backend Ruff and pytest on every pull request
 ├── backend/             # FastAPI VMA API
 │   ├── DEVELOPMENT.md  # backend and VMA integration development guide
+│   ├── VERCEL_HANDOFF.md # Vercel setup, information to collect and integration checks
 │   ├── .python-version # Python 3.13
 │   ├── .env.example    # backend variable names only
 │   ├── requirements.txt / requirements-dev.txt  # pinned dependencies
@@ -83,13 +84,14 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   │   ├── core/       # settings and upstream errors
 │   │   ├── models/     # Pydantic response models
 │   │   └── services/   # upstream fetching and JSON decoding
-│   └── tests/          # pytest API and upstream response tests
+│   └── tests/          # pytest API, CORS and upstream response tests
 └── frontend/            # Vite + React + TypeScript PWA
     ├── .env.example    # frontend variable names only
     ├── public/          # static assets and PWA icons
     ├── e2e/             # Playwright tests (planned, not created)
     ├── index.html       # HTML entry (lang="sv")
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
+    ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs
     ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
         ├── components/  # AppLayout, Header, BottomNavigation, VmaBanner, CrisisCard, DetailedCrisisCard, OfflineToggle (save/remove), ModeToggle (online/offline switch), ConnectionStatus (connectivity + auto-switch notice)
@@ -126,6 +128,8 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 | Preview build | `npm run preview` | n/a |
 
 CI: `.github/workflows/backend-ci.yml` runs the backend lint, format check and test commands on every pull request. No frontend CI exists.
+
+Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint without additional Vercel configuration. Account settings and deployed behavior still need verification. Manual `curl` diagnostics and the process-variable command for running the local frontend against a deployed backend are documented in `backend/VERCEL_HANDOFF.md`.
 
 Create the backend environment with Python 3.13 using `python3 -m venv .venv` and activate it with `source .venv/bin/activate`. On Windows PowerShell, use `py -3.13 -m venv .venv` and `.venv\Scripts\Activate.ps1`. See `backend/DEVELOPMENT.md` for environment configuration and manual verification commands.
 
@@ -287,6 +291,7 @@ Decided tooling:
 - Frontend VMA tests cover validation, mapping, transport, banner selection, request state, local time transitions and shared layout integration with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Component/hook integration tests replace `fetch` while retaining real validation/mapping, so no backend is required. No test page or mock mode is bundled with the app. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Manual browser layout checks complement these tests; jsdom does not verify real rendering or spoken screen-reader output.
 - Layout integration tests mount the real `ModeProvider`, mode toggle and connectivity status alongside the VMA banner. They cover keyboard mode changes, title updates, connection loss and recovery while preserving the warning and its single request.
 - The backend pytest suite runs in CI on every pull request and must not need network access or environment variables.
+- Backend CORS tests provide their own JSON origin environment variable and mock upstream transport. They check that approved frontend origins can read successful feeds and 502/504 errors, and that unlisted origins or unsupported methods do not pass preflight.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
 - Keep E2E small: a few critical user flows, including at least one offline scenario.
 
@@ -316,7 +321,7 @@ Decided tooling:
 - Change the PWA or service worker config (`VitePWA` in `vite.config.ts`, manifest, caching).
 - Create or change any backend database schema.
 - Add or change authentication or authorization.
-- Touch deploy, hosting or CI config (`.github/workflows/`). The only CI is `backend-ci.yml`; no deploy or hosting config exists.
+- Touch deploy, hosting or CI config (`frontend/vercel.json`, `.github/workflows/`). The frontend has a Vercel SPA fallback; the only CI is `backend-ci.yml`. Project creation, environment settings and actual deployment remain account-side work.
 - Delete, move or rename files.
 - Change TypeScript, ESLint, Prettier, Ruff or build configuration.
 - Remove or skip an existing test.

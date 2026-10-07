@@ -1,8 +1,12 @@
 # Backend and VMA integration
 
 The FastAPI backend fetches VMA from Sveriges Radio's dedicated v3 API. The frontend service
-validates public Swedish CAP records and maps them to a shared presentation model. Presentation,
-polling, persistent storage and deployment are separate work. The UI still uses mock crisis data.
+validates public Swedish CAP records and maps them to a shared presentation model. A shared banner
+shows the most recent active warning. Polling and persistent VMA storage remain separate work;
+general crisis articles still use mock data. Deployed integration remains to be verified.
+
+Use [VERCEL_HANDOFF.md](VERCEL_HANDOFF.md) for project settings, the information to collect during
+temporary Vercel access, Production/Preview scoping and the deployed verification sequence.
 
 ## Separate information sources
 
@@ -312,7 +316,9 @@ identified the production and example endpoints. No production warning was avail
 Tests use synthetic SR-shaped fixtures and deterministic times, never live emergency content.
 They cover valid/empty/mixed/invalid feeds, optional fields, Swedish blocks, exclusions,
 cancellations, supersession, expiry, provenance, safe links, transport failures and timeouts.
-Backend tests use HTTPX MockTransport and ASGITransport without contacting SR. No dependencies
+Backend tests use HTTPX MockTransport and ASGITransport without contacting SR. CORS integration
+tests load the origin list from a process environment variable and verify browser-readable
+successes and gateway failures, plus allowed and rejected preflights. No dependencies
 were added for the provider switch. Existing Vitest and pytest tooling is reused.
 
 For manual checking, open `http://localhost:8000/docs` and execute GET `/api/v1/vmas`. Confirm
@@ -327,5 +333,6 @@ console.log(await fetchVmas())
 Inspect metadata, diagnostics and statuses. Static examples may have expired relative to today's
 date; do not alter their dates to suggest they are live. Real production messages, when available,
 still merit an end-to-end check. The banner can be verified with simulated responses without a
-backend; its deployed backend integration remains a separate verification step. Vercel deployment,
-polling and offline VMA storage remain outside this implementation.
+backend; its deployed backend integration remains a separate verification step. The Vercel handoff
+guide and frontend SPA routing configuration prepare that step without deploying either project.
+Polling and offline VMA storage remain outside this implementation.
