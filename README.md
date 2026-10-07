@@ -43,8 +43,11 @@ and switch between online and offline mode with a visible, keyboard-accessible c
 the internet connection switches the app to offline mode automatically, with an explanation;
 switching back to online mode is always a manual choice.
 
-A backend can retrieve public warning messages from Sveriges Radio. Live warnings are not
-yet shown in the app, and information is not updated automatically.
+A banner can display an active public warning from Sveriges Radio across the app's pages.
+If several warnings are active, it shows the most recent message and indicates that others exist.
+The app reports when it cannot check warning information and offers a retry. It checks for new
+warnings when opened; recurring updates and offline storage of warnings are not implemented.
+Use with the deployed backend remains to be verified.
 
 ## 🛠️ Tech stack
 

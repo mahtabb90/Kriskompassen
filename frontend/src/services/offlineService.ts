@@ -12,6 +12,7 @@ export async function saveOffline(item: CrisisItem) {
   await db.crisisItems.put({
     ...item,
     savedOffline: true,
+    savedAt: new Date().toISOString(),
   })
 }
 
