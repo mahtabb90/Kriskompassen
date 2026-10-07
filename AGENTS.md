@@ -70,7 +70,8 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 ├── documentation-baseline.md  # JSDoc and code comment rules for frontend/TypeScript code
 ├── .github/
 │   └── workflows/
-│       └── backend-ci.yml  # backend Ruff and pytest on every pull request
+│       ├── backend-ci.yml   # backend Ruff and pytest on every pull request
+│       └── frontend-ci.yml  # frontend lint, format check, tests and build on PRs and pushes to dev
 ├── backend/             # FastAPI VMA API
 │   ├── DEVELOPMENT.md  # backend and VMA integration development guide
 │   ├── VERCEL_HANDOFF.md # Vercel setup, information to collect and integration checks
@@ -87,6 +88,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   └── tests/          # pytest API, CORS and upstream response tests
 └── frontend/            # Vite + React + TypeScript PWA
     ├── .env.example    # frontend variable names only
+    ├── .nvmrc          # single source of truth for the Node.js version (24 = latest 24.x LTS), read by CI and nvm
     ├── public/          # static assets and PWA icons
     ├── e2e/             # Playwright tests (planned, not created)
     ├── index.html       # HTML entry (lang="sv")
@@ -127,7 +129,7 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 | Build | `npm run build` | n/a |
 | Preview build | `npm run preview` | n/a |
 
-CI: `.github/workflows/backend-ci.yml` runs the backend lint, format check and test commands on every pull request. No frontend CI exists.
+CI: `.github/workflows/backend-ci.yml` runs the backend lint, format check and test commands on every pull request. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npx prettier --check .`, `npx vitest run` and `npm run build` on Node from `frontend/.nvmrc` for pull requests into `dev` or `main` and for pushes to `dev`.
 
 Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint without additional Vercel configuration. Account settings and deployed behavior still need verification. Manual `curl` diagnostics and the process-variable command for running the local frontend against a deployed backend are documented in `backend/VERCEL_HANDOFF.md`.
 
@@ -321,7 +323,7 @@ Decided tooling:
 - Change the PWA or service worker config (`VitePWA` in `vite.config.ts`, manifest, caching).
 - Create or change any backend database schema.
 - Add or change authentication or authorization.
-- Touch deploy, hosting or CI config (`frontend/vercel.json`, `.github/workflows/`). The frontend has a Vercel SPA fallback; the only CI is `backend-ci.yml`. Project creation, environment settings and actual deployment remain account-side work.
+- Touch deploy, hosting or CI config (`frontend/vercel.json`, `.github/workflows/`). The frontend has a Vercel SPA fallback. CI workflows are `backend-ci.yml` and `frontend-ci.yml`. Project creation, environment settings and actual deployment remain account-side work.
 - Delete, move or rename files.
 - Change TypeScript, ESLint, Prettier, Ruff or build configuration.
 - Remove or skip an existing test.
