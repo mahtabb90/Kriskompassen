@@ -47,7 +47,6 @@ A banner can display an active public warning from Sveriges Radio across the app
 If several warnings are active, it shows the most recent message and indicates that others exist.
 The app reports when it cannot check warning information and offers a retry. It checks for new
 warnings when opened; recurring updates and offline storage of warnings are not implemented.
-Use with the deployed backend remains to be verified.
 
 ## 🛠️ Tech stack
 
@@ -80,6 +79,8 @@ technology has not yet been fully verified.
 KrisKompassen is being developed as a **Progressive Web App (PWA)**, with installation and offline access as core goals.
 
 On supported browsers and devices, users will be able to install the app on their phone or computer.
+
+> **Older PWA installations:** If you installed KrisKompassen on your home screen before **7 October 2026**, remove the old installation and reinstall it from [www.kriskompassen.se](https://www.kriskompassen.se/) to load the current app version and VMA configuration.
 
 The planned offline approach separates the app itself from the information users choose to save:
 

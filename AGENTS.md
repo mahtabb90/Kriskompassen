@@ -21,7 +21,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Users can save important information locally and read it offline.
 - Target users: the general public in Sweden. No login or user accounts are planned.
 - Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level online/offline mode toggle (`ModeToggle`, backed by `ModeContext`) controls whether `/crisis` and `/crisis/:id` show the bundled mock dataset or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
-- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, an indication of additional warnings and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; the crisis articles still use mock data. Recurring network updates and offline VMA storage are not implemented. The banner's integration with the deployed backend remains to be verified.
+- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, an indication of additional warnings and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; the crisis articles still use mock data. Recurring network updates and offline VMA storage are not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
 
 ## 2. Tech stack
 
@@ -58,7 +58,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 | Tests | pytest | 9.1.1 |
 | Lint/format | Ruff | 0.16.10 |
 
-- Backend setup, API contracts, configuration and manual verification are documented in `backend/DEVELOPMENT.md`. `backend/VERCEL_HANDOFF.md` covers separate Vercel projects, environment scopes, the access-window information template and live integration checks.
+- Backend setup, API contracts, configuration, Vercel connection settings and manual verification are documented in `backend/DEVELOPMENT.md`.
 
 ## 3. Repository structure
 
@@ -74,7 +74,6 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │       └── frontend-ci.yml  # frontend lint, format check, tests and build on PRs and pushes to dev
 ├── backend/             # FastAPI VMA API
 │   ├── DEVELOPMENT.md  # backend and VMA integration development guide
-│   ├── VERCEL_HANDOFF.md # Vercel setup, information to collect and integration checks
 │   ├── .python-version # Python 3.13
 │   ├── .env.example    # backend variable names only
 │   ├── requirements.txt / requirements-dev.txt  # pinned dependencies
@@ -131,7 +130,7 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 
 CI: `.github/workflows/backend-ci.yml` runs the backend lint, format check and test commands on every pull request. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npx prettier --check .`, `npx vitest run` and `npm run build` on Node from `frontend/.nvmrc` for pull requests into `dev` or `main` and for pushes to `dev`.
 
-Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint without additional Vercel configuration. Account settings and deployed behavior still need verification. Manual `curl` diagnostics and the process-variable command for running the local frontend against a deployed backend are documented in `backend/VERCEL_HANDOFF.md`.
+Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint. The user configured Vercel to install backend dependencies from `requirements.txt`; that dashboard setting is not stored in the repo. Connection settings, local testing against the deployed backend and the scope of reported live verification are documented in `backend/DEVELOPMENT.md`.
 
 Create the backend environment with Python 3.13 using `python3 -m venv .venv` and activate it with `source .venv/bin/activate`. On Windows PowerShell, use `py -3.13 -m venv .venv` and `.venv\Scripts\Activate.ps1`. See `backend/DEVELOPMENT.md` for environment configuration and manual verification commands.
 
