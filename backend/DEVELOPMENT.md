@@ -301,6 +301,8 @@ ruff check .
 ruff format --check .
 ```
 
+The same three backend commands run in `.github/workflows/backend-ci.yml` on every pull request.
+
 On 2026-10-05, a manual check passed the production and example feeds through the backend route
 and the actual frontend validator/mapper. Production produced an empty successful result. The six
 examples produced two expired warnings and one cancellation; three technical-test/exercise records

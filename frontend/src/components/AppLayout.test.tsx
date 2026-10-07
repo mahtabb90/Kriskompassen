@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import { StrictMode } from "react"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { MemoryRouter, Route, Routes } from "react-router-dom"
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { ModeProvider } from "../context/ModeProvider"
+import { useMode } from "../context/modeContext"
 import { alert, feed, info, now } from "../services/__fixtures__/vma"
 import AppLayout from "./AppLayout"
 
@@ -10,9 +12,11 @@ let fetchMock = vi.fn<typeof fetch>()
 const measureCallbacks: Array<() => void> = []
 
 function Page({ title }: { title: string }) {
+  const { mode } = useMode()
+  const { pathname } = useLocation()
   return (
-    <h1 id="page-heading" tabIndex={-1}>
-      {title}
+    <h1 id="page-heading" tabIndex={-1} data-pathname={pathname}>
+      {mode === "offline" ? `${title} – offline` : title}
     </h1>
   )
 }
@@ -20,20 +24,23 @@ function Page({ title }: { title: string }) {
 function mountLayout() {
   return render(
     <StrictMode>
-      <MemoryRouter>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route index element={<Page title="Hem" />} />
-            <Route path="crisis" element={<Page title="Krisinformation" />} />
-          </Route>
-        </Routes>
-      </MemoryRouter>
+      <ModeProvider>
+        <MemoryRouter>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route index element={<Page title="Hem" />} />
+              <Route path="crisis" element={<Page title="Krisinformation" />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </ModeProvider>
     </StrictMode>
   )
 }
 
 beforeEach(() => {
   vi.spyOn(Date, "now").mockReturnValue(now)
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(true)
   fetchMock = vi.fn<typeof fetch>()
   vi.stubGlobal("fetch", fetchMock)
   vi.stubGlobal(
@@ -88,6 +95,66 @@ describe("AppLayout VMA integration", () => {
     fireEvent.click(button)
     await waitFor(() => expect(screen.queryByRole("complementary")).toBe(null))
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("keeps the warning while keyboard mode changes update content and title on the same route", async () => {
+    fetchMock.mockResolvedValue(Response.json(feed()))
+    mountLayout()
+    const warningHeading = await screen.findByRole("heading", { name: info.event })
+    const announcement = screen.getByRole("alert").firstChild
+    const online = screen.getByRole("radio", { name: "Online" })
+    const offline = screen.getByRole("radio", { name: "Offline" })
+
+    online.focus()
+    fireEvent.keyDown(online, { key: "ArrowRight" })
+    expect(offline.getAttribute("aria-checked")).toBe("true")
+    expect(document.activeElement).toBe(offline)
+    expect(screen.getByRole("heading", { name: "Hem – offline" }).dataset.pathname).toBe("/")
+    await waitFor(() => expect(document.title).toBe("Hem – offline | KrisKompassen"))
+    expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
+    expect(screen.getByRole("alert").firstChild).toBe(announcement)
+    expect(screen.getByText("Ansluten")).toBeTruthy()
+
+    fireEvent.keyDown(offline, { key: "ArrowLeft" })
+    expect(online.getAttribute("aria-checked")).toBe("true")
+    expect(document.activeElement).toBe(online)
+    expect(screen.getByRole("heading", { name: "Hem" }).dataset.pathname).toBe("/")
+    await waitFor(() => expect(document.title).toBe("Hem | KrisKompassen"))
+    expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
+    expect(screen.getByRole("alert").firstChild).toBe(announcement)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("shows connection loss alongside a retained warning and keeps offline mode on recovery", async () => {
+    fetchMock.mockResolvedValue(Response.json(feed()))
+    mountLayout()
+    const warningHeading = await screen.findByRole("heading", { name: info.event })
+    const live = screen.getByRole("alert")
+    const announcement = live.firstChild
+    const online = screen.getByRole<HTMLButtonElement>("radio", { name: "Online" })
+    const offline = screen.getByRole("radio", { name: "Offline" })
+
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+    fireEvent(window, new Event("offline"))
+    expect(screen.getByText("Ingen internetanslutning")).toBeTruthy()
+    expect(
+      screen.getByText("Internetanslutningen försvann, så du har växlats till offline-läge.")
+    ).toBeTruthy()
+    expect(offline.getAttribute("aria-checked")).toBe("true")
+    expect(online.disabled).toBe(true)
+    expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
+    expect(live.firstChild).toBe(announcement)
+
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true)
+    fireEvent(window, new Event("online"))
+    expect(screen.getByText("Ansluten")).toBeTruthy()
+    expect(offline.getAttribute("aria-checked")).toBe("true")
+    expect(online.disabled).toBe(false)
+    fireEvent.click(screen.getByRole("button", { name: "Stäng" }))
+    expect(screen.getByRole("alert")).toBe(live)
+    expect(live.firstChild).toBe(announcement)
+    expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it("shows one valid message and an incomplete-data notice when a record is malformed", async () => {

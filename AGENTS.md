@@ -20,7 +20,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Planned scope: Swedish public warning messages (VMA) and local information about floods, gas leaks, contaminated drinking water, etc.
 - Users can save important information locally and read it offline.
 - Target users: the general public in Sweden. No login or user accounts are planned.
-- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`), an offline list of saved crisis information (`/offline`), an offline detail page (`/offline/:id`) and a not-found page. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
+- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level online/offline mode toggle (`ModeToggle`, backed by `ModeContext`) controls whether `/crisis` and `/crisis/:id` show the bundled mock dataset or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
 - A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, an indication of additional warnings and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; the crisis articles still use mock data. Recurring network updates and offline VMA storage are not implemented. The banner's integration with the deployed backend remains to be verified.
 
 ## 2. Tech stack
@@ -68,6 +68,9 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 ├── README.md            # outward-facing project overview (English)
 ├── DESIGN_SYSTEM.md     # visual tokens, component patterns and accessibility rules
 ├── documentation-baseline.md  # JSDoc and code comment rules for frontend/TypeScript code
+├── .github/
+│   └── workflows/
+│       └── backend-ci.yml  # backend Ruff and pytest on every pull request
 ├── backend/             # FastAPI VMA API
 │   ├── DEVELOPMENT.md  # backend and VMA integration development guide
 │   ├── .python-version # Python 3.13
@@ -89,12 +92,13 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
     ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
-        ├── components/  # AppLayout, Header, BottomNavigation, VmaBanner, CrisisCard, DetailedCrisisCard, OfflineToggle and placeholders
+        ├── components/  # AppLayout, Header, BottomNavigation, VmaBanner, CrisisCard, DetailedCrisisCard, OfflineToggle (save/remove), ModeToggle (online/offline switch), ConnectionStatus (connectivity + auto-switch notice)
         ├── config/      # central backend address and VMA request timeout
+        ├── context/     # ModeProvider.tsx + modeContext.ts (context object, Mode type, useMode hook — split to satisfy react-refresh/only-export-components)
         ├── data/        # mock data (mockCrisisData.ts)
         ├── db/          # Dexie database (db.ts)
         ├── hooks/       # VMA request state and local validity scheduling; adjacent tests
-        ├── pages/       # HomePage, CrisisInfoPage, OfflinePage, NotFoundPage, IndexedDbTest and placeholders
+        ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
         ├── services/    # offline storage, VMA fetching, validation, mapping and banner selection; adjacent unit tests
         └── types/       # shared crisis and VMA TypeScript types
 ```
@@ -102,8 +106,8 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 - New frontend code goes under `frontend/src/` in the matching folder above.
 - Frontend unit and component tests live next to the file they test: `Foo.test.tsx` beside `Foo.tsx`.
 - New backend code goes under `backend/src/`: routers and dependency providers in `api/`, settings and application errors in `core/`, Pydantic models in `models/`, and upstream I/O in `services/`. Tests belong in `backend/tests/`.
-- Several files in `components/` and `pages/` are empty placeholders. Fill them in; do not delete them without asking.
-- `App.tsx` registers routes inside the shared `AppLayout`. The `/crisis/:id` route renders `DetailedCrisisCard` from the mock data and shows a not-found message for unknown IDs. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`. `OfflinePage` (`/offline`) lists items from `getOfflineItems()`, and `DetailedCrisisCard` with `isOffline` (`/offline/:id`) reads a single saved item through `getOfflineItem(id)`. No navigation link or connection detection enters these routes yet.
+- Several files in `components/` and `pages/` are empty placeholders (`SettingsPage.tsx`). Fill them in; do not delete them without asking.
+- `App.tsx` wraps the router in `ModeProvider` and registers routes inside the shared `AppLayout`. There are no separate offline routes: `CrisisInfoPage` (`/crisis`) and `DetailedCrisisCard` (`/crisis/:id`) both read `useMode()` and switch data source — the bundled mock dataset in online mode, `getOfflineItems()`/`getOfflineItem(id)` in offline mode — without the URL changing. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`. If the item shown on `/crisis/:id` is not available in the current mode (mode just switched, or the URL was opened directly), `DetailedCrisisCard` redirects to `/crisis` with an explanation passed via router location state, rather than showing an inline message. `ModeProvider` forces offline mode (with an explanation shown by `ConnectionStatus`) when the browser's `offline` event fires, and never switches back to online automatically — the user does that via `ModeToggle`, which is disabled for online mode while `navigator.onLine` is false.
 
 ## 4. Commands
 
@@ -120,6 +124,8 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 | E2E | `npm run test:e2e` *(planned, Playwright)* | n/a |
 | Build | `npm run build` | n/a |
 | Preview build | `npm run preview` | n/a |
+
+CI: `.github/workflows/backend-ci.yml` runs the backend lint, format check and test commands on every pull request. No frontend CI exists.
 
 Create the backend environment with Python 3.13 using `python3 -m venv .venv` and activate it with `source .venv/bin/activate`. On Windows PowerShell, use `py -3.13 -m venv .venv` and `.venv\Scripts\Activate.ps1`. See `backend/DEVELOPMENT.md` for environment configuration and manual verification commands.
 
@@ -279,6 +285,8 @@ Decided tooling:
 
 - Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. `fake-indexeddb` and Playwright remain planned and are not installed.
 - Frontend VMA tests cover validation, mapping, transport, banner selection, request state, local time transitions and shared layout integration with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Component/hook integration tests replace `fetch` while retaining real validation/mapping, so no backend is required. No test page or mock mode is bundled with the app. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Manual browser layout checks complement these tests; jsdom does not verify real rendering or spoken screen-reader output.
+- Layout integration tests mount the real `ModeProvider`, mode toggle and connectivity status alongside the VMA banner. They cover keyboard mode changes, title updates, connection loss and recovery while preserving the warning and its single request.
+- The backend pytest suite runs in CI on every pull request and must not need network access or environment variables.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
 - Keep E2E small: a few critical user flows, including at least one offline scenario.
 
@@ -304,10 +312,11 @@ Decided tooling:
 - Add, remove or upgrade dependencies, or change `package-lock.json` or `requirements*.txt`.
 - Scaffold the backend.
 - Change the Dexie schema in `frontend/src/db/db.ts`. The current schema is `version(1)`, `crisisItems: "id, title, source, fetchedAt, savedOffline"`. Changes need a new version and a migration plan.
+- Reintroduce separate online/offline routes (e.g. `/offline`, `/offline/:id`) or otherwise encode the selected mode in the URL. The team decided online/offline is a shared `ModeContext` read by `/crisis` and `/crisis/:id` instead (see §3) specifically so the URL never changes on a mode switch. If a task description points back toward separate routes, stop and ask, and remind them of this decision, rather than silently reintroducing it.
 - Change the PWA or service worker config (`VitePWA` in `vite.config.ts`, manifest, caching).
 - Create or change any backend database schema.
 - Add or change authentication or authorization.
-- Touch deploy, hosting or CI config. None exists yet.
+- Touch deploy, hosting or CI config (`.github/workflows/`). The only CI is `backend-ci.yml`; no deploy or hosting config exists.
 - Delete, move or rename files.
 - Change TypeScript, ESLint, Prettier, Ruff or build configuration.
 - Remove or skip an existing test.
