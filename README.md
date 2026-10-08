@@ -47,7 +47,6 @@ A banner can display an active public warning from Sveriges Radio across the app
 If several warnings are active, it shows the most recent message and indicates that others exist.
 The app reports when it cannot check warning information and offers a retry. It checks for new
 warnings when opened; recurring updates and offline storage of warnings are not implemented.
-Use with the deployed backend remains to be verified.
 
 ## 🛠️ Tech stack
 
@@ -79,7 +78,18 @@ technology has not yet been fully verified.
 
 KrisKompassen is being developed as a **Progressive Web App (PWA)**, with installation and offline access as core goals.
 
-On supported browsers and devices, users will be able to install the app on their phone or computer.
+On supported browsers and devices, users can install the app on their phone or computer.
+
+When connected, the app checks for new app versions when opened or brought back to the foreground.
+Once an update is ready, it offers **Uppdatera appen**. Users can continue reading until they choose
+to reload with the new version; saved articles remain on the device. The header shows the loaded
+app version. Failed update checks do not block use, and a fully downloaded update can be selected
+offline. A waiting version can also become active after the app is completely closed.
+
+Older installations without this update message may need an online opening followed by a full
+close and reopening of the app to receive the feature. This keeps the existing installation and
+saved information. The update message becomes available once the new app code has loaded.
+Verification of this upgrade path on an existing iPhone installation is pending.
 
 The planned offline approach separates the app itself from the information users choose to save:
 
@@ -117,6 +127,7 @@ Our workflow includes:
 - **Jira backlog** — tracking and prioritising upcoming work.
 - **Daily stand-ups** — sharing progress and identifying blockers.
 - **Feature branches and pull requests** — reviewing changes before merging them into `dev`.
+- **Automated checks** — linting, formatting, tests and builds run automatically on pull requests for the parts of the project that changed.
 - **Sprint demos** — presenting progress and gathering feedback.
 - **Retrospectives** — improving how we work together.
 

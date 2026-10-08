@@ -40,13 +40,13 @@ function ModeToggle() {
   }
 
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className="flex max-w-full flex-col items-start gap-1">
       <div
         role="radiogroup"
         aria-label="Läge"
         aria-describedby={!isOnline ? helpTextId : undefined}
         onKeyDown={handleKeyDown}
-        className="inline-flex rounded-xl border border-blue-900 p-1"
+        className="inline-flex max-w-full flex-wrap rounded-xl border border-blue-900 p-1"
       >
         {OPTIONS.map((option, index) => {
           const disabled = isDisabled(option.value)

@@ -4,15 +4,18 @@ import tailwindcss from "@tailwindcss/vite"
 import { VitePWA } from "vite-plugin-pwa"
 
 export default defineConfig({
+  // Rebuilding produces a new, visible identifier even when the same commit is redeployed.
+  define: { __APP_BUILD_ID__: JSON.stringify(new Date().toISOString()) },
   plugins: [
     react(),
 
     tailwindcss(),
 
     VitePWA({
-      // Activates a new service worker as soon as it's ready, so users get updated
-      // app files on the next load instead of being stuck on a stale offline cache.
-      registerType: "autoUpdate",
+      // The document-scoped updater owns registration and the user's activation choice.
+      registerType: "prompt",
+      injectRegister: false,
+      workbox: { skipWaiting: false, clientsClaim: true },
 
       // The header logo is separate from the manifest icons cached automatically.
       includeAssets: ["kriskompassen-logo.png"],

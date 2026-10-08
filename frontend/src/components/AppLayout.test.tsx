@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { StrictMode } from "react"
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ModeProvider } from "../context/ModeProvider"
@@ -90,7 +90,9 @@ describe("AppLayout VMA integration", () => {
     fetchMock.mockRejectedValueOnce(new TypeError("Offline"))
     mountLayout()
     const button = await screen.findByRole("button", { name: "Försök igen" })
-    expect(screen.getByRole("status").textContent).toContain("VMA-status kunde inte kontrolleras")
+    expect(within(screen.getByRole("complementary")).getByRole("status").textContent).toContain(
+      "VMA-status kunde inte kontrolleras"
+    )
     fetchMock.mockResolvedValueOnce(Response.json(feed([])))
     fireEvent.click(button)
     await waitFor(() => expect(screen.queryByRole("complementary")).toBe(null))
@@ -161,7 +163,7 @@ describe("AppLayout VMA integration", () => {
     fetchMock.mockResolvedValue(Response.json(feed([alert, null])))
     mountLayout()
     await screen.findByRole("heading", { name: info.event })
-    expect(screen.getByRole("status").textContent).toContain(
+    expect(within(screen.getByRole("complementary")).getByRole("status").textContent).toContain(
       "VMA-informationen kan vara ofullständig"
     )
     expect(screen.getByRole("button", { name: "Försök igen" })).toBeTruthy()

@@ -1,9 +1,11 @@
 import { useLayoutEffect, useRef } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import { useVmaBanner } from "../hooks/useVmaBanner"
+import { usePwaUpdate } from "../hooks/usePwaUpdate"
 import BottomNavigation from "./BottomNavigation"
 import Header from "./Header"
 import VmaBanner from "./VmaBanner"
+import PwaUpdateNotice from "./PwaUpdateNotice"
 
 /**
  * Provides shared landmarks, navigation spacing and accessible route transitions.
@@ -11,8 +13,8 @@ import VmaBanner from "./VmaBanner"
  * Child pages supply one h1 with id="page-heading" and tabIndex={-1}. Its text sets
  * the document title. Path changes focus that heading and scroll only as needed to
  * reveal it; initial loads and hash-only changes preserve browser focus. The measured
- * navigation and VMA notice heights reserve scroll space between the fixed mobile bar and the
- * sticky top notice. VMA requests belong to this persistent layout, not individual routes.
+ * navigation, VMA and app-update heights reserve scroll space around focused content. VMA
+ * requests and the update subscription belong to this persistent layout, not individual routes.
  */
 function AppLayout() {
   const { pathname } = useLocation()
@@ -20,32 +22,42 @@ function AppLayout() {
   const mainRef = useRef<HTMLElement>(null)
   const navigationRef = useRef<HTMLElement>(null)
   const bannerRef = useRef<HTMLDivElement>(null)
+  const updateRef = useRef<HTMLDivElement>(null)
   const vma = useVmaBanner()
+  const update = usePwaUpdate()
   const noticeVisible = Boolean(vma.message || vma.loading || vma.failed || vma.uncertain)
 
   useLayoutEffect(() => {
     const main = mainRef.current
     const navigation = navigationRef.current
     const banner = bannerRef.current
-    if (!main || !navigation || !banner) return
+    const updateNotice = updateRef.current
+    if (!main || !navigation || !banner || !updateNotice) return
 
     const root = document.documentElement
     const previousHeight = root.style.getPropertyValue("--navigation-height")
     const previousBannerHeight = root.style.getPropertyValue("--vma-banner-height")
+    const previousUpdateHeight = root.style.getPropertyValue("--pwa-update-height")
+    const previousNavigationOverflow = navigation.getAttribute("data-overflows-viewport")
     let focusFrame = 0
 
     const keepFocusedContentVisible = () => {
       const focused = document.activeElement
+      const stickyUpdate = getComputedStyle(updateNotice).position === "sticky"
       if (
         !(focused instanceof HTMLElement) ||
         banner.contains(focused) ||
+        (stickyUpdate && updateNotice.contains(focused)) ||
         (!main.contains(focused) && !navigation.contains(focused))
       )
         return
 
       const fixedNavigation = getComputedStyle(navigation).position === "fixed"
       if (fixedNavigation && navigation.contains(focused)) return
-      const visibleTop = banner.getBoundingClientRect().bottom + 8
+      const bannerBottom = banner.getBoundingClientRect().bottom
+      const updateBounds = updateNotice.getBoundingClientRect()
+      const updateBottom = stickyUpdate && updateBounds.height > 0 ? updateBounds.bottom : 0
+      const visibleTop = Math.max(bannerBottom, updateBottom) + 8
       const visibleBottom = fixedNavigation
         ? navigation.getBoundingClientRect().top - 8
         : window.innerHeight - 8
@@ -67,6 +79,14 @@ function AppLayout() {
     }
 
     const updateReservedSpace = () => {
+      // Media-query rem units do not follow the user's enlarged root text size.
+      // Keep a tall navigation bar in normal flow instead of covering focused controls.
+      const navigationContentHeight =
+        navigation.scrollHeight - (parseFloat(getComputedStyle(navigation).paddingBottom) || 0)
+      navigation.toggleAttribute(
+        "data-overflows-viewport",
+        navigationContentHeight > window.innerHeight * 0.25
+      )
       const height =
         getComputedStyle(navigation).position === "fixed"
           ? Math.ceil(navigation.getBoundingClientRect().height)
@@ -77,12 +97,18 @@ function AppLayout() {
         "--vma-banner-height",
         `${Math.ceil(banner.getBoundingClientRect().height)}px`
       )
+      const updateHeight =
+        getComputedStyle(updateNotice).position === "sticky"
+          ? Math.ceil(updateNotice.getBoundingClientRect().height)
+          : 0
+      root.style.setProperty("--pwa-update-height", `${updateHeight}px`)
       scheduleFocusCheck()
     }
 
     const observer = new ResizeObserver(updateReservedSpace)
     observer.observe(navigation)
     observer.observe(banner)
+    observer.observe(updateNotice)
     window.addEventListener("resize", updateReservedSpace)
     main.addEventListener("focusin", scheduleFocusCheck)
     navigation.addEventListener("focusin", scheduleFocusCheck)
@@ -94,6 +120,11 @@ function AppLayout() {
       main.removeEventListener("focusin", scheduleFocusCheck)
       navigation.removeEventListener("focusin", scheduleFocusCheck)
       cancelAnimationFrame(focusFrame)
+      if (previousNavigationOverflow === null) {
+        navigation.removeAttribute("data-overflows-viewport")
+      } else {
+        navigation.setAttribute("data-overflows-viewport", previousNavigationOverflow)
+      }
       if (previousHeight) {
         root.style.setProperty("--navigation-height", previousHeight)
       } else {
@@ -103,6 +134,11 @@ function AppLayout() {
         root.style.setProperty("--vma-banner-height", previousBannerHeight)
       } else {
         root.style.removeProperty("--vma-banner-height")
+      }
+      if (previousUpdateHeight) {
+        root.style.setProperty("--pwa-update-height", previousUpdateHeight)
+      } else {
+        root.style.removeProperty("--pwa-update-height")
       }
     }
   }, [])
@@ -172,6 +208,9 @@ function AppLayout() {
           "pb-[calc(var(--navigation-height,0px)+2rem)] sm:px-6 sm:pt-10"
         }
       >
+        <div ref={updateRef} className="pwa-update-slot">
+          <PwaUpdateNotice {...update} />
+        </div>
         <Outlet />
       </main>
     </div>

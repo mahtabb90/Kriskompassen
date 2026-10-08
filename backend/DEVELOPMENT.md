@@ -3,10 +3,8 @@
 The FastAPI backend fetches VMA from Sveriges Radio's dedicated v3 API. The frontend service
 validates public Swedish CAP records and maps them to a shared presentation model. A shared banner
 shows the most recent active warning. Polling and persistent VMA storage remain separate work;
-general crisis articles still use mock data. Deployed integration remains to be verified.
-
-Use [VERCEL_HANDOFF.md](VERCEL_HANDOFF.md) for project settings, the information to collect during
-temporary Vercel access, Production/Preview scoping and the deployed verification sequence.
+general crisis articles still use mock data. The user has confirmed working live integration;
+the verification record below distinguishes that result from active-warning rendering.
 
 ## Separate information sources
 
@@ -123,6 +121,44 @@ KRISKOMPASSEN_VMA_API_URL='https://vmaapi.sr.se/testapi/v3/examples/data' uvicor
 
 The returned `source.apiUrl` identifies the test endpoint accurately. Stop that server and restart
 with the production default afterwards. Never deploy a configuration pointing at static examples.
+
+### Deployed setup
+
+Vercel uses two projects: `frontend/` with the Vite preset, Node from `.nvmrc`, `npm run build`
+and output directory `dist`; `backend/` with the FastAPI preset, Python 3.13 and entrypoint
+`src/app.py`. The backend deployment was configured in Vercel to install from `requirements.txt`
+because the tools-only `pyproject.toml` is not a dependency manifest. Preserve that dashboard
+setting when recreating the project. `frontend/vercel.json` provides the frontend SPA fallback.
+
+Set `VITE_API_BASE_URL` on the frontend project to the backend HTTPS base URL, without
+`/api/v1/vmas`. On the backend project, set `KRISKOMPASSEN_CORS_ORIGINS` to a JSON array of exact
+frontend origins, for example `["https://frontend.example","http://127.0.0.1:5173"]`. Replace the
+example domain with the real frontend origin; retain local origins only when testing locally.
+Origins include scheme, hostname and optional port, with no page path or wildcard.
+
+Apply settings to the deployment's environment (Production or Preview), including any branch
+override. Redeploy the affected project after changes; Vite embeds `VITE_API_BASE_URL` at build
+time. If missing, it falls back to `http://localhost:8000` even in a deployed build.
+[Vercel environment variables](https://vercel.com/docs/environment-variables),
+[Vite environment variables](https://vite.dev/guide/env-and-mode).
+
+The backend must accept browser requests without a Vercel login: the frontend sends
+`credentials: "omit"`. For 401/403 responses or login HTML, check deployment protection.
+For CORS errors, check the exact frontend origin. CORS does not provide authentication, and
+a successful `curl` request alone does not prove that a browser can read the response.
+
+To test the local frontend against the deployed backend, run this from `frontend/`:
+
+```sh
+VITE_API_BASE_URL='https://kriskompassen.vercel.app' npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
+```
+
+The backend must allow `http://127.0.0.1:5173`. In the browser's Network panel, verify the request
+uses the intended HTTPS backend and returns JSON. `/health` should return `200 {"status":"ok"}`;
+`/api/v1/vmas` should return `timestamp`, `alerts` and `source`, with `Cache-Control: no-store`
+and `Access-Control-Allow-Origin` matching the frontend. A successful empty feed hides the
+banner; request failures must remain explicit. After frontend deployments, also check direct
+route reloads and that static assets and `/sw.js` return their own files rather than HTML.
 
 ## Backend contract
 
@@ -305,13 +341,20 @@ ruff check .
 ruff format --check .
 ```
 
-The same three backend commands run in `.github/workflows/backend-ci.yml` on every pull request.
+The same three backend commands run in `.github/workflows/backend-ci.yml` on pull requests into
+`dev` or `main` and on pushes to `dev`, whenever `backend/` or the workflow file changed.
 
 On 2026-10-05, a manual check passed the production and example feeds through the backend route
 and the actual frontend validator/mapper. Production produced an empty successful result. The six
 examples produced two expired warnings and one cancellation; three technical-test/exercise records
 were excluded. Both checks had zero rejected records or validation issues. Source metadata correctly
 identified the production and example endpoints. No production warning was available to inspect.
+
+On 2026-10-07, the user reported successful empty-feed handling from the local frontend against
+`https://kriskompassen.vercel.app`, with the banner disappearing as expected, and then confirmed
+that the integration also works from the deployed frontend. These are user-reported checks;
+the live frontend URL and deployment commit were not supplied. A real active warning, deployed
+failure/retry behavior and actual screen-reader output were not verified by this report.
 
 Tests use synthetic SR-shaped fixtures and deterministic times, never live emergency content.
 They cover valid/empty/mixed/invalid feeds, optional fields, Swedish blocks, exclusions,
@@ -333,6 +376,6 @@ console.log(await fetchVmas())
 Inspect metadata, diagnostics and statuses. Static examples may have expired relative to today's
 date; do not alter their dates to suggest they are live. Real production messages, when available,
 still merit an end-to-end check. The banner can be verified with simulated responses without a
-backend; its deployed backend integration remains a separate verification step. The Vercel handoff
-guide and frontend SPA routing configuration prepare that step without deploying either project.
+backend; keep those results separate from the user-reported live integration check above.
+Repeat the connection checks in [Deployed setup](#deployed-setup) after deployment changes.
 Polling and offline VMA storage remain outside this implementation.

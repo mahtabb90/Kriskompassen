@@ -8,7 +8,8 @@ Base every change on what is in the repo. If something is undecided, ask instead
 The team updates the repo continuously, so this file can fall behind. **The repo is the source of truth, not this file.**
 
 - At the start of every task, check this file against the repo: `package.json`, the lock files, config files, the folder structure, `.github/`, `.env.example` and `git branch -a`.
-- If something here is outdated or missing (new scripts, dependencies, versions, folders, tools, conventions), propose the change first, wait for approval, then update AGENTS.md as part of your task. List the changes in your plan and in your final summary.
+- Agents update affected docstrings, `AGENTS.md`, README and existing developer documentation as part of implementation. The human reviews the finished changes; do not leave required documentation work for the human to write.
+- If something here is outdated or missing (new scripts, dependencies, versions, folders or tools), include the factual correction in your plan and update AGENTS.md within the authorized task. Do not request the same documentation approval again. Propose undecided convention or policy changes before editing. List documentation changes in your final summary.
 - When the repo shows that a `TODO(team)` has been decided (for example a test runner has been added), replace the TODO with what the repo shows, after approval.
 - Never change the team decisions in sections 5 and 6 on your own. Only people change those.
 - Do not guess. If the repo does not show the answer, leave or add a `TODO(team)`.
@@ -19,9 +20,13 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - It answers three questions: *What has happened? What should I do? Where should I go?*
 - Planned scope: Swedish public warning messages (VMA) and local information about floods, gas leaks, contaminated drinking water, etc.
 - Users can save important information locally and read it offline.
+- Installed app versions are checked on startup and visible foreground/connectivity events.
+  A completed update offers a Swedish, user-selected reload and retains saved articles. A build
+  identifier is visible in the header. Physical verification on an existing iPhone installation
+  is pending. This change uses one production publication and a manual check on the existing device.
 - Target users: the general public in Sweden. No login or user accounts are planned.
 - Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level online/offline mode toggle (`ModeToggle`, backed by `ModeContext`) controls whether `/crisis` and `/crisis/:id` show the bundled mock dataset or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
-- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, an indication of additional warnings and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; the crisis articles still use mock data. Recurring network updates and offline VMA storage are not implemented. The banner's integration with the deployed backend remains to be verified.
+- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, an indication of additional warnings and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; the crisis articles still use mock data. Recurring network updates and offline VMA storage are not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
 
 ## 2. Tech stack
 
@@ -41,7 +46,7 @@ Frontend versions are taken from `frontend/package-lock.json`.
 | Unit tests | Vitest | 4.1.11 |
 | Component tests | React Testing Library / DOM Testing Library | 16.3.3 / 10.4.2 |
 | DOM test environment | jsdom | 27.4.0 |
-| E2E tests | Playwright (Node/TypeScript) | not yet installed |
+| E2E tests | Playwright (Node/TypeScript) | planned, not installed |
 | Runtime | Node.js (required by Vite) | ^20.19.0 or >=22.12.0 |
 
 Backend versions are pinned in `backend/requirements.txt` and `backend/requirements-dev.txt`:
@@ -58,7 +63,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 | Tests | pytest | 9.1.1 |
 | Lint/format | Ruff | 0.16.10 |
 
-- Backend setup, API contracts, configuration and manual verification are documented in `backend/DEVELOPMENT.md`. `backend/VERCEL_HANDOFF.md` covers separate Vercel projects, environment scopes, the access-window information template and live integration checks.
+- Backend setup, API contracts, configuration, Vercel connection settings and manual verification are documented in `backend/DEVELOPMENT.md`.
 
 ## 3. Repository structure
 
@@ -70,11 +75,10 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 ├── documentation-baseline.md  # JSDoc and code comment rules for frontend/TypeScript code
 ├── .github/
 │   └── workflows/
-│       ├── backend-ci.yml   # backend Ruff and pytest on every pull request
-│       └── frontend-ci.yml  # frontend lint, format check, tests and build on PRs and pushes to dev
+│       ├── backend-ci.yml   # backend Ruff and pytest when backend/ changes; PRs into dev/main and pushes to dev
+│       └── frontend-ci.yml  # frontend lint, format check, tests and build when frontend/ changes; same triggers
 ├── backend/             # FastAPI VMA API
 │   ├── DEVELOPMENT.md  # backend and VMA integration development guide
-│   ├── VERCEL_HANDOFF.md # Vercel setup, information to collect and integration checks
 │   ├── .python-version # Python 3.13
 │   ├── .env.example    # backend variable names only
 │   ├── requirements.txt / requirements-dev.txt  # pinned dependencies
@@ -96,15 +100,15 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs
     ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
-        ├── components/  # AppLayout, Header, BottomNavigation, VmaBanner, CrisisCard, DetailedCrisisCard, OfflineToggle (save/remove), ModeToggle (online/offline switch), ConnectionStatus (connectivity + auto-switch notice)
+        ├── components/  # shared layout/header/navigation, VmaBanner, PwaUpdateNotice, crisis cards and offline/mode controls
         ├── config/      # central backend address and VMA request timeout
         ├── context/     # ModeProvider.tsx + modeContext.ts (context object, Mode type, useMode hook — split to satisfy react-refresh/only-export-components)
         ├── data/        # mock data (mockCrisisData.ts)
         ├── db/          # Dexie database (db.ts)
-        ├── hooks/       # VMA request state and local validity scheduling; adjacent tests
+        ├── hooks/       # VMA request state/validity and shared PWA update subscription; adjacent tests
         ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
-        ├── services/    # offline storage, VMA fetching, validation, mapping and banner selection; adjacent unit tests
-        └── types/       # shared crisis and VMA TypeScript types
+        ├── services/    # offline storage, PWA update lifecycle and VMA services; adjacent unit tests
+        └── types/       # shared crisis/VMA types and the compiled build identifier declaration
 ```
 
 - New frontend code goes under `frontend/src/` in the matching folder above.
@@ -129,9 +133,9 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 | Build | `npm run build` | n/a |
 | Preview build | `npm run preview` | n/a |
 
-CI: `.github/workflows/backend-ci.yml` runs the backend lint, format check and test commands on every pull request. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npx prettier --check .`, `npx vitest run` and `npm run build` on Node from `frontend/.nvmrc` for pull requests into `dev` or `main` and for pushes to `dev`.
+CI: both workflows trigger on pull requests into `dev` or `main` and on pushes to `dev`. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npm run format:check`, `npm run test` and `npm run build` on Node from `frontend/.nvmrc`. `.github/workflows/backend-ci.yml` runs the backend install, `ruff check .`, `ruff format --check .` and `pytest` on Python from `backend/.python-version`. Each workflow always starts (no `on: paths:`) and has three jobs: a change-detection job that diffs against the PR base branch or the previous push with `git diff` and logs the changed files, the check job that runs only when its folder or its own workflow file changed, and a gate job. If the diff cannot be computed, the checks run anyway. The gate jobs `Frontend CI result` and `Backend CI result` are the status checks to mark as required in branch protection; they fail when change detection fails or when needed checks did not succeed. PR runs are cancelled when superseded; pushes to `dev` run to completion. CI uses no third-party actions.
 
-Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint without additional Vercel configuration. Account settings and deployed behavior still need verification. Manual `curl` diagnostics and the process-variable command for running the local frontend against a deployed backend are documented in `backend/VERCEL_HANDOFF.md`.
+Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint. The user configured Vercel to install backend dependencies from `requirements.txt`; that dashboard setting is not stored in the repo. Connection settings, local testing against the deployed backend and the scope of reported live verification are documented in `backend/DEVELOPMENT.md`.
 
 Create the backend environment with Python 3.13 using `python3 -m venv .venv` and activate it with `source .venv/bin/activate`. On Windows PowerShell, use `py -3.13 -m venv .venv` and `.venv\Scripts\Activate.ps1`. See `backend/DEVELOPMENT.md` for environment configuration and manual verification commands.
 
@@ -234,6 +238,21 @@ Frontend conventions visible in the existing code:
 - VMA models distinguish CAP message IDs from incident IDs and retain complete references. Cancel records may lack title/content because `info: null` is valid. Mapping applies expiry and same-feed Update/Cancel references; unknown validity is explicit. No history is merged between requests. See `backend/DEVELOPMENT.md` for lifecycle and attribution rules.
 - `useVmaBanner()` belongs to the persistent `AppLayout`. It fetches once on mount and on manual retry, sharing an in-flight request during StrictMode effect replays. Failures retain the last successful feed with an explicit status notice and last-check time. Local sent/expiry timers and tab visibility re-evaluate the complete feed through the mapper; they never poll the API. No VMA is persisted.
 - `selectVmaBanner()` selects the newest active `sentAt`, breaking ties by ascending CAP ID. Additional active messages get an indication, not a list or switcher. Rejected/excluded records, validation issues and unknown validity produce an incomplete-information notice alongside any usable active warning. `VmaBanner` only presents state and invokes the supplied retry callback; it does not fetch or parse data.
+- `pwaUpdateService` owns native service worker registration and lifecycle listeners outside React.
+  `usePwaUpdate()` subscribes to its stable snapshot; `PwaUpdateNotice` presents it. Checks run on
+  startup and visible foreground/connectivity events, coalesce in flight and have a 10-second
+  logical deadline. Signals during a check queue one follow-up so a newer publication is not lost.
+  Network-check failures are silent. A completed waiting version remains an
+  offer, including offline; explicit activation uses `SKIP_WAITING`, waits for control and reloads
+  the current document at most once. A 15-second activation timeout removes reload authorization
+  and offers retry. Another tab's activation never automatically reloads this document.
+- PWA generation uses `generateSW`, `registerType: "prompt"`, `injectRegister: false`,
+  `skipWaiting: false` and `clientsClaim: true`, retaining `/sw.js`, scope `/` and manifest identity.
+  Bootstrap starts registration only in secure production builds. The updater never accesses
+  IndexedDB or clears storage. `__APP_BUILD_ID__` is a compiled UTC build timestamp displayed in
+  the header. Older installations without this client updater adopt the release through an online
+  opening and a full close/reopen after the new worker downloads; the new prompt requires the new
+  app code to be loaded. Do not require a separate A/B test publication or clear local storage.
 - Style with Tailwind utility classes in `className`. There are no separate CSS files beyond `index.css`.
 - Follow [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) for visual tokens and component patterns. VMA warning colours use the central `vma-surface`, `vma-foreground`, `vma-border` and `vma-focus` aliases in `index.css`; keep their documented contrast and focus treatment in sync with the implementation.
 - Put IndexedDB access in `db/` and `services/`, not in UI components. (`IndexedDbTest.tsx` is a test page and an exception.)
@@ -246,8 +265,12 @@ Navigation and accessibility:
 - Keep one `BrowserRouter` and one shared `AppLayout`. The layout owns the header, primary navigation, skip link, single `main` landmark, document title and route focus management.
 - Each routed page supplies one `h1` with `id="page-heading"` and `tabIndex={-1}`. The layout derives the document title from that heading and focuses it on pathname changes, including back/forward navigation. Initial loads and hash-only changes preserve browser focus.
 - Add public links to the typed `navigationItems` list in `BottomNavigation.tsx` and register their routes in `App.tsx`. Navigation currently uses exact matching; keep the same DOM links across screen sizes.
-- The navigation is fixed at the bottom below `48rem` viewport width when the viewport is at least `30rem` high; otherwise it stays above the content in normal flow. `AppLayout` measures it with `ResizeObserver` and maintains `--navigation-height` for content and scroll spacing.
+- The navigation is fixed at the bottom below `48rem` viewport width when the viewport is at least `30rem` high; otherwise it stays above the content in normal flow. `AppLayout` also keeps it in normal flow when its content exceeds 25% of the viewport height, so enlarged text cannot cover focused controls. It measures the bar with `ResizeObserver` and maintains `--navigation-height` for content and scroll spacing.
 - The VMA notice is sticky above the header and limited to 40dvh, with complete text in a keyboard-scrollable region. The layout measures `--vma-banner-height`, reserves top scroll padding and reveals focused main/navigation content between the notice and any fixed bottom bar. Only the first visible region owns the top safe-area inset. VMA live announcements persist across routes; the warning never takes focus when it arrives.
+- The app-update slot precedes routed content. At heights of at least `40rem` it sticks below VMA
+  and its region is limited to `25dvh` with keyboard scrolling; lower viewports use normal flow.
+  `AppLayout` measures `--pwa-update-height` for scroll/focus spacing. The update's persistent,
+  polite `Appuppdatering` status does not take focus or reannounce on route changes.
 - Active VMA warnings pair the red/white surface with a visible VMA label and an inline SVG warning triangle. The redundant icon inherits `currentColor`, is hidden from assistive technology and is not focusable. Loading, failure and uncertainty alone use the neutral status surface without a warning icon; they never imply an active warning or an all-clear result.
 - Target WCAG 2.2 AA with at least 48 by 48 CSS pixel navigation targets, 3px focus outlines and a non-colour active indicator. Verify keyboard use, zoom/reflow and actual screen-reader output; do not infer conformance from an accessibility tree alone.
 - Keep UI and accessible names in Swedish. Use English comments and documentation as specified in section 6.
@@ -289,10 +312,15 @@ Decided tooling:
 | Frontend E2E | Playwright (Node/TypeScript) | `frontend/e2e/` |
 | Backend | pytest | `backend/tests/` |
 
-- Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. `fake-indexeddb` and Playwright remain planned and are not installed.
+- Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading, supplies a deterministic build identifier and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. `fake-indexeddb` and Playwright remain planned and are not installed.
 - Frontend VMA tests cover validation, mapping, transport, banner selection, request state, local time transitions and shared layout integration with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Component/hook integration tests replace `fetch` while retaining real validation/mapping, so no backend is required. No test page or mock mode is bundled with the app. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Manual browser layout checks complement these tests; jsdom does not verify real rendering or spoken screen-reader output.
 - Layout integration tests mount the real `ModeProvider`, mode toggle and connectivity status alongside the VMA banner. They cover keyboard mode changes, title updates, connection loss and recovery while preserving the warning and its single request.
-- The backend pytest suite runs in CI on every pull request and must not need network access or environment variables.
+- Installed-PWA update verification for this change is manual on the existing iPhone after one
+  production publication. Do not add simulated updater tests, A/B fixtures or a separate update
+  guide for this change. Existing VMA and layout tests remain. Device migration, saved articles,
+  offline reopening and actual VoiceOver output are pending live verification; local build checks
+  do not establish those results.
+- The backend pytest suite runs in CI whenever `backend/` changes (see §4) and must not need network access or environment variables.
 - Backend CORS tests provide their own JSON origin environment variable and mock upstream transport. They check that approved frontend origins can read successful feeds and 502/504 errors, and that unlisted origins or unsupported methods do not pass preflight.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
 - Keep E2E small: a few critical user flows, including at least one offline scenario.
@@ -327,7 +355,7 @@ Decided tooling:
 - Delete, move or rename files.
 - Change TypeScript, ESLint, Prettier, Ruff or build configuration.
 - Remove or skip an existing test.
-- Change this file (see section 0).
+- Change repository conventions or policies in this file beyond documentation updates authorized by the task (see section 0).
 
 ## 11. How to work
 
