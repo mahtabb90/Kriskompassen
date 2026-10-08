@@ -10,7 +10,7 @@
 html {
   /* Reserve scrollbar space so routes of different heights keep the same content width. */
   scrollbar-gutter: stable;
-  scroll-padding-block: calc(var(--vma-banner-height, 0px) + 1rem)
+  scroll-padding-block: calc(var(--vma-banner-height, 0px) + var(--pwa-update-height, 0px) + 1rem)
     calc(var(--navigation-height, 0px) + 1rem);
 }
 
@@ -21,8 +21,32 @@ html {
 }
 
 /* Keep the top-edge outline inside the viewport, overriding the global focus offset. */
-.vma-notice:focus-visible {
+.vma-notice:focus-visible,
+.pwa-update-region:focus-visible {
   outline-offset: -4px;
+}
+
+.pwa-update-slot {
+  display: flow-root;
+}
+
+.pwa-update-region {
+  margin-bottom: 1rem;
+}
+
+/* Bound the two notices separately so app updates never displace the higher-priority VMA. */
+@media (height >= 40rem) {
+  .pwa-update-slot {
+    position: sticky;
+    top: var(--vma-banner-height, 0px);
+    z-index: 10;
+  }
+
+  .pwa-update-region {
+    max-height: 25dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 /* The warning's dark background needs a light outline for its region and controls. */
@@ -40,6 +64,13 @@ html {
     padding-bottom: env(safe-area-inset-bottom);
     box-shadow: 0 -4px 16px rgb(15 23 42 / 0.06);
   }
+}
+
+.primary-navigation[data-overflows-viewport] {
+  position: static;
+  inset: auto;
+  padding-bottom: 0;
+  box-shadow: none;
 }
 
 @media (forced-colors: active) {
