@@ -118,6 +118,7 @@ Our workflow includes:
 - **Jira backlog** — tracking and prioritising upcoming work.
 - **Daily stand-ups** — sharing progress and identifying blockers.
 - **Feature branches and pull requests** — reviewing changes before merging them into `dev`.
+- **Automated checks** — linting, formatting, tests and builds run automatically on pull requests for the parts of the project that changed.
 - **Sprint demos** — presenting progress and gathering feedback.
 - **Retrospectives** — improving how we work together.
 
