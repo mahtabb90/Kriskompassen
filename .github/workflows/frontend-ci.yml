@@ -1,5 +1,7 @@
 name: Frontend CI
 
+# The workflow always triggers and skips work at job level instead of using `on: paths:`, because a
+# workflow that never starts leaves its required status check pending forever.
 on:
   pull_request:
     branches: [dev, main]
@@ -9,19 +11,80 @@ on:
 permissions:
   contents: read
 
+# Only pull request runs are cancelled when superseded; every push to dev runs to completion.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-defaults:
-  run:
-    working-directory: frontend
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    name: Detect frontend changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      # Full history so both the pull request base branch and the previous push SHA can be diffed.
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Event values are passed through env, not interpolated into the script, to prevent script
+      # injection. Any case where the diff cannot be computed falls back to running all checks.
+      - name: Detect changed paths
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          run_all() {
+            echo "Fallback used: $1. Running all frontend checks."
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            range="origin/$BASE_REF...HEAD"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+              run_all "push has no previous commit"
+            fi
+            if ! git cat-file -e "$BEFORE_SHA^{commit}" 2>/dev/null; then
+              run_all "previous commit $BEFORE_SHA is not in the fetched history"
+            fi
+            range="$BEFORE_SHA...HEAD"
+          else
+            run_all "unsupported event $EVENT_NAME"
+          fi
+
+          if ! changed=$(git diff --name-only "$range"); then
+            run_all "git diff failed for $range"
+          fi
+
+          echo "Fallback used: no"
+          echo "Changed files in $range:"
+          if [ -n "$changed" ]; then echo "$changed"; else echo "(none)"; fi
+
+          if grep -qE '^(frontend/|\.github/workflows/frontend-ci\.yml$)' <<< "$changed"; then
+            frontend=true
+          else
+            frontend=false
+          fi
+          echo "Frontend checks needed: $frontend"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+
   frontend:
     name: Frontend lint, tests and build
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -49,12 +112,43 @@ jobs:
       # Run the remaining checks after an ESLint failure so one run reports every failure.
       - name: Prettier format check
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npx prettier --check .
+        run: npm run format:check
 
       - name: Vitest unit tests
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        run: npx vitest run
+        run: npm run test
 
       - name: Typecheck and build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run build
+
+  # The single required status check for this workflow. A job skipped by `if:` counts as passing,
+  # so this gate also fails when change detection itself fails or required checks did not succeed.
+  result:
+    name: Frontend CI result
+    needs: [changes, frontend]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CHECKS_NEEDED: ${{ needs.changes.outputs.frontend }}
+          CHECKS_RESULT: ${{ needs.frontend.result }}
+        run: |
+          echo "Change detection: $CHANGES_RESULT"
+          echo "Frontend checks needed: ${CHECKS_NEEDED:-unknown}"
+          echo "Frontend checks: $CHECKS_RESULT"
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "Change detection did not succeed."
+            exit 1
+          fi
+          if [ "$CHECKS_NEEDED" = "true" ] && [ "$CHECKS_RESULT" != "success" ]; then
+            echo "Frontend checks were needed but did not succeed."
+            exit 1
+          fi
+          if [ "$CHECKS_NEEDED" != "true" ] && [ "$CHECKS_RESULT" != "skipped" ]; then
+            echo "Frontend checks were not needed but did not report as skipped."
+            exit 1
+          fi

@@ -70,8 +70,8 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 ├── documentation-baseline.md  # JSDoc and code comment rules for frontend/TypeScript code
 ├── .github/
 │   └── workflows/
-│       ├── backend-ci.yml   # backend Ruff and pytest on every pull request
-│       └── frontend-ci.yml  # frontend lint, format check, tests and build on PRs and pushes to dev
+│       ├── backend-ci.yml   # backend Ruff and pytest when backend/ changes; PRs into dev/main and pushes to dev
+│       └── frontend-ci.yml  # frontend lint, format check, tests and build when frontend/ changes; same triggers
 ├── backend/             # FastAPI VMA API
 │   ├── DEVELOPMENT.md  # backend and VMA integration development guide
 │   ├── .python-version # Python 3.13
@@ -128,7 +128,7 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 | Build | `npm run build` | n/a |
 | Preview build | `npm run preview` | n/a |
 
-CI: `.github/workflows/backend-ci.yml` runs the backend lint, format check and test commands on every pull request. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npx prettier --check .`, `npx vitest run` and `npm run build` on Node from `frontend/.nvmrc` for pull requests into `dev` or `main` and for pushes to `dev`.
+CI: both workflows trigger on pull requests into `dev` or `main` and on pushes to `dev`. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npm run format:check`, `npm run test` and `npm run build` on Node from `frontend/.nvmrc`. `.github/workflows/backend-ci.yml` runs the backend install, `ruff check .`, `ruff format --check .` and `pytest` on Python from `backend/.python-version`. Each workflow always starts (no `on: paths:`) and has three jobs: a change-detection job that diffs against the PR base branch or the previous push with `git diff` and logs the changed files, the check job that runs only when its folder or its own workflow file changed, and a gate job. If the diff cannot be computed, the checks run anyway. The gate jobs `Frontend CI result` and `Backend CI result` are the status checks to mark as required in branch protection; they fail when change detection fails or when needed checks did not succeed. PR runs are cancelled when superseded; pushes to `dev` run to completion. CI uses no third-party actions.
 
 Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint. The user configured Vercel to install backend dependencies from `requirements.txt`; that dashboard setting is not stored in the repo. Connection settings, local testing against the deployed backend and the scope of reported live verification are documented in `backend/DEVELOPMENT.md`.
 
@@ -291,7 +291,7 @@ Decided tooling:
 - Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. `fake-indexeddb` and Playwright remain planned and are not installed.
 - Frontend VMA tests cover validation, mapping, transport, banner selection, request state, local time transitions and shared layout integration with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Component/hook integration tests replace `fetch` while retaining real validation/mapping, so no backend is required. No test page or mock mode is bundled with the app. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Manual browser layout checks complement these tests; jsdom does not verify real rendering or spoken screen-reader output.
 - Layout integration tests mount the real `ModeProvider`, mode toggle and connectivity status alongside the VMA banner. They cover keyboard mode changes, title updates, connection loss and recovery while preserving the warning and its single request.
-- The backend pytest suite runs in CI on every pull request and must not need network access or environment variables.
+- The backend pytest suite runs in CI whenever `backend/` changes (see §4) and must not need network access or environment variables.
 - Backend CORS tests provide their own JSON origin environment variable and mock upstream transport. They check that approved frontend origins can read successful feeds and 502/504 errors, and that unlisted origins or unsupported methods do not pass preflight.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
 - Keep E2E small: a few critical user flows, including at least one offline scenario.
