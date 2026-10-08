@@ -367,6 +367,30 @@ This ensures that system focus outlines adapt to the user's chosen high-contrast
 
 KrisKompassen performs offline storage operations and network calls that must be communicated immediately and accessibly.
 
+### App Update Notice
+
+- A completed app update uses the existing white card surface, `border-blue-200/80`,
+  `rounded-2xl`, `shadow-sm`, blue heading and primary button. It is informational; it does not
+  use the active VMA warning surface or icon.
+- The notice appears before routed content. At heights of at least `40rem`, its layout slot is
+  sticky below the measured VMA height with z-index 10 (VMA 30, navigation 20). The visible region
+  is limited to `25dvh` and scrolls internally. Lower viewports use unrestricted normal flow.
+- The layout includes the measured slot height in `--pwa-update-height` and root scroll padding.
+  Focused page controls are revealed below both notices; update controls in normal flow receive
+  the same protection. Internal scrolling retains full copy and access to the 48×48px button.
+- If enlarged navigation content exceeds 25% of the viewport height, the shared navigation
+  returns to normal flow above the content, retaining the same links and keyboard order.
+  CSS media-query `rem` units alone cannot detect enlarged root text.
+- A persistent `role="status"`, named **Appuppdatering**, announces availability, activation and
+  action failure politely. It does not take focus or reannounce on route changes. The visible,
+  keyboard-scrollable region is named **Uppdatering av appen**; its outline is inset to remain
+  visible inside the scroll boundary.
+- The action says **Uppdatera appen**, or **Uppdaterar appen…** while disabled. The offer remains
+  until selection. The header's **Appversion: …** uses existing secondary text styling and wraps
+  long identifiers so users can verify a release on the phone without developer tools.
+- Contrast uses the existing blue/white and slate/white palette. Actual rendering, reflow and
+  spoken screen-reader output must be verified in the installed app during the live check.
+
 ### 9.1 Status vs Alert Live Regions
 
 - **Informational Confirmations (`role="status"`):**

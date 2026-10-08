@@ -4,7 +4,7 @@ import ModeToggle from "./ModeToggle"
 /**
  * Renders shared branding, the mode toggle and connectivity status within a ModeProvider.
  *
- * Reserves the top device inset when no VMA notice owns it.
+ * Shows the loaded build identifier and reserves the top device inset when no VMA notice owns it.
  *
  * @param reserveTopInset Whether the header is the first visible region in the page.
  */
@@ -34,6 +34,8 @@ function Header({ reserveTopInset = true }: { reserveTopInset?: boolean }) {
           <div className="self-stretch md:col-span-2 md:row-start-3 md:mt-3 md:self-auto">
             <ConnectionStatus />
           </div>
+        <p className="mt-3 text-base text-slate-600">Din kompass när krisen kommer.</p>
+        <p className="mt-1 text-sm text-slate-600 wrap-anywhere">Appversion: {__APP_BUILD_ID__}</p>
 
           <div className="md:col-start-2 md:row-start-1 md:self-center md:justify-self-end">
             <ModeToggle />
