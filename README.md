@@ -82,9 +82,9 @@ On supported browsers and devices, users can install the app on their phone or c
 
 When connected, the app checks for new app versions when opened or brought back to the foreground.
 Once an update is ready, it offers **Uppdatera appen**. Users can continue reading until they choose
-to reload with the new version; saved articles remain on the device. The header shows the loaded
-app version. Failed update checks do not block use, and a fully downloaded update can be selected
-offline. A waiting version can also become active after the app is completely closed.
+to reload with the new version; saved articles remain on the device. Failed update checks do not
+block use, and a fully downloaded update can be selected offline. A waiting version can also
+become active after the app is completely closed.
 
 Older installations without this update message may need an online opening followed by a full
 close and reopening of the app to receive the feature. This keeps the existing installation and

@@ -4,8 +4,6 @@ import tailwindcss from "@tailwindcss/vite"
 import { VitePWA } from "vite-plugin-pwa"
 
 export default defineConfig({
-  // Rebuilding produces a new, visible identifier even when the same commit is redeployed.
-  define: { __APP_BUILD_ID__: JSON.stringify(new Date().toISOString()) },
   plugins: [
     react(),
 
