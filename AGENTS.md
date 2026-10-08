@@ -21,9 +21,10 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Planned scope: Swedish public warning messages (VMA) and local information about floods, gas leaks, contaminated drinking water, etc.
 - Users can save important information locally and read it offline.
 - Installed app versions are checked on startup and visible foreground/connectivity events.
-  A completed update offers a Swedish, user-selected reload and retains saved articles. A build
-  identifier is visible in the header. Physical verification on an existing iPhone installation
-  is pending. This change uses one production publication and a manual check on the existing device.
+  A completed update offers a Swedish, user-selected reload and retains saved articles. App
+  versions and build timestamps are not displayed in the user interface. Physical verification
+  on an existing iPhone installation is pending. This change uses one production publication
+  and a manual check on the existing device.
 - Target users: the general public in Sweden. No login or user accounts are planned.
 - Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level online/offline mode toggle (`ModeToggle`, backed by `ModeContext`) controls whether `/crisis` and `/crisis/:id` show the bundled mock dataset or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
 - A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, an indication of additional warnings and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; the crisis articles still use mock data. Recurring network updates and offline VMA storage are not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
@@ -108,7 +109,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
         ├── hooks/       # VMA request state/validity and shared PWA update subscription; adjacent tests
         ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
         ├── services/    # offline storage, PWA update lifecycle and VMA services; adjacent unit tests
-        └── types/       # shared crisis/VMA types and the compiled build identifier declaration
+        └── types/       # shared crisis/VMA types
 ```
 
 - New frontend code goes under `frontend/src/` in the matching folder above.
@@ -249,9 +250,10 @@ Frontend conventions visible in the existing code:
 - PWA generation uses `generateSW`, `registerType: "prompt"`, `injectRegister: false`,
   `skipWaiting: false` and `clientsClaim: true`, retaining `/sw.js`, scope `/` and manifest identity.
   Bootstrap starts registration only in secure production builds. The updater never accesses
-  IndexedDB or clears storage. `__APP_BUILD_ID__` is a compiled UTC build timestamp displayed in
-  the header. Older installations without this client updater adopt the release through an online
-  opening and a full close/reopen after the new worker downloads; the new prompt requires the new
+  IndexedDB or clears storage. Workbox precache revisions identify changed app files; no
+  displayed or compiled build timestamp is required. Older installations without this client
+  updater adopt the release through an online opening and a full close/reopen after the new worker
+  downloads; the new prompt requires the new
   app code to be loaded. Do not require a separate A/B test publication or clear local storage.
 - Style with Tailwind utility classes in `className`. There are no separate CSS files beyond `index.css`.
 - Follow [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) for visual tokens and component patterns. VMA warning colours use the central `vma-surface`, `vma-foreground`, `vma-border` and `vma-focus` aliases in `index.css`; keep their documented contrast and focus treatment in sync with the implementation.
@@ -312,7 +314,7 @@ Decided tooling:
 | Frontend E2E | Playwright (Node/TypeScript) | `frontend/e2e/` |
 | Backend | pytest | `backend/tests/` |
 
-- Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading, supplies a deterministic build identifier and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. `fake-indexeddb` and Playwright remain planned and are not installed.
+- Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. `fake-indexeddb` and Playwright remain planned and are not installed.
 - Frontend VMA tests cover validation, mapping, transport, banner selection, request state, local time transitions and shared layout integration with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Component/hook integration tests replace `fetch` while retaining real validation/mapping, so no backend is required. No test page or mock mode is bundled with the app. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Manual browser layout checks complement these tests; jsdom does not verify real rendering or spoken screen-reader output.
 - Layout integration tests mount the real `ModeProvider`, mode toggle and connectivity status alongside the VMA banner. They cover keyboard mode changes, title updates, connection loss and recovery while preserving the warning and its single request.
 - Installed-PWA update verification for this change is manual on the existing iPhone after one

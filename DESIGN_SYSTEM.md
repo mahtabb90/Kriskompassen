@@ -386,8 +386,7 @@ KrisKompassen performs offline storage operations and network calls that must be
   keyboard-scrollable region is named **Uppdatering av appen**; its outline is inset to remain
   visible inside the scroll boundary.
 - The action says **Uppdatera appen**, or **Uppdaterar appen…** while disabled. The offer remains
-  until selection. The header's **Appversion: …** uses existing secondary text styling and wraps
-  long identifiers so users can verify a release on the phone without developer tools.
+  until selection. App versions and build timestamps are not displayed in the user interface.
 - Contrast uses the existing blue/white and slate/white palette. Actual rendering, reflow and
   spoken screen-reader output must be verified in the installed app during the live check.
 
