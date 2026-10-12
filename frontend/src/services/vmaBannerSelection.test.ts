@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { VmaResult } from "../types/vma"
-import { alert, feed, info, now } from "./__fixtures__/vma"
+import { alert, feed, info, multipleAlerts, now } from "./__fixtures__/vma"
 import { compareVmaMessages, selectVmaBanner } from "./vmaBannerSelection"
 import { mapVmaMessages } from "./vmaMapper"
 import { validateVmaResponse } from "./vmaResponseValidator"
@@ -117,6 +117,16 @@ describe("selectVmaBanner", () => {
     ])
     expect(selection.message).toBe(selection.activeMessages[0])
     expect(selection.hasMore).toBe(true)
+  })
+
+  it("orders the shared multi-alert fixture with its duplicate listed once", () => {
+    const selection = selectVmaBanner(result(multipleAlerts))
+    expect(selection.activeMessages.map((message) => message.id)).toEqual([
+      "SRCAP-example-3",
+      alert.identifier,
+      "SRCAP-example-2",
+    ])
+    expect(selection).toMatchObject({ hasMore: true, uncertain: false })
   })
 
   it("orders messages through the shared comparator", () => {
