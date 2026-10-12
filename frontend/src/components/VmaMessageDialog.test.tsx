@@ -36,7 +36,7 @@ describe("VmaMessageDialog", () => {
     render(<VmaMessageDialog {...base} />)
     const dialog = screen.getByRole("dialog")
     const first = within(dialog).getByRole("button", { name: "Stäng" })
-    const last = within(dialog).getByRole("link", { name: /Källa: Sveriges Radio/ })
+    const last = within(dialog).getByRole("link", { name: /Mer information hos Sveriges Radio/ })
     last.focus()
     fireEvent.keyDown(last, { key: "Tab" })
     expect(document.activeElement).toBe(first)
@@ -70,7 +70,12 @@ describe("VmaMessageDialog", () => {
     expect(dialog.querySelector("time")?.dateTime).toBe(message.sentAt)
     const sourceLink = within(dialog).getByRole("link", { name: /Källa: Sveriges Radio/ })
     expect(sourceLink.getAttribute("href")).toBe(source.url)
-    expect(within(dialog).queryByRole("heading", { name: "Mer information" })).toBe(null)
+    expect(within(dialog).getByRole("heading", { name: "Mer information" })).toBeTruthy()
+    expect(
+      within(dialog)
+        .getByRole("link", { name: /Mer information hos Sveriges Radio/ })
+        .getAttribute("href")
+    ).toBe(source.url)
   })
 
   it("labels Update sent time without inventing an original publication date", () => {
@@ -81,7 +86,7 @@ describe("VmaMessageDialog", () => {
 
   it("renders upstream markup as text and deduplicates validated message links", () => {
     const markup = '<img src=x onerror="alert(1)"><script>alert(1)</script>'
-    const url = "https://www.sverigesradio.se/vma"
+    const url = "https://www.sverigesradio.se/artikel/syntetiskt-testmeddelande"
     const linked = {
       ...message,
       title: markup,
@@ -106,6 +111,37 @@ describe("VmaMessageDialog", () => {
       expect(link.getAttribute("rel")).toBe("noopener noreferrer")
       expect(link.textContent).toContain("öppnas i ny flik")
     }
+  })
+
+  it.each([
+    "https://www.sverigesradio.se/vma",
+    "https://sverigesradio.se/vma/",
+    "https://www.sverigesradio.se/vma?test=1#information",
+  ])("uses the provider homepage instead of the unavailable SR path %s", (url) => {
+    render(<VmaMessageDialog {...base} message={{ ...message, links: [{ label: "VMA", url }] }} />)
+    const link = screen.getByRole("link", { name: /Mer information hos Sveriges Radio/ })
+    expect(link.getAttribute("href")).toBe(source.url)
+    expect(link.getAttribute("target")).toBe("_blank")
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer")
+  })
+
+  it("preserves a supplied article link when another entry is the unavailable SR path", () => {
+    const article = "https://www.sverigesradio.se/artikel/syntetiskt-testmeddelande"
+    render(
+      <VmaMessageDialog
+        {...base}
+        message={{
+          ...message,
+          links: [
+            { label: "VMA", url: "https://www.sverigesradio.se/vma" },
+            { label: "Artikel", url: article },
+          ],
+        }}
+      />
+    )
+    const links = screen.getAllByRole("link", { name: /Mer information hos Sveriges Radio/ })
+    expect(links).toHaveLength(1)
+    expect(links[0].getAttribute("href")).toBe(article)
   })
 
   it.each([

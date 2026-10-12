@@ -108,7 +108,7 @@ To ensure accessible contrast ratios, eliminate visual glare, and provide comfor
 - **Icon and label:** A 24×24 CSS pixel inline SVG triangle with an exclamation mark sits beside **"VMA · Viktigt meddelande"**, with an 8px gap. Its 2px rounded stroke uses `currentColor`. The icon does not shrink or require a downloaded asset. It is redundant with the visible label, so it has `aria-hidden="true"` and `focusable="false"` and creates no extra screen-reader announcement or keyboard stop.
 - **Text and layout:** The bold heading is 18px, rising to 20px at `sm`. Titles wrap without truncation. The icon and VMA label remain visible while the banner scrolls internally, with the same opaque warning background. The outer banner stays above the header, is limited to 40dvh and remains keyboard-scrollable.
 - **Full message:** The heading contains an underlined button with `aria-haspopup="dialog"`,
-  a minimum 48×48px target and the white warning focus outline. Source/retry controls remain
+  a pointer cursor, a minimum 48×48px target and the white warning focus outline. Source/retry controls remain
   separate; the warning surface itself is not a nested click target.
 - **Links and controls:** Source attribution stays underlined. The compact retry button uses inherited foreground colour, a 1px `border-current`, `rounded-md`, a 14px semibold label and `disabled:opacity-70`. Links and buttons retain at least 48×48 CSS pixel targets. This warning-surface variant preserves legibility without introducing a second button background.
 - **Focus and contrast:** White text, icon strokes, enabled control borders and focus outlines against the installed Tailwind `red-900` value (`oklch(0.396 0.141 25.723)`) have approximately **10.06:1** contrast. The banner's own outline is inset by 4px to remain visible at the viewport edge; control outlines use the standard 4px outward offset. Forced colours use the system `Highlight` outline and allow the icon to inherit the system foreground. Recheck contrast when changing these tokens.
@@ -380,6 +380,8 @@ This ensures that system focus outlines adapt to the user's chosen high-contrast
 - Keep selected text readable after expiry, replacement or cancellation. Neutral status copy
   explains validity/request uncertainty, and expiry never claims the danger has ended. Source
   and validated SR information links announce that they open in a new tab.
+- The close button uses a pointer cursor. The information link falls back to the source homepage
+  when no message link is supplied or SR's unavailable `/vma` address is supplied.
 
 ---
 

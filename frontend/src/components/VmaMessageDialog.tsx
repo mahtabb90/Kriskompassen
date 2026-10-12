@@ -32,12 +32,33 @@ function validityNotice(message: VmaMessage | undefined): string | null {
 }
 
 /**
+ * Keeps validated message links, falling back to the provider when no usable link is supplied.
+ *
+ * SR's /vma path is unavailable; exclude that known address without making cross-origin probes
+ * or assuming that an arbitrary API link can be checked from this document.
+ */
+function informationUrls(message: VmaMessage): string[] {
+  const urls = message.links
+    .map((link) => new URL(link.url))
+    .filter(
+      (url) =>
+        !(
+          ["sverigesradio.se", "www.sverigesradio.se"].includes(url.hostname) &&
+          url.pathname.replace(/\/+$/, "").toLowerCase() === "/vma"
+        )
+    )
+    .map((url) => url.href)
+  return urls.length ? [...new Set(urls)] : [message.source.url]
+}
+
+/**
  * Shows a selected CAP snapshot without fetching, storing or interpreting upstream markup.
  *
  * Native modal behavior makes the background inert; boundary wrapping retains keyboard focus. Initial
  * focus targets the heading so long content starts at the top. Closing releases the scroll lock
  * before the owner restores focus. Cleanup removes the listener before closing the native dialog;
  * queued close events from StrictMode cleanup are ignored when it has already reopened.
+ * Missing message links and SR's unavailable /vma address use the validated provider URL.
  *
  * @param message The snapshot selected from the banner; content never switches to another CAP ID.
  * @param currentMessage The same ID in the latest evaluated feed, or undefined if no longer present.
@@ -67,7 +88,7 @@ function VmaMessageDialog({
       : uncertain
         ? "VMA-informationen kan vara ofullständig."
         : null
-  const links = [...new Map(message.links.map((link) => [link.url, link])).values()]
+  const links = informationUrls(message)
 
   useLayoutEffect(() => {
     const dialog = dialogRef.current
@@ -129,7 +150,7 @@ function VmaMessageDialog({
           <button
             type="button"
             onClick={() => dialogRef.current?.close()}
-            className="min-h-12 min-w-12 rounded-xl border border-blue-900 px-4 py-2 font-semibold text-blue-900 hover:bg-blue-50"
+            className="min-h-12 min-w-12 cursor-pointer rounded-xl border border-blue-900 px-4 py-2 font-semibold text-blue-900 hover:bg-blue-50"
           >
             Stäng
           </button>
@@ -204,25 +225,23 @@ function VmaMessageDialog({
               )}
             </section>
           ))}
-          {links.length ? (
-            <section className="mt-6 border-t border-slate-200 pt-5">
-              <h3 className="font-bold text-blue-900">Mer information</h3>
-              <ul className="mt-2 space-y-2">
-                {links.map((link) => (
-                  <li key={link.url}>
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-12 min-w-12 items-center py-2 text-blue-900 underline underline-offset-4"
-                    >
-                      Mer information hos Sveriges Radio (öppnas i ny flik)
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
+          <section className="mt-6 border-t border-slate-200 pt-5">
+            <h3 className="font-bold text-blue-900">Mer information</h3>
+            <ul className="mt-2 space-y-2">
+              {links.map((url) => (
+                <li key={url}>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-12 min-w-12 items-center py-2 text-blue-900 underline underline-offset-4"
+                  >
+                    Mer information hos Sveriges Radio (öppnas i ny flik)
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
       </div>
     </dialog>

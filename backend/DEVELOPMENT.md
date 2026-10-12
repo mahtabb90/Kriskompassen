@@ -274,6 +274,10 @@ may be a general explanation of VMA and must not be labelled as the original art
 that is actually what the link contains. The dialog labels validated message links
 `Mer information hos Sveriges Radio` and announces new-tab navigation. API metadata remains
 available in the model, without adding technical API details to the public warning.
+If no message link remains, the information action uses `source.url`. The frontend also excludes
+SR's unavailable `/vma` address, including its trailing-slash/query/fragment variants. Other
+validated API links are retained; the UI does not probe external pages for availability or mutate
+the CAP data. Do not invent `/vma` as a fallback or as a working link in manual test data.
 
 ### Frontend banner behavior and verification without a backend
 

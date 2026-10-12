@@ -249,6 +249,8 @@ Frontend conventions visible in the existing code:
   preserving paragraph/line breaks and escaping markup. CAP `sentAt` labels distinguish an issued
   message from an Update; neither feed time nor references invent an original publication date.
   Validated message links use a neutral SR information label because they may be general VMA pages.
+  Missing links and SR's unavailable `/vma` path fall back to `source.url`; other validated API
+  links are retained without availability probes or changes to the source data.
   Opening performs no I/O and introduces no persistence or additional route.
 - `pwaUpdateService` owns native service worker registration and lifecycle listeners outside React.
   `usePwaUpdate()` subscribes to its stable snapshot; `PwaUpdateNotice` presents it. Checks run on
@@ -280,7 +282,8 @@ Navigation and accessibility:
 - Add public links to the typed `navigationItems` list in `BottomNavigation.tsx` and register their routes in `App.tsx`. Navigation currently uses exact matching; keep the same DOM links across screen sizes.
 - The navigation is fixed at the bottom below `48rem` viewport width when the viewport is at least `30rem` high; otherwise it stays above the content in normal flow. `AppLayout` also keeps it in normal flow when its content exceeds 25% of the viewport height, so enlarged text cannot cover focused controls. It measures the bar with `ResizeObserver` and maintains `--navigation-height` for content and scroll spacing.
 - The VMA notice is sticky above the header and limited to 40dvh, with complete text in a keyboard-scrollable region. The layout measures `--vma-banner-height`, reserves top scroll padding and reveals focused main/navigation content between the notice and any fixed bottom bar. Only the first visible region owns the top safe-area inset. VMA live announcements persist across routes; the warning never takes focus when it arrives.
-- The banner heading contains a 48px underlined button with `aria-haspopup="dialog"`. The native
+- The banner heading contains a 48px underlined button with `aria-haspopup="dialog"` and a pointer
+  cursor; the dialog's close button also uses a pointer cursor. The native
   modal sits outside `main`, uses `showModal()` and initially focuses its labelled heading. Its
   close row remains outside scrolling content; safe-area-aware bounds fit short/mobile viewports.
   Tab/Shift+Tab wrap at boundary controls. Stäng/Escape close it; backdrop clicks do not.

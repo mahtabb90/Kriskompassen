@@ -100,7 +100,7 @@ function VmaBanner({
                     aria-haspopup="dialog"
                     data-vma-id={message.id}
                     onClick={(event) => openMessage(message, event.currentTarget)}
-                    className="min-h-12 min-w-12 rounded-sm py-2 text-left underline underline-offset-4"
+                    className="min-h-12 min-w-12 cursor-pointer rounded-sm py-2 text-left underline underline-offset-4"
                   >
                     {message.title}
                   </button>
