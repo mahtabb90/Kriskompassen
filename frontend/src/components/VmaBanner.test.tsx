@@ -1,15 +1,23 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { feed, info, now, source } from "../services/__fixtures__/vma"
+import { feed, info, multipleAlerts, now, source } from "../services/__fixtures__/vma"
+import { selectVmaBanner } from "../services/vmaBannerSelection"
 import { mapVmaMessages } from "../services/vmaMapper"
 import { validateVmaResponse } from "../services/vmaResponseValidator"
 import VmaBanner from "./VmaBanner"
 
 const message = mapVmaMessages(validateVmaResponse(feed()).records, source, now)[0]
+const { records, ...diagnostics } = validateVmaResponse(feed(multipleAlerts))
+const active = selectVmaBanner({
+  ...diagnostics,
+  messages: mapVmaMessages(records, source, now),
+  evaluatedAt: new Date(now).toISOString(),
+}).activeMessages
+const [update, first, second] = active
 const empty = {
   message: null,
-  hasMore: false,
+  activeMessages: [],
   uncertain: false,
   loading: false,
   retrying: false,
@@ -78,10 +86,130 @@ describe("VmaBanner", () => {
     expect(live.firstChild).not.toBe(announcement)
   })
 
-  it("mentions additional active VMA without adding a list or selecting another warning", () => {
-    render(<VmaBanner {...empty} message={message} hasMore />)
-    expect(screen.getByRole("complementary").textContent).toContain("Fler aktiva VMA finns.")
+  it("keeps a single active message free of count, disclosure and extra metadata", () => {
+    render(<VmaBanner {...empty} message={message} activeMessages={[message]} />)
+    const banner = screen.getByRole("complementary")
+    expect(banner.textContent).not.toContain("aktiva VMA")
+    expect(within(banner).getAllByRole("button")).toHaveLength(1)
+    expect(screen.getByRole("button", { name: info.event }).hasAttribute("aria-describedby")).toBe(
+      false
+    )
+  })
+
+  it("shows the count and lists the other messages once each behind a collapsed disclosure", () => {
+    render(<VmaBanner {...empty} message={update} activeMessages={active} />)
+    const banner = screen.getByRole("complementary")
+    expect(within(banner).getByText("3 aktiva VMA")).toBeTruthy()
     expect(screen.getAllByRole("heading")).toHaveLength(1)
+    const title = screen.getByRole("button", { name: "Förorenat dricksvatten" })
+    const titleMeta = document.getElementById(title.getAttribute("aria-describedby")!)
+    expect(titleMeta?.textContent).toContain("Exempellänet · Uppdaterat")
+    expect(titleMeta?.querySelector("time")?.dateTime).toBe(update.sentAt)
+
+    const toggle = screen.getByRole("button", { name: "Visa 2 fler VMA" })
+    const list = document.getElementById(toggle.getAttribute("aria-controls")!)!
+    expect(toggle.getAttribute("aria-expanded")).toBe("false")
+    expect(list.hidden).toBe(true)
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute("aria-expanded")).toBe("true")
+    expect(toggle.textContent).toBe("Dölj fler VMA")
+    expect(list.hidden).toBe(false)
+
+    const entries = within(list).getAllByRole("button")
+    expect(entries.map((entry) => entry.textContent)).toEqual([
+      info.event,
+      "Gasläcka i Exempelstad",
+    ])
+    expect(entries.map((entry) => entry.getAttribute("aria-haspopup"))).toEqual([
+      "dialog",
+      "dialog",
+    ])
+    const metas = entries.map(
+      (entry) => document.getElementById(entry.getAttribute("aria-describedby")!)?.textContent
+    )
+    expect(metas[0]).toContain("Exempelkommunen · Utfärdat")
+    expect(metas[1]).toContain("Exempelstad · Utfärdat")
+    expect(
+      [...banner.querySelectorAll<HTMLElement>("[data-vma-id]")].map((node) => node.dataset.vmaId)
+    ).toEqual([update.id, first.id, second.id])
+  })
+
+  it("opens the CAP message that belongs to each listed headline", () => {
+    const openMessage = vi.fn()
+    render(
+      <VmaBanner {...empty} message={update} activeMessages={active} openMessage={openMessage} />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Visa 2 fler VMA" }))
+    for (const listed of [first, second]) {
+      const trigger = screen.getByRole("button", { name: listed.title })
+      fireEvent.click(trigger)
+      expect(openMessage).toHaveBeenLastCalledWith(listed, trigger)
+    }
+    expect(openMessage).toHaveBeenCalledTimes(2)
+  })
+
+  it("updates the count and choices as messages change and collapses below two", () => {
+    const { rerender } = render(<VmaBanner {...empty} message={update} activeMessages={active} />)
+    fireEvent.click(screen.getByRole("button", { name: "Visa 2 fler VMA" }))
+    rerender(<VmaBanner {...empty} message={update} activeMessages={[update, second]} />)
+    expect(screen.getByText("2 aktiva VMA")).toBeTruthy()
+    const toggle = screen.getByRole("button", { name: "Dölj fler VMA" })
+    const list = document.getElementById(toggle.getAttribute("aria-controls")!)!
+    expect(
+      within(list)
+        .getAllByRole("button")
+        .map((entry) => entry.textContent)
+    ).toEqual(["Gasläcka i Exempelstad"])
+    rerender(<VmaBanner {...empty} message={update} activeMessages={[update]} />)
+    expect(screen.queryByText(/aktiva VMA/)).toBe(null)
+    expect(screen.queryByRole("button", { name: /fler VMA/ })).toBe(null)
+    rerender(<VmaBanner {...empty} message={update} activeMessages={active} />)
+    expect(
+      screen.getByRole("button", { name: "Visa 2 fler VMA" }).getAttribute("aria-expanded")
+    ).toBe("false")
+  })
+
+  it("announces a new first message assertively and count changes politely", () => {
+    const { container, rerender } = render(<VmaBanner {...empty} />)
+    const alert = screen.getByRole("alert")
+    const polite = container.querySelector('[aria-live="polite"]')!
+    rerender(<VmaBanner {...empty} message={update} activeMessages={active} />)
+    expect(alert.textContent).toBe("VMA: Förorenat dricksvatten")
+    expect(polite.textContent).toBe("3 aktiva VMA.")
+    const announcement = alert.firstChild
+    rerender(<VmaBanner {...empty} message={update} activeMessages={[update, second]} />)
+    expect(alert.firstChild).toBe(announcement)
+    expect(polite.textContent).toBe("2 aktiva VMA.")
+    rerender(<VmaBanner {...empty} message={update} activeMessages={[update]} />)
+    expect(polite.textContent).toBe("1 aktivt VMA.")
+    rerender(<VmaBanner {...empty} />)
+    rerender(<VmaBanner {...empty} message={first} activeMessages={[first]} />)
+    expect(alert.textContent).toBe(`VMA: ${info.event}`)
+    expect(polite.textContent).toBe("")
+  })
+
+  it("moves focus to a remaining control when the focused list entry disappears", () => {
+    const { rerender } = render(<VmaBanner {...empty} message={update} activeMessages={active} />)
+    fireEvent.click(screen.getByRole("button", { name: "Visa 2 fler VMA" }))
+    screen.getByRole("button", { name: "Gasläcka i Exempelstad" }).focus()
+    rerender(<VmaBanner {...empty} message={update} activeMessages={[update, first]} />)
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Dölj fler VMA" }))
+
+    screen.getByRole("button", { name: info.event }).focus()
+    rerender(<VmaBanner {...empty} message={update} activeMessages={[update]} />)
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Förorenat dricksvatten" })
+    )
+  })
+
+  it("keeps focus on a listed message that becomes the first message", () => {
+    const { rerender } = render(<VmaBanner {...empty} message={update} activeMessages={active} />)
+    fireEvent.click(screen.getByRole("button", { name: "Visa 2 fler VMA" }))
+    screen.getByRole("button", { name: info.event }).focus()
+    rerender(<VmaBanner {...empty} message={first} activeMessages={[first, second]} />)
+    const focused = document.activeElement as HTMLElement
+    expect(focused.dataset.vmaId).toBe(first.id)
+    expect(focused.closest("h2")).not.toBe(null)
   })
 
   it("leaves no visible banner or all-clear statement for a successful empty result", () => {
