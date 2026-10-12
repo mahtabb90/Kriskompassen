@@ -31,6 +31,7 @@ describe("useVmaBanner", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(result.current).toMatchObject({
       message: { id: alert.identifier, title: info.event },
+      messages: [{ id: alert.identifier, status: "active" }],
       loading: false,
       failed: false,
       uncertain: false,
@@ -52,6 +53,7 @@ describe("useVmaBanner", () => {
       failed: false,
       loading: false,
       uncertain: false,
+      messages: [],
     })
   })
 
@@ -142,6 +144,7 @@ describe("useVmaBanner", () => {
       message: null,
       failed: true,
       lastCheckedAt: new Date(now).toISOString(),
+      messages: [{ id: alert.identifier, status: "inactive", inactiveReason: "expired" }],
     })
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
@@ -178,6 +181,12 @@ describe("useVmaBanner", () => {
       await vi.advanceTimersByTimeAsync(1_000)
     })
     expect(result.current).toMatchObject({ message: null, uncertain: false, failed: false })
+    expect(
+      result.current.messages.find((message) => message.id === alert.identifier)
+    ).toMatchObject({
+      status: "inactive",
+      inactiveReason: "cancelled",
+    })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 

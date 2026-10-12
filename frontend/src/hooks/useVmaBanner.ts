@@ -18,7 +18,7 @@ interface RequestState {
  * CAP validity without polling or persistent storage. Errors become explicit UI state, never [];
  * the last successful check time stays separate from local validity evaluation time.
  *
- * @returns Banner selection, loading/error state, last successful check and a guarded retry action.
+ * @returns Banner selection, the complete retained feed for detail validity, request state and retry.
  */
 export function useVmaBanner() {
   const [state, setState] = useState<RequestState>({
@@ -108,6 +108,7 @@ export function useVmaBanner() {
 
   return {
     ...selectVmaBanner(state.result),
+    messages: state.result?.messages ?? [],
     loading: state.status === "loading" || state.status === "retrying",
     retrying: state.status === "retrying",
     failed: state.status === "error",
