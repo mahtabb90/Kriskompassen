@@ -61,6 +61,14 @@ export function useAddress() {
     }
   }, [])
 
+  /**
+   * Confirms a manually typed address.
+   *
+   * Only trims and stores the text as-is: it is never sent to the backend, never validated
+   * against a real place and never given coordinates. Unlike `requestLocation`, this is a
+   * synchronous, purely local update — it has no network/geocoding step to fail. A blank or
+   * whitespace-only address is silently ignored rather than confirmed.
+   */
   const submitManualAddress = useCallback((text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
