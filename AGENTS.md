@@ -122,6 +122,10 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 - Several files in `components/` and `pages/` are empty placeholders (`SettingsPage.tsx`). Fill them in; do not delete them without asking.
 - `App.tsx` wraps the router in `ModeProvider` and registers routes inside the shared `AppLayout`. There are no separate offline routes: `CrisisInfoPage` (`/crisis`) and `DetailedCrisisCard` (`/crisis/:id`) both read `useMode()` and switch data source — the bundled mock dataset in online mode, `getOfflineItems()`/`getOfflineItem(id)` in offline mode — without the URL changing. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`. If the item shown on `/crisis/:id` is not available in the current mode (mode just switched, or the URL was opened directly), `DetailedCrisisCard` redirects to `/crisis` with an explanation passed via router location state, rather than showing an inline message. `ModeProvider` forces offline mode (with an explanation shown by `ConnectionStatus`) when the browser's `offline` event fires, and never switches back to online automatically — the user does that via `ModeToggle`, which is disabled for online mode while `navigator.onLine` is false.
 
+- Crisis detail redirects carry `notice` and `noticeMode` in router location state. The crisis
+  list derives the visible notice from the current mode, so an offline-access explanation
+  disappears immediately in online mode, including reloads with retained browser history state.
+
 ## 4. Commands
 
 Run frontend commands from `frontend/`, backend commands from `backend/` with the virtual environment active. Use only commands listed here. Commands marked *planned* do not work until the tool is set up; do not run them before then.
@@ -348,6 +352,10 @@ Decided tooling:
 - Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. `fake-indexeddb` and Playwright remain planned and are not installed.
 - Frontend VMA tests cover validation, mapping, transport, banner selection, request state, local time transitions and shared layout integration with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Component/hook integration tests replace `fetch` while retaining real validation/mapping, so no backend is required. No test page or mock mode is bundled with the app. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Manual browser layout checks complement these tests; jsdom does not verify real rendering or spoken screen-reader output.
 - Layout integration tests mount the real `ModeProvider`, mode toggle and connectivity status alongside the VMA banner. They cover keyboard mode changes, title updates, connection loss and recovery while preserving the warning and its single request.
+- Crisis list regression tests mount the real mode provider, toggle and crisis list/detail
+  routes with mocked offline storage. They cover the unsaved-item redirect, immediate notice
+  removal on returning online, retained offline notices on an online mount and the existing
+  online not-found explanation.
 - VMA detail tests cover complete content/metadata, escaped markup, safe links, validity/request
   notices, selection retention, repeat opening and explicit focus/scroll cleanup. The adjacent
   `components/__fixtures__/dialog.ts` supplies missing jsdom open/close methods only; actual modal

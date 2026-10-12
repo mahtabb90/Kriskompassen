@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useLocation } from "react-router-dom"
 import CrisisCard from "../components/CrisisCard"
-import { useMode } from "../context/modeContext"
+import { useMode, type Mode } from "../context/modeContext"
 import { mockCrisisData } from "../data/mockCrisisData"
 import { getOfflineItems } from "../services/offlineService"
 import type { CrisisItem } from "../types/crisis"
@@ -14,12 +14,14 @@ type OfflineListState =
  *
  * Online mode shows the full bundled dataset. Offline mode reads only items saved for
  * offline access from IndexedDB, making no network call. Items disappear from the offline
- * list as soon as they are removed.
+ * list as soon as they are removed. Redirect notices are shown only in the mode that
+ * produced them, including when browser history state survives a reload.
  */
 function CrisisInfoPage() {
   const { mode } = useMode()
   const location = useLocation()
-  const notice = (location.state as { notice?: string } | null)?.notice
+  const redirectNotice = location.state as { notice?: string; noticeMode?: Mode } | null
+  const notice = redirectNotice?.noticeMode === mode ? redirectNotice.notice : undefined
 
   const [offlineState, setOfflineState] = useState<OfflineListState>({ status: "loading" })
   const [removedMessage, setRemovedMessage] = useState("")
