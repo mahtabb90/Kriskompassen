@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.api import health, vma
+from src.api import geocode, health, vma
 from src.core.config import Settings
 from src.core.errors import UpstreamError
 from src.models.errors import ErrorDetail, ErrorResponse
@@ -35,7 +35,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application = FastAPI(
         title="KrisKompassen API",
         version="0.1.0",
-        description="Retrieves VMA information from Sveriges Radio with source attribution.",
+        description=(
+            "Retrieves VMA information from Sveriges Radio and reverse-geocodes positions "
+            "through OpenStreetMap Nominatim, both with source attribution."
+        ),
         lifespan=lifespan,
     )
     application.state.settings = app_settings
@@ -50,7 +53,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @application.exception_handler(UpstreamError)
     async def handle_upstream_error(_request: Request, error: UpstreamError) -> JSONResponse:
         """Renders a stable failure body and logs its code without upstream content."""
-        logger.warning("VMA retrieval failed: %s", error.code)
+        logger.warning("Upstream request failed: %s", error.code)
         body = ErrorResponse(error=ErrorDetail(code=error.code, message=error.message))
         return JSONResponse(
             status_code=error.status_code,
@@ -60,6 +63,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application.include_router(health.router)
     application.include_router(vma.router, prefix="/api/v1")
+    application.include_router(geocode.router, prefix="/api/v1")
     return application
 
 

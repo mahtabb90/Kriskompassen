@@ -28,6 +28,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Target users: the general public in Sweden. No login or user accounts are planned.
 - Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level online/offline mode toggle (`ModeToggle`, backed by `ModeContext`) controls whether `/crisis` and `/crisis/:id` show the bundled mock dataset or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
 - A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, an indication of additional warnings and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; the crisis articles still use mock data. Recurring network updates and offline VMA storage are not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
+- `AddressSection` on the home page lets the user confirm an address by typing it or by fetching the device's position through the browser's Geolocation API (permission requested only on that button click). The backend reverse-geocodes the resulting coordinates through OpenStreetMap Nominatim and returns a normalized `{found, address, municipality, county, lat, lon, source}` shape; `found: false` is a resolvable-but-unknown result, not an upstream error. The confirmed address is in-memory only for now (no Dexie table); it is intended as the future starting point for nearby-shelter search, which is not implemented.
 
 ## 2. Tech stack
 
@@ -78,7 +79,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   └── workflows/
 │       ├── backend-ci.yml   # backend Ruff and pytest when backend/ changes; PRs into dev/main and pushes to dev
 │       └── frontend-ci.yml  # frontend lint, format check, tests and build when frontend/ changes; same triggers
-├── backend/             # FastAPI VMA API
+├── backend/             # FastAPI VMA and geocoding API
 │   ├── DEVELOPMENT.md  # backend and VMA integration development guide
 │   ├── .python-version # Python 3.13
 │   ├── .env.example    # backend variable names only
@@ -101,15 +102,15 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs
     ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
-        ├── components/  # shared layout/header/navigation, VmaBanner, PwaUpdateNotice, crisis cards and offline/mode controls
-        ├── config/      # central backend address and VMA request timeout
+        ├── components/  # shared layout/header/navigation, VmaBanner, AddressSection, PwaUpdateNotice, crisis cards and offline/mode controls
+        ├── config/      # central backend address, VMA request timeout and the geocode endpoint URL
         ├── context/     # ModeProvider.tsx + modeContext.ts (context object, Mode type, useMode hook — split to satisfy react-refresh/only-export-components)
         ├── data/        # mock data (mockCrisisData.ts)
         ├── db/          # Dexie database (db.ts)
-        ├── hooks/       # VMA request state/validity and shared PWA update subscription; adjacent tests
+        ├── hooks/       # VMA request state/validity, address entry/geolocation state (useAddress) and shared PWA update subscription; adjacent tests
         ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
-        ├── services/    # offline storage, PWA update lifecycle and VMA services; adjacent unit tests
-        └── types/       # shared crisis/VMA types
+        ├── services/    # offline storage, PWA update lifecycle, VMA, geocoding and geolocation services; adjacent unit tests
+        └── types/       # shared crisis/VMA/address types
 ```
 
 - New frontend code goes under `frontend/src/` in the matching folder above.
@@ -300,8 +301,9 @@ Backend conventions:
 - Ruff decides formatting and lint rules. `ruff check .` and `ruff format --check .` must pass.
 - The application factory in `src/app.py` creates a shared HTTPX client through FastAPI lifespan. Routers obtain it through dependency injection; upstream fetching and response validation remain separate.
 - `GET /api/v1/vmas` returns `{timestamp, alerts, source}` from SR's VMA API. Pydantic validates the timezone-bearing timestamp and strict JSON alerts list, preserving malformed entries for frontend classification. The backend supplies source/API attribution independently of upstream data, including empty feeds. Public API metadata strips credentials, query parameters and fragments. Individual records must be validated before presentation.
-- Upstream failures use the documented `error.code` / `error.message` envelope and HTTP 502 or 504. Never turn failures into a successful empty result. VMA responses use `Cache-Control: no-store`.
-- Backend settings use the `KRISKOMPASSEN_` environment prefix. Frontend backend address and request timeout live in `frontend/src/config/apiConfig.ts`. See `backend/DEVELOPMENT.md` for defaults, CORS and the official API evidence.
+- `GET /api/v1/geocode?lat=&lon=` reverse-geocodes one position through OpenStreetMap Nominatim and returns `{found, address, municipality, county, lat, lon, message, source}`. `found: false` (Nominatim has no result, or its response cannot be read as a complete address) is a normal `200`, not an `UpstreamError`; `upstream_invalid_response` is reserved for JSON that fails to decode. Missing/out-of-range `lat`/`lon` get FastAPI's own `422 {"detail": [...]}` shape, which intentionally differs from the `{"error": {...}}` envelope used for upstream failures. See `backend/DEVELOPMENT.md` for the Nominatim usage policy and attribution requirement.
+- Upstream failures use the documented `error.code` / `error.message` envelope and HTTP 502 or 504. Never turn failures into a successful empty result. VMA and geocode responses use `Cache-Control: no-store`.
+- Backend settings use the `KRISKOMPASSEN_` environment prefix. Frontend backend address, VMA timeout and the geocode endpoint URL live in `frontend/src/config/apiConfig.ts`. See `backend/DEVELOPMENT.md` for defaults, CORS and the official API evidence.
 
 ## 8. Testing
 

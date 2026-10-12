@@ -48,6 +48,13 @@ If several warnings are active, it shows the most recent message and indicates t
 The app reports when it cannot check warning information and offers a retry. It checks for new
 warnings when opened; recurring updates and offline storage of warnings are not implemented.
 
+On the home page, users can enter their address by typing it or by requesting their device's
+position; a fetched position is reverse-geocoded into a readable address and clearly marked as
+approximate, and can be corrected or refetched at any time. Location permission is only requested
+when the user chooses to use it, and a denied permission, timeout or unsupported browser leaves
+manual entry available with a clear explanation. This address is not yet saved between visits;
+it is the starting point for a planned future feature to find nearby shelters.
+
 ## 🛠️ Tech stack
 
 | Technology      | Purpose                                                 |
