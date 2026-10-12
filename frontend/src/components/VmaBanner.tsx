@@ -170,16 +170,19 @@ function VmaBanner({
                 {others.length ? (
                   <>
                     {messageMeta(message, `${baseId}-meta`)}
-                    <button
-                      ref={toggleRef}
-                      type="button"
-                      aria-expanded={expanded}
-                      aria-controls={listId}
-                      onClick={() => setExpanded((open) => !open)}
-                      className="mt-2 min-h-12 min-w-12 cursor-pointer rounded-md border border-current px-4 py-2 text-sm font-semibold"
-                    >
-                      {expanded ? "Dölj fler VMA" : `Visa ${others.length} fler VMA`}
-                    </button>
+                    {/* A block wrapper keeps the inline source link off the disclosure's line. */}
+                    <div className="mt-2">
+                      <button
+                        ref={toggleRef}
+                        type="button"
+                        aria-expanded={expanded}
+                        aria-controls={listId}
+                        onClick={() => setExpanded((open) => !open)}
+                        className="min-h-12 min-w-12 cursor-pointer rounded-md border border-current px-4 py-2 text-sm font-semibold"
+                      >
+                        {expanded ? "Dölj fler VMA" : `Visa ${others.length} fler VMA`}
+                      </button>
+                    </div>
                     <ul id={listId} hidden={!expanded} className="mt-2 space-y-3">
                       {others.map((other, index) => (
                         <li key={other.id}>
