@@ -16,11 +16,21 @@ const empty = {
   failed: false,
   lastCheckedAt: null,
   retry: vi.fn(),
+  openMessage: vi.fn(),
 }
 
 afterEach(cleanup)
 
 describe("VmaBanner", () => {
+  it("opens the selected CAP message through a labelled dialog trigger", () => {
+    const openMessage = vi.fn()
+    render(<VmaBanner {...empty} message={message} openMessage={openMessage} />)
+    const trigger = screen.getByRole("button", { name: info.event })
+    expect(trigger.getAttribute("aria-haspopup")).toBe("dialog")
+    expect(trigger.getAttribute("data-vma-id")).toBe(message.id)
+    fireEvent.click(trigger)
+    expect(openMessage).toHaveBeenCalledWith(message, trigger)
+  })
   it("pairs the warning icon with the VMA label, complete title and source attribution", () => {
     render(<VmaBanner {...empty} message={message} />)
     expect(screen.getByRole("heading", { name: info.event }).textContent).toBe(info.event)
@@ -101,7 +111,7 @@ describe("VmaBanner", () => {
     expect(retry).toHaveBeenCalledTimes(1)
     expect(screen.getByRole("status").textContent).toBe("VMA-status kunde inte kontrolleras.")
     rerender(<VmaBanner {...empty} loading retrying retry={retry} />)
-    expect(screen.getByRole("button")).toBe(button)
+    expect(screen.getByRole("button", { name: "Försöker igen…" })).toBe(button)
     expect(button.disabled).toBe(true)
     fireEvent.click(button)
     expect(retry).toHaveBeenCalledTimes(1)

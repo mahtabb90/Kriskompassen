@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react"
+import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import { useVmaBanner } from "../hooks/useVmaBanner"
 import { usePwaUpdate } from "../hooks/usePwaUpdate"
@@ -6,6 +6,8 @@ import BottomNavigation from "./BottomNavigation"
 import Header from "./Header"
 import VmaBanner from "./VmaBanner"
 import PwaUpdateNotice from "./PwaUpdateNotice"
+import VmaMessageDialog from "./VmaMessageDialog"
+import type { VmaMessage } from "../types/vma"
 
 /**
  * Provides shared landmarks, navigation spacing and accessible route transitions.
@@ -15,6 +17,7 @@ import PwaUpdateNotice from "./PwaUpdateNotice"
  * reveal it; initial loads and hash-only changes preserve browser focus. The measured
  * navigation, VMA and app-update heights reserve scroll space around focused content. VMA
  * requests and the update subscription belong to this persistent layout, not individual routes.
+ * A selected CAP snapshot stays readable in a modal outside main while its feed validity changes.
  */
 function AppLayout() {
   const { pathname } = useLocation()
@@ -26,6 +29,24 @@ function AppLayout() {
   const vma = useVmaBanner()
   const update = usePwaUpdate()
   const noticeVisible = Boolean(vma.message || vma.loading || vma.failed || vma.uncertain)
+  const [openedVma, setOpenedVma] = useState<{
+    message: VmaMessage
+    trigger: HTMLButtonElement
+  } | null>(null)
+
+  const openMessage = (message: VmaMessage, trigger: HTMLButtonElement) => {
+    setOpenedVma({ message, trigger })
+  }
+  const closeMessage = useCallback(() => {
+    if (!openedVma) return
+    setOpenedVma(null)
+    const { message, trigger } = openedVma
+    const target =
+      trigger.isConnected && trigger.dataset.vmaId === message.id
+        ? trigger
+        : mainRef.current?.querySelector<HTMLElement>("#page-heading")
+    target?.focus({ preventScroll: true })
+  }, [openedVma])
 
   useLayoutEffect(() => {
     const main = mainRef.current
@@ -194,7 +215,7 @@ function AppLayout() {
         Hoppa till huvudinnehållet
       </a>
       <div ref={bannerRef} className="sticky top-0 z-30">
-        <VmaBanner {...vma} />
+        <VmaBanner {...vma} openMessage={openMessage} />
       </div>
       <Header reserveTopInset={!noticeVisible} />
       <BottomNavigation navigationRef={navigationRef} />
@@ -213,6 +234,18 @@ function AppLayout() {
         </div>
         <Outlet />
       </main>
+      {openedVma ? (
+        <VmaMessageDialog
+          key={openedVma.message.id}
+          message={openedVma.message}
+          currentMessage={vma.messages.find((message) => message.id === openedVma.message.id)}
+          loading={vma.loading}
+          failed={vma.failed}
+          uncertain={vma.uncertain}
+          lastCheckedAt={vma.lastCheckedAt}
+          onClose={closeMessage}
+        />
+      ) : null}
     </div>
   )
 }
