@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ModeProvider } from "../context/ModeProvider"
 import { useMode } from "../context/modeContext"
-import { alert, feed, info, now } from "../services/__fixtures__/vma"
+import { alert, feed, info, multipleAlerts, now } from "../services/__fixtures__/vma"
 import AppLayout from "./AppLayout"
 import { installDialogTestMethods } from "./__fixtures__/dialog"
 
@@ -128,6 +128,67 @@ describe("AppLayout VMA integration", () => {
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Stäng" }))
     expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Hem" }))
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("opens each listed message and returns focus to its list entry", async () => {
+    fetchMock.mockResolvedValue(Response.json(feed(multipleAlerts)))
+    mountLayout()
+    await screen.findByText("3 aktiva VMA")
+    fireEvent.click(screen.getByRole("button", { name: "Visa 2 fler VMA" }))
+    for (const [title, text] of [
+      [info.event, "Gå inomhus och stäng dörrar och fönster."],
+      ["Gasläcka i Exempelstad", "Håll dig borta från hamnområdet."],
+    ]) {
+      const trigger = screen.getByRole("button", { name: title })
+      trigger.focus()
+      fireEvent.click(trigger)
+      const dialog = screen.getByRole("dialog", { name: title })
+      expect(dialog.textContent).toContain(text)
+      fireEvent.click(within(dialog).getByRole("button", { name: "Stäng" }))
+      expect(document.activeElement).toBe(trigger)
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps an open listed message when it leaves the banner and returns focus to the page", async () => {
+    const [newest, listed, update] = multipleAlerts
+    const expiring = {
+      ...listed,
+      info: [{ ...listed.info[0], expires: new Date(now + 1_000).toISOString() }],
+    }
+    fetchMock.mockResolvedValue(Response.json(feed([newest, expiring, update])))
+    mountLayout()
+    fireEvent.click(await screen.findByRole("button", { name: "Visa 2 fler VMA" }))
+    const trigger = screen.getByRole("button", { name: "Gasläcka i Exempelstad" })
+    trigger.focus()
+    fireEvent.click(trigger)
+    const dialog = screen.getByRole("dialog", { name: "Gasläcka i Exempelstad" })
+    const dialogHeading = within(dialog).getByRole("heading", { level: 2 })
+    expect(document.activeElement).toBe(dialogHeading)
+
+    vi.spyOn(Date, "now").mockReturnValue(now + 1_001)
+    fireEvent(document, new Event("visibilitychange"))
+    await screen.findByText("2 aktiva VMA")
+    expect(trigger.isConnected).toBe(false)
+    expect(screen.getByRole("dialog", { name: "Gasläcka i Exempelstad" })).toBe(dialog)
+    expect(dialog.textContent).toContain("Håll dig borta från hamnområdet.")
+    expect(within(dialog).getByRole("status").textContent).toContain("giltighetstid har gått ut")
+    expect(document.activeElement).toBe(dialogHeading)
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Stäng" }))
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Hem" }))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("takes dialog validity from the copy the banner lists when a CAP ID repeats", async () => {
+    const expiredCopy = { ...alert, info: [{ ...info, expires: new Date(now).toISOString() }] }
+    const activeCopy = { ...alert, sent: new Date(now).toISOString() }
+    fetchMock.mockResolvedValue(Response.json(feed([expiredCopy, activeCopy])))
+    mountLayout()
+    fireEvent.click(await screen.findByRole("button", { name: info.event }))
+    const status = within(screen.getByRole("dialog", { name: info.event })).getByRole("status")
+    expect(status.textContent).not.toContain("giltighetstid har gått ut")
+    expect(status.textContent).toContain("VMA-informationen kan vara ofullständig.")
   })
 
   it("shows retained data with request diagnostics in the dialog after retry fails", async () => {

@@ -287,12 +287,19 @@ Manual retry is guarded against concurrent calls. No route change, visibility ch
 triggers another network request. Reload the app to fetch newly published warnings after a
 successful check; recurring updates are a separate feature.
 
-`selectVmaBanner()` chooses the active message with the latest CAP `sentAt`, breaking equal
-timestamps by ascending CAP ID. It does not filter by location. The title is `VmaMessage.title`
-(CAP `info.event`), which may be a general VMA label, not an incident-specific news headline.
-When several messages are active the banner indicates that additional VMA exist; it provides
-neither a list nor a switcher. The title button opens only that selected CAP message in a dialog;
-there is no detail route or additional request.
+`selectVmaBanner()` returns every displayable active message once per CAP ID, ordered by
+`compareVmaMessages()`: latest CAP `sentAt` first (the update time for an Update), equal
+timestamps by ascending CAP ID. That comparator is the single place to change the display order,
+for example to rank local messages first; it does not filter by location today. A CAP ID repeated
+with identical content is listed once; differing copies keep the first-ranked copy and mark the
+data as incomplete. The title is `VmaMessage.title` (CAP `info.event`), which may be a general VMA
+label, not an incident-specific news headline, so each headline in a multi-message banner is
+paired with its area names and sent/updated time.
+
+When several messages are active, the banner shows the count, the newest headline and a collapsed
+disclosure list of the others. Every title button opens its own CAP message in a dialog; there is
+no detail route or additional request. The dialog keeps the opened snapshot if the message leaves
+the banner, and takes its validity from the banner's listed copy before the complete feed.
 
 The presentation distinguishes these states:
 

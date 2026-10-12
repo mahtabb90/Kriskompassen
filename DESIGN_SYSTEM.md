@@ -110,6 +110,14 @@ To ensure accessible contrast ratios, eliminate visual glare, and provide comfor
 - **Full message:** The heading contains an underlined button with `aria-haspopup="dialog"`,
   a pointer cursor, a minimum 48×48px target and the white warning focus outline. Source/retry controls remain
   separate; the warning surface itself is not a nested click target.
+- **Multiple messages:** With more than one active message, a semibold count (**"3 aktiva VMA"**)
+  sits below the VMA label, and the newest headline gains a 14px metadata line with its area names
+  and **Utfärdat**/**Uppdaterat** time, because CAP titles are often the same generic VMA label. A
+  disclosure button (**"Visa 2 fler VMA"** / **"Dölj fler VMA"**) reuses the compact retry-button
+  style in its own block, so the source link always starts on a new line. It is collapsed by
+  default and controls a list of the other messages in display order, each a bold, underlined,
+  48×48px title button with its own metadata line. The list scrolls within the 40dvh banner. No
+  separators or extra colours are introduced. With one message, none of these elements appear.
 - **Links and controls:** Source attribution stays underlined. The compact retry button uses inherited foreground colour, a 1px `border-current`, `rounded-md`, a 14px semibold label and `disabled:opacity-70`. Links and buttons retain at least 48×48 CSS pixel targets. This warning-surface variant preserves legibility without introducing a second button background.
 - **Focus and contrast:** White text, icon strokes, enabled control borders and focus outlines against the installed Tailwind `red-900` value (`oklch(0.396 0.141 25.723)`) have approximately **10.06:1** contrast. The banner's own outline is inset by 4px to remain visible at the viewport edge; control outlines use the standard 4px outward offset. Forced colours use the system `Highlight` outline and allow the icon to inherit the system foreground. Recheck contrast when changing these tokens.
 - **Request states:** Without an active message, loading, failed checks and incomplete information use `bg-slate-100 text-slate-900 border-slate-300` with explicit status text and no warning triangle. A successful empty result hides the banner. A failed check never claims that no VMA exists. If a still-active message is retained after a failed check, its warning styling stays visible alongside the failure text and last successful check time.
@@ -423,7 +431,9 @@ KrisKompassen performs offline storage operations and network calls that must be
   - Used for action failures (e.g. storage quota exceeded, device storage blocked).
   - Screen readers announce assertively.
 - **VMA warnings and request status:**
-  - A persistent, visually hidden `role="alert"` announces the selected active VMA and any indication that more warnings exist. The visible icon is excluded from this announcement.
+  - A persistent, visually hidden `role="alert"` announces the newest active VMA title only when a new message becomes the newest. The visible icon is excluded from this announcement.
+  - A persistent, visually hidden polite live region announces changes in the number of active messages (for example *"2 aktiva VMA."*, and *"1 aktivt VMA."* after a drop to one). It stays silent for a single first warning, which the alert already announces.
+  - Banner title and list buttons use `aria-haspopup="dialog"` and reference their metadata line with `aria-describedby`. The disclosure uses `aria-expanded` and `aria-controls`. If a focused list entry disappears, focus moves to the disclosure, or to the newest headline when the list is gone; arriving messages never take focus.
   - Loading, failure and incomplete-information messages use `role="status"`. Their text inherits the foreground of the warning or neutral status surface defined in section 2.4.1.
 
 ### 9.2 Symbol Representation
