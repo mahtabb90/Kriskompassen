@@ -10,6 +10,7 @@ interface NavigationItem {
 const navigationItems: readonly NavigationItem[] = [
   { to: "/", label: "Hem", end: true },
   { to: "/crisis", label: "Krisinformation", end: true },
+  { to: "/crisis-kit", label: "Min krislåda", end: true },
 ]
 
 interface BottomNavigationProps {
