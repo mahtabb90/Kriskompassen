@@ -134,7 +134,7 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 | Build | `npm run build` | n/a |
 | Preview build | `npm run preview` | n/a |
 
-CI: both workflows trigger on pull requests into `dev` or `main` and on pushes to `dev`. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npm run format:check`, `npm run test` and `npm run build` on Node from `frontend/.nvmrc`. `.github/workflows/backend-ci.yml` runs the backend install, `ruff check .`, `ruff format --check .` and `pytest` on Python from `backend/.python-version`. Each workflow always starts (no `on: paths:`) and has three jobs: a change-detection job that diffs against the PR base branch or the previous push with `git diff` and logs the changed files, the check job that runs only when its folder or its own workflow file changed, and a gate job. If the diff cannot be computed, the checks run anyway. The gate jobs `Frontend CI result` and `Backend CI result` are the status checks to mark as required in branch protection; they fail when change detection fails or when needed checks did not succeed. PR runs are cancelled when superseded; pushes to `dev` run to completion. CI uses no third-party actions.
+CI: both workflows trigger on pull requests into `dev` or `main` and on pushes to `dev`. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npm run format:check`, `npm run test` and `npm run build` on Node from `frontend/.nvmrc`. `.github/workflows/backend-ci.yml` runs the backend install, `ruff check .`, `ruff format --check .` and `pytest` on Python from `backend/.python-version`. Each workflow always starts (no `on: paths:`) and has three jobs: a change-detection job that diffs against the PR base branch or the previous push with `git diff` and logs the changed files, the check job that runs only when its folder or its own workflow file changed, and a gate job. The check job runs as a matrix on `ubuntu-latest`, `windows-latest` and `macos-latest` (`fail-fast: false`, `defaults.run.shell: bash`, 15-minute timeout, OS in the job name, e.g. `Frontend lint, tests and build (windows-latest)`). Change detection and the gate jobs stay on Ubuntu only. The gate aggregates all matrix variants, so one failing OS fails it, and a skipped matrix still counts as skipped. Do not mark the per-OS jobs as required checks. If the diff cannot be computed, the checks run anyway. The gate jobs `Frontend CI result` and `Backend CI result` are the status checks to mark as required in branch protection; they fail when change detection fails or when needed checks did not succeed. PR runs are cancelled when superseded; pushes to `dev` run to completion. CI uses no third-party actions.
 
 Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint. The user configured Vercel to install backend dependencies from `requirements.txt`; that dashboard setting is not stored in the repo. Connection settings, local testing against the deployed backend and the scope of reported live verification are documented in `backend/DEVELOPMENT.md`.
 
@@ -261,6 +261,16 @@ Frontend conventions visible in the existing code:
 - Prettier decides formatting (`frontend/.prettierrc`: no semicolons, double quotes, `printWidth` 100). `npm run format:check` must pass.
 - `endOfLine` is `"auto"` because Windows clones with `core.autocrlf=true` have CRLF working trees while the repo stores LF; `"lf"` would fail the check after every checkout.
 - `npm run lint` must pass.
+
+Cross-platform (CI runs on Ubuntu, Windows and macOS, see section 4):
+
+- Import paths must match the exact filename casing on disk. Windows and macOS are case-insensitive by default, Linux is not.
+- Never add files whose names differ only by case.
+- Avoid filenames that are invalid on Windows: reserved names (`CON`, `PRN`, `AUX`, `NUL`, `COM1`-`COM9`, `LPT1`-`LPT9`), the characters `<>:"/\|?*`, and trailing dots or spaces.
+- npm scripts must not depend on POSIX-only commands or syntax (`rm -rf`, `cp`, `VAR=x cmd`). Use Node-based or cross-platform tools.
+- Backend code builds file paths with `pathlib.Path`, not string concatenation or hard-coded separators.
+- Python text file operations pass `encoding="utf-8"` explicitly.
+- When documentation shows a shell command whose syntax differs between POSIX shells and PowerShell, include a PowerShell alternative. This applies to documentation written from now on; existing documentation is not rewritten for it.
 
 Navigation and accessibility:
 

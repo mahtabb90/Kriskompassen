@@ -77,13 +77,20 @@ jobs:
           echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
 
   frontend:
-    name: Frontend lint, tests and build
+    name: Frontend lint, tests and build (${{ matrix.os }})
     needs: changes
     if: ${{ needs.changes.outputs.frontend == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Developers use Windows, macOS and Linux; path, shell and line-ending problems only show up
+    # when the checks run on each of them. fail-fast is off so one run reports every OS.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     defaults:
       run:
+        shell: bash
         working-directory: frontend
     steps:
       - name: Check out repository
