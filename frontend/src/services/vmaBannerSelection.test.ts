@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { VmaResult } from "../types/vma"
 import { alert, feed, info, now } from "./__fixtures__/vma"
-import { selectVmaBanner } from "./vmaBannerSelection"
+import { compareVmaMessages, selectVmaBanner } from "./vmaBannerSelection"
 import { mapVmaMessages } from "./vmaMapper"
 import { validateVmaResponse } from "./vmaResponseValidator"
 
@@ -41,7 +41,12 @@ describe("selectVmaBanner", () => {
   })
 
   it("distinguishes an empty feed from incomplete data", () => {
-    expect(selectVmaBanner(result([]))).toEqual({ message: null, hasMore: false, uncertain: false })
+    expect(selectVmaBanner(result([]))).toEqual({
+      message: null,
+      activeMessages: [],
+      hasMore: false,
+      uncertain: false,
+    })
     const partial = result([alert, null])
     expect(selectVmaBanner(partial)).toMatchObject({
       message: { id: alert.identifier },
@@ -63,7 +68,12 @@ describe("selectVmaBanner", () => {
     },
     { name: "excluded", record: { ...alert, status: "Test" }, uncertain: true },
   ])("does not display a $name record as an active warning", ({ record, uncertain }) => {
-    expect(selectVmaBanner(result([record]))).toEqual({ message: null, hasMore: false, uncertain })
+    expect(selectVmaBanner(result([record]))).toEqual({
+      message: null,
+      activeMessages: [],
+      hasMore: false,
+      uncertain,
+    })
   })
 
   it("retains active warnings with malformed optional fields and reports uncertainty", () => {
@@ -77,7 +87,67 @@ describe("selectVmaBanner", () => {
   it("never presents a model without a usable title as a complete warning", () => {
     const input = result()
     input.messages[0].title = undefined
-    expect(selectVmaBanner(input)).toEqual({ message: null, hasMore: false, uncertain: true })
-    expect(selectVmaBanner(null)).toEqual({ message: null, hasMore: false, uncertain: false })
+    expect(selectVmaBanner(input)).toEqual({
+      message: null,
+      activeMessages: [],
+      hasMore: false,
+      uncertain: true,
+    })
+    expect(selectVmaBanner(null)).toEqual({
+      message: null,
+      activeMessages: [],
+      hasMore: false,
+      uncertain: false,
+    })
+  })
+
+  it("lists every active message newest first with ascending CAP IDs for equal sent times", () => {
+    const sent = new Date(now).toISOString()
+    const input = result([
+      alert,
+      { ...alert, identifier: "b", sent },
+      { ...alert, identifier: "expired", info: [{ ...info, expires: sent }] },
+      { ...alert, identifier: "a", sent },
+    ])
+    const selection = selectVmaBanner(input)
+    expect(selection.activeMessages.map((message) => message.id)).toEqual([
+      "a",
+      "b",
+      alert.identifier,
+    ])
+    expect(selection.message).toBe(selection.activeMessages[0])
+    expect(selection.hasMore).toBe(true)
+  })
+
+  it("orders messages through the shared comparator", () => {
+    const [older, newer] = result([
+      alert,
+      { ...alert, identifier: "newer", sent: new Date(now).toISOString() },
+    ]).messages
+    expect(compareVmaMessages(newer, older)).toBeLessThan(0)
+    expect(compareVmaMessages(older, newer)).toBeGreaterThan(0)
+    expect(compareVmaMessages(older, { ...older })).toBe(0)
+    expect(compareVmaMessages({ ...older, id: "a" }, { ...older, id: "b" })).toBeLessThan(0)
+  })
+
+  it("lists an identical repeated CAP ID once without reporting uncertainty", () => {
+    const selection = selectVmaBanner(result([alert, { ...alert }]))
+    expect(selection.activeMessages).toHaveLength(1)
+    expect(selection).toMatchObject({ hasMore: false, uncertain: false })
+  })
+
+  it("keeps the newest copy of a conflicting repeated CAP ID and reports uncertainty", () => {
+    const newerCopy = {
+      ...alert,
+      sent: new Date(now).toISOString(),
+      info: [{ ...info, event: "Ändrad rubrik" }],
+    }
+    const selection = selectVmaBanner(result([alert, newerCopy]))
+    expect(selection.activeMessages).toHaveLength(1)
+    expect(selection).toMatchObject({
+      message: { id: alert.identifier, title: "Ändrad rubrik" },
+      hasMore: false,
+      uncertain: true,
+    })
   })
 })
