@@ -30,6 +30,15 @@ html {
   display: flow-root;
 }
 
+/* The close row stays outside the scrolling message, including short landscape viewports. */
+.vma-message-dialog {
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem);
+  max-width: min(
+    48rem,
+    calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 2rem)
+  );
+}
+
 .pwa-update-region {
   margin-bottom: 1rem;
 }

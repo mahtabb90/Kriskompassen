@@ -265,12 +265,19 @@ Source metadata is available on both the result and every message, including can
 }
 ```
 
-The banner shows **Källa: Sveriges Radio**, linked through `source.url`. A future detail section
-can also show **API: Sveriges Radios VMA-API, v3**, with links from the model.
+The banner shows **Källa: Sveriges Radio**, linked through `source.url`. Selecting its title
+opens a native modal with the same source attribution, complete Swedish descriptions/instructions,
+issuers, areas and CAP sent time. Alert uses `Meddelandet utfärdat`; Update uses
+`Meddelandet uppdaterat`. Neither feed time nor references is an original publication date.
 `details[].senderName` identifies the issuer; `details[].web`
 may be a general explanation of VMA and must not be labelled as the original article unless
-that is actually what the link contains. API details can live in the source/detail section so
-the warning itself stays concise.
+that is actually what the link contains. The dialog labels validated message links
+`Mer information hos Sveriges Radio` and announces new-tab navigation. API metadata remains
+available in the model, without adding technical API details to the public warning.
+If no message link remains, the information action uses `source.url`. The frontend also excludes
+SR's unavailable `/vma` address, including its trailing-slash/query/fragment variants. Other
+validated API links are retained; the UI does not probe external pages for availability or mutate
+the CAP data. Do not invent `/vma` as a fallback or as a working link in manual test data.
 
 ### Frontend banner behavior and verification without a backend
 
@@ -284,7 +291,8 @@ successful check; recurring updates are a separate feature.
 timestamps by ascending CAP ID. It does not filter by location. The title is `VmaMessage.title`
 (CAP `info.event`), which may be a general VMA label, not an incident-specific news headline.
 When several messages are active the banner indicates that additional VMA exist; it provides
-neither a list nor a switcher or detail route.
+neither a list nor a switcher. The title button opens only that selected CAP message in a dialog;
+there is no detail route or additional request.
 
 The presentation distinguishes these states:
 

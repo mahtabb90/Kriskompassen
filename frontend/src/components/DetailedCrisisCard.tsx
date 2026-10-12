@@ -15,7 +15,8 @@ type OfflineDetailState =
  * Online mode reads from the bundled mock dataset; offline mode reads the item from
  * IndexedDB instead, making no network call. If the item is not available in the current
  * mode — whether because the mode was just switched or the URL was opened directly — this
- * redirects to the crisis list with an explanation, rather than showing an inline message.
+ * redirects to the crisis list with an explanation tagged with the selected mode. The list
+ * shows the explanation only while that mode is selected.
  */
 function DetailedCrisisCard() {
   const { id } = useParams()
@@ -60,6 +61,7 @@ function DetailedCrisisCard() {
     navigate("/crisis", {
       replace: true,
       state: {
+        noticeMode: mode,
         notice:
           mode === "online"
             ? "Den informationen hittades inte."
