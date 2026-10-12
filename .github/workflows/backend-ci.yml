@@ -11,9 +11,11 @@ on:
 permissions:
   contents: read
 
-# Only pull request runs are cancelled when superseded; every push to dev runs to completion.
+# Pull request runs share a group and are cancelled when superseded. Each push to dev gets its own
+# group, because a shared group would still cancel a queued push run, and the next run only diffs
+# its own push, so the skipped push's changes would never be checked.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
