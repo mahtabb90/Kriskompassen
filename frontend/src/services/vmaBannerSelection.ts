@@ -6,7 +6,6 @@ export interface VmaBannerSelection {
   message: VmaMessage | null
   /** Contains every displayable active message once, in compareVmaMessages order. */
   activeMessages: VmaMessage[]
-  hasMore: boolean
   uncertain: boolean
 }
 
@@ -34,10 +33,10 @@ export function compareVmaMessages(a: VmaMessage, b: VmaMessage): number {
  * uncertain instead of silently trusting one copy.
  *
  * @param result A validated feed with validity already evaluated at the desired time.
- * @returns The ordered active messages, the first of them, whether more exist and uncertainty.
+ * @returns The ordered active messages, the first of them and data uncertainty.
  */
 export function selectVmaBanner(result: VmaResult | null): VmaBannerSelection {
-  if (!result) return { message: null, activeMessages: [], hasMore: false, uncertain: false }
+  if (!result) return { message: null, activeMessages: [], uncertain: false }
 
   const seen = new Set<string>()
   const activeMessages = result.messages
@@ -60,7 +59,6 @@ export function selectVmaBanner(result: VmaResult | null): VmaBannerSelection {
   return {
     message: activeMessages[0] ?? null,
     activeMessages,
-    hasMore: activeMessages.length > 1,
     uncertain:
       conflictingCopies ||
       result.rejectedCount > 0 ||

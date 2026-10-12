@@ -25,7 +25,7 @@ describe("selectVmaBanner", () => {
       const before = structuredClone(input)
       expect(selectVmaBanner(input)).toMatchObject({
         message: { id: "latest" },
-        hasMore: true,
+        activeMessages: [{ id: "latest" }, { id: alert.identifier }],
         uncertain: false,
       })
       expect(input).toEqual(before)
@@ -44,7 +44,6 @@ describe("selectVmaBanner", () => {
     expect(selectVmaBanner(result([]))).toEqual({
       message: null,
       activeMessages: [],
-      hasMore: false,
       uncertain: false,
     })
     const partial = result([alert, null])
@@ -71,7 +70,6 @@ describe("selectVmaBanner", () => {
     expect(selectVmaBanner(result([record]))).toEqual({
       message: null,
       activeMessages: [],
-      hasMore: false,
       uncertain,
     })
   })
@@ -90,13 +88,11 @@ describe("selectVmaBanner", () => {
     expect(selectVmaBanner(input)).toEqual({
       message: null,
       activeMessages: [],
-      hasMore: false,
       uncertain: true,
     })
     expect(selectVmaBanner(null)).toEqual({
       message: null,
       activeMessages: [],
-      hasMore: false,
       uncertain: false,
     })
   })
@@ -116,7 +112,6 @@ describe("selectVmaBanner", () => {
       alert.identifier,
     ])
     expect(selection.message).toBe(selection.activeMessages[0])
-    expect(selection.hasMore).toBe(true)
   })
 
   it("orders the shared multi-alert fixture with its duplicate listed once", () => {
@@ -126,7 +121,7 @@ describe("selectVmaBanner", () => {
       alert.identifier,
       "SRCAP-example-2",
     ])
-    expect(selection).toMatchObject({ hasMore: true, uncertain: false })
+    expect(selection.uncertain).toBe(false)
   })
 
   it("orders messages through the shared comparator", () => {
@@ -143,7 +138,7 @@ describe("selectVmaBanner", () => {
   it("lists an identical repeated CAP ID once without reporting uncertainty", () => {
     const selection = selectVmaBanner(result([alert, { ...alert }]))
     expect(selection.activeMessages).toHaveLength(1)
-    expect(selection).toMatchObject({ hasMore: false, uncertain: false })
+    expect(selection.uncertain).toBe(false)
   })
 
   it("keeps the newest copy of a conflicting repeated CAP ID and reports uncertainty", () => {
@@ -156,7 +151,6 @@ describe("selectVmaBanner", () => {
     expect(selection.activeMessages).toHaveLength(1)
     expect(selection).toMatchObject({
       message: { id: alert.identifier, title: "Ändrad rubrik" },
-      hasMore: false,
       uncertain: true,
     })
   })

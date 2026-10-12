@@ -237,11 +237,17 @@ describe("useVmaBanner", () => {
     )
     const { result, unmount } = renderHook(() => useVmaBanner())
     await act(async () => {})
-    expect(result.current).toMatchObject({ message: { id: "newest" }, hasMore: true })
+    expect(result.current).toMatchObject({
+      message: { id: "newest" },
+      activeMessages: [{ id: "newest" }, { id: alert.identifier }],
+    })
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1_000)
     })
-    expect(result.current).toMatchObject({ message: { id: alert.identifier }, hasMore: false })
+    expect(result.current).toMatchObject({
+      message: { id: alert.identifier },
+      activeMessages: [{ id: alert.identifier }],
+    })
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(vi.getTimerCount()).toBeGreaterThan(0)
     unmount()
