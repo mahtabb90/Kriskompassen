@@ -3,6 +3,7 @@ import AppLayout from "./components/AppLayout"
 import DetailedCrisisCard from "./components/DetailedCrisisCard"
 import { ModeProvider } from "./context/ModeProvider"
 import CrisisInfoPage from "./pages/CrisisInfoPage"
+import CrisisKitPage from "./pages/CrisisKitPage"
 import HomePage from "./pages/HomePage"
 import IndexedDbTest from "./pages/IndexedDbTest"
 import NotFoundPage from "./pages/NotFoundPage"
@@ -21,6 +22,7 @@ function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/crisis" element={<CrisisInfoPage />} />
+            <Route path="/crisis-kit" element={<CrisisKitPage />} />
             <Route path="/crisis/:id" element={<DetailedCrisisCard />} />
             {import.meta.env.DEV && <Route path="/dev/indexeddb" element={<IndexedDbTest />} />}
             <Route path="*" element={<NotFoundPage />} />
