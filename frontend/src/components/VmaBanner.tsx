@@ -9,6 +9,7 @@ interface VmaBannerProps {
   failed: boolean
   lastCheckedAt: string | null
   retry: () => void
+  openMessage: (message: VmaMessage, trigger: HTMLButtonElement) => void
 }
 
 const checkTimeFormat = new Intl.DateTimeFormat("sv-SE", {
@@ -24,13 +25,14 @@ const checkTimeFormat = new Intl.DateTimeFormat("sv-SE", {
  * The scrollable region preserves complete long titles within a bounded part of the viewport.
  *
  * @param message The selected active warning, or null when none can be displayed.
- * @param hasMore Indicates additional active warnings outside this ticket's single-message view.
+ * @param hasMore Indicates additional active warnings outside the single-message view.
  * @param uncertain Indicates incomplete or unknown validity information.
  * @param loading Indicates a pending initial request or manual retry.
  * @param retrying Keeps the retry control present and disabled during a manual request.
  * @param failed Indicates that the latest request failed, independently of retained data.
  * @param lastCheckedAt Time of the last successful request, not a local expiry check.
  * @param retry Starts a guarded manual request.
+ * @param openMessage Opens this CAP message and records its trigger for focus restoration.
  */
 function VmaBanner({
   message,
@@ -41,6 +43,7 @@ function VmaBanner({
   failed,
   lastCheckedAt,
   retry,
+  openMessage,
 }: VmaBannerProps) {
   const visible = Boolean(message || loading || failed || uncertain)
   const statusText = loading
@@ -91,7 +94,17 @@ function VmaBanner({
                   </svg>
                   <span>VMA · Viktigt meddelande</span>
                 </p>
-                <h2 className="mt-1 text-lg leading-snug font-bold sm:text-xl">{message.title}</h2>
+                <h2 className="mt-1 text-lg leading-snug font-bold sm:text-xl">
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    data-vma-id={message.id}
+                    onClick={(event) => openMessage(message, event.currentTarget)}
+                    className="min-h-12 min-w-12 cursor-pointer rounded-sm py-2 text-left underline underline-offset-4"
+                  >
+                    {message.title}
+                  </button>
+                </h2>
                 {hasMore ? <p className="mt-2">Fler aktiva VMA finns.</p> : null}
                 <a
                   href={message.source.url}

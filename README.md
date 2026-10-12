@@ -45,6 +45,8 @@ switching back to online mode is always a manual choice.
 
 A banner can display an active public warning from Sveriges Radio across the app's pages.
 If several warnings are active, it shows the most recent message and indicates that others exist.
+Selecting the banner's title opens the full warning with instructions, affected areas, source
+and the message's issue or update time. Users can close it and return to the page they were reading.
 The app reports when it cannot check warning information and offers a retry. It checks for new
 warnings when opened; recurring updates and offline storage of warnings are not implemented.
 

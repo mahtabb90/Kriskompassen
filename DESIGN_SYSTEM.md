@@ -107,6 +107,9 @@ To ensure accessible contrast ratios, eliminate visual glare, and provide comfor
 - **Meaning:** Red/white styling and the warning triangle appear only when an active VMA message is displayed. They do not encode different severity levels.
 - **Icon and label:** A 24×24 CSS pixel inline SVG triangle with an exclamation mark sits beside **"VMA · Viktigt meddelande"**, with an 8px gap. Its 2px rounded stroke uses `currentColor`. The icon does not shrink or require a downloaded asset. It is redundant with the visible label, so it has `aria-hidden="true"` and `focusable="false"` and creates no extra screen-reader announcement or keyboard stop.
 - **Text and layout:** The bold heading is 18px, rising to 20px at `sm`. Titles wrap without truncation. The icon and VMA label remain visible while the banner scrolls internally, with the same opaque warning background. The outer banner stays above the header, is limited to 40dvh and remains keyboard-scrollable.
+- **Full message:** The heading contains an underlined button with `aria-haspopup="dialog"`,
+  a pointer cursor, a minimum 48×48px target and the white warning focus outline. Source/retry controls remain
+  separate; the warning surface itself is not a nested click target.
 - **Links and controls:** Source attribution stays underlined. The compact retry button uses inherited foreground colour, a 1px `border-current`, `rounded-md`, a 14px semibold label and `disabled:opacity-70`. Links and buttons retain at least 48×48 CSS pixel targets. This warning-surface variant preserves legibility without introducing a second button background.
 - **Focus and contrast:** White text, icon strokes, enabled control borders and focus outlines against the installed Tailwind `red-900` value (`oklch(0.396 0.141 25.723)`) have approximately **10.06:1** contrast. The banner's own outline is inset by 4px to remain visible at the viewport edge; control outlines use the standard 4px outward offset. Forced colours use the system `Highlight` outline and allow the icon to inherit the system foreground. Recheck contrast when changing these tokens.
 - **Request states:** Without an active message, loading, failed checks and incomplete information use `bg-slate-100 text-slate-900 border-slate-300` with explicit status text and no warning triangle. A successful empty result hides the banner. A failed check never claims that no VMA exists. If a still-active message is retained after a failed check, its warning styling stays visible alongside the failure text and last successful check time.
@@ -360,6 +363,25 @@ This ensures that system focus outlines adapt to the user's chosen high-contrast
 - **Heading Target:** Every routed page renders a single `h1` with `id="page-heading"` and `tabIndex={-1}`.
 - **Focus Shift:** On pathname transitions, `AppLayout` moves keyboard focus to the `h1` element and scrolls only as needed to reveal it (`block: "nearest", inline: "nearest"`).
 - **Document Title:** The document title (`document.title`) is automatically synchronized with the `h1` text: `${heading} | KrisKompassen`.
+
+### 8.4 Full VMA Message Dialog
+
+- A native modal dialog sits outside `main` in the browser's top layer with a dimmed backdrop.
+  Use a white `rounded-2xl` reading surface, blue headings, slate body text and a visible VMA label.
+  The full message does not use the red banner surface, since its validity can change while open.
+- Limit its width to 48rem and the available viewport width; limit height using `100dvh` minus
+  safe-area insets and outer margins. Keep the Stäng row above a separate scrolling content region.
+  Long titles/text/links wrap. Paragraphs have spacing and single line breaks are preserved.
+- Opening focuses the heading (`tabIndex={-1}`); `aria-labelledby` names the dialog without
+  announcing the entire message through `aria-describedby`. The background is inert and scroll
+  locked. Tab/Shift+Tab wrap at boundary controls; Stäng/Escape close it and backdrop clicks do not.
+- Restore focus to the originating title button if it still represents the selected CAP ID,
+  otherwise the page heading. Opening/closing leaves the route, document title and mode intact.
+- Keep selected text readable after expiry, replacement or cancellation. Neutral status copy
+  explains validity/request uncertainty, and expiry never claims the danger has ended. Source
+  and validated SR information links announce that they open in a new tab.
+- The close button uses a pointer cursor. The information link falls back to the source homepage
+  when no message link is supplied or SR's unavailable `/vma` address is supplied.
 
 ---
 

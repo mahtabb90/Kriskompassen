@@ -7,9 +7,11 @@ import { ModeProvider } from "../context/ModeProvider"
 import { useMode } from "../context/modeContext"
 import { alert, feed, info, now } from "../services/__fixtures__/vma"
 import AppLayout from "./AppLayout"
+import { installDialogTestMethods } from "./__fixtures__/dialog"
 
 let fetchMock = vi.fn<typeof fetch>()
 const measureCallbacks: Array<() => void> = []
+let restoreDialog: () => void
 
 function Page({ title }: { title: string }) {
   const { mode } = useMode()
@@ -39,6 +41,7 @@ function mountLayout() {
 }
 
 beforeEach(() => {
+  restoreDialog = installDialogTestMethods()
   vi.spyOn(Date, "now").mockReturnValue(now)
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true)
   fetchMock = vi.fn<typeof fetch>()
@@ -63,12 +66,90 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  restoreDialog()
   measureCallbacks.length = 0
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
 
 describe("AppLayout VMA integration", () => {
+  it("opens the banner message without fetching and returns focus to its trigger on repeated use", async () => {
+    fetchMock.mockResolvedValue(Response.json(feed()))
+    mountLayout()
+    const trigger = await screen.findByRole("button", { name: info.event })
+    const live = screen.getByRole("alert").firstChild
+    for (let index = 0; index < 2; index++) {
+      trigger.focus()
+      fireEvent.click(trigger)
+      const dialog = screen.getByRole("dialog", { name: info.event })
+      expect(document.activeElement).toBe(within(dialog).getByRole("heading", { level: 2 }))
+      expect(dialog.textContent).toContain("Gå inomhus och stäng dörrar och fönster.")
+      expect(screen.getByRole("main").contains(dialog)).toBe(false)
+      expect(document.title).toBe("Hem | KrisKompassen")
+      fireEvent.click(within(dialog).getByRole("button", { name: "Stäng" }))
+      expect(screen.queryByRole("dialog")).toBe(null)
+      expect(document.activeElement).toBe(trigger)
+    }
+    expect(screen.getByRole("alert").firstChild).toBe(live)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the selected message after expiry and returns to the page when the banner disappears", async () => {
+    fetchMock.mockResolvedValue(Response.json(feed()))
+    mountLayout()
+    fireEvent.click(await screen.findByRole("button", { name: info.event }))
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse(info.expires) + 1)
+    fireEvent(document, new Event("visibilitychange"))
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBe(null))
+    const dialog = screen.getByRole("dialog", { name: info.event })
+    expect(within(dialog).getByRole("status").textContent).toContain("giltighetstid har gått ut")
+    expect(dialog.textContent).toContain("Lyssna på lokal P4.")
+    fireEvent.click(within(dialog).getByRole("button", { name: "Stäng" }))
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Hem" }))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not switch the open message when the banner selects a newer CAP ID", async () => {
+    const newer = {
+      ...alert,
+      identifier: "newer-cap-id",
+      sent: new Date(now + 60_000).toISOString(),
+      info: [{ ...info, event: "Nyare varning", description: "En annan varning." }],
+    }
+    fetchMock.mockResolvedValue(Response.json(feed([alert, newer])))
+    mountLayout()
+    fireEvent.click(await screen.findByRole("button", { name: info.event }))
+    vi.spyOn(Date, "now").mockReturnValue(now + 60_001)
+    fireEvent(document, new Event("visibilitychange"))
+    await screen.findByRole("button", { name: "Nyare varning" })
+    expect(screen.getByRole("dialog", { name: info.event }).textContent).not.toContain(
+      "En annan varning."
+    )
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Stäng" }))
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Hem" }))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("shows retained data with request diagnostics in the dialog after retry fails", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json(feed([alert, null])))
+    mountLayout()
+    await screen.findByRole("button", { name: info.event })
+    fetchMock.mockRejectedValueOnce(new TypeError("Offline"))
+    fireEvent.click(screen.getByRole("button", { name: "Försök igen" }))
+    await waitFor(() =>
+      expect(within(screen.getByRole("complementary")).getByRole("status").textContent).toContain(
+        "VMA-status kunde inte kontrolleras"
+      )
+    )
+    fireEvent.click(screen.getByRole("button", { name: info.event }))
+    const dialog = screen.getByRole("dialog")
+    expect(dialog.textContent).toContain("Gå inomhus")
+    expect(within(dialog).getByRole("status").textContent).toContain(
+      "VMA-status kunde inte kontrolleras"
+    )
+    expect(within(dialog).getByRole("status").textContent).toContain("Senast kontrollerat")
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
   it("preserves the same banner and request across routes while focusing the new page heading", async () => {
     fetchMock.mockResolvedValue(Response.json(feed()))
     mountLayout()
