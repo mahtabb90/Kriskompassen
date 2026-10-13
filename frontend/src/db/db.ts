@@ -1,4 +1,5 @@
 import Dexie, { type Table } from "dexie"
+import type { SavedAddress } from "../types/address"
 import type { CrisisItem } from "../types/crisis"
 import type { CrisisKitItem } from "../types/crisisKit"
 
@@ -11,6 +12,7 @@ import type { CrisisKitItem } from "../types/crisisKit"
 class KrisKompassenDatabase extends Dexie {
   crisisItems!: Table<CrisisItem, string>
   crisisKitItems!: Table<CrisisKitItem, string>
+  savedAddresses!: Table<SavedAddress, string>
 
   constructor() {
     super("KrisKompassenDB")
@@ -22,6 +24,12 @@ class KrisKompassenDatabase extends Dexie {
     this.version(2).stores({
       crisisItems: "id, title, source, fetchedAt, savedOffline",
       crisisKitItems: "id, category, isOwned, isCustom",
+    })
+
+    this.version(3).stores({
+      crisisItems: "id, title, source, fetchedAt, savedOffline",
+      crisisKitItems: "id, category, isOwned, isCustom",
+      savedAddresses: "id, isActive",
     })
   }
 }

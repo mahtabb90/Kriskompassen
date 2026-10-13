@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { AddressProvider } from "../context/AddressProvider"
 import { ModeProvider } from "../context/ModeProvider"
 import CrisisInfoPage from "../pages/CrisisInfoPage"
 import CrisisKitPage from "../pages/CrisisKitPage"
@@ -21,6 +22,16 @@ vi.mock("../services/offlineService", () => ({
 
 vi.mock("../services/crisisKitService", () => ({
   getCrisisKitItems: vi.fn().mockResolvedValue([]),
+}))
+
+// This file exercises route/landmark structure, not addresses; stub the storage boundary
+// so AddressProvider (rendered by the real Header/AddressIndicator) never touches IndexedDB,
+// which jsdom does not implement.
+vi.mock("../services/addressStorageService", () => ({
+  getSavedAddresses: vi.fn().mockResolvedValue([]),
+  saveAddress: vi.fn(),
+  setActiveAddress: vi.fn(),
+  removeAddress: vi.fn(),
 }))
 
 beforeEach(() => {
@@ -51,17 +62,19 @@ describe("routed page structure", () => {
     async (path) => {
       render(
         <ModeProvider>
-          <MemoryRouter initialEntries={[path]}>
-            <Routes>
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/crisis" element={<CrisisInfoPage />} />
-                <Route path="/crisis-kit" element={<CrisisKitPage />} />
-                <Route path="/crisis/:id" element={<DetailedCrisisCard />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Route>
-            </Routes>
-          </MemoryRouter>
+          <AddressProvider>
+            <MemoryRouter initialEntries={[path]}>
+              <Routes>
+                <Route element={<AppLayout />}>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/crisis" element={<CrisisInfoPage />} />
+                  <Route path="/crisis-kit" element={<CrisisKitPage />} />
+                  <Route path="/crisis/:id" element={<DetailedCrisisCard />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Route>
+              </Routes>
+            </MemoryRouter>
+          </AddressProvider>
         </ModeProvider>
       )
 

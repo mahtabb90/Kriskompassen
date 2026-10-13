@@ -21,6 +21,9 @@ class Settings(BaseSettings):
 
     vma_api_url: AnyHttpUrl = AnyHttpUrl("https://vmaapi.sr.se/api/v3/alerts")
     vma_timeout_seconds: float = Field(default=8.0, gt=0, allow_inf_nan=False)
+    geocode_api_url: AnyHttpUrl = AnyHttpUrl("https://nominatim.openstreetmap.org/reverse")
+    geocode_timeout_seconds: float = Field(default=8.0, gt=0, allow_inf_nan=False)
+    geocode_user_agent: str = "KrisKompassen/0.1"
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
     )
