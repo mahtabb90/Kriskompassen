@@ -1,6 +1,8 @@
 """Checks the shared VMA cache with injected clocks and a fake SR fetch, without sleeping."""
 
 import asyncio
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -9,7 +11,7 @@ import pytest
 from src.api.dependencies import get_http_client, get_vma_cache
 from src.app import create_app
 from src.core.config import VMA_CACHE_TTL_SECONDS, Settings
-from src.core.errors import UpstreamError
+from src.core.errors import UpstreamError, UpstreamErrorCode
 from src.models.vma import VmaResponse, VmaSource
 from src.services.vma_cache import CachedVma, VmaCache
 
@@ -192,6 +194,31 @@ def test_monotonic_clock_running_backwards_expires_the_cache() -> None:
     assert sr.calls == 2
 
 
+UpstreamHandler = Callable[[httpx.Request], Awaitable[httpx.Response]]
+
+
+@asynccontextmanager
+async def _api(cache: VmaCache, upstream: UpstreamHandler) -> AsyncIterator[httpx.AsyncClient]:
+    """Serves the real API with the given cache and a mocked SR transport."""
+    application = create_app(
+        Settings(vma_api_url="https://upstream.example/vmas", vma_timeout_seconds=5)
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(upstream)) as sr_client:
+
+        async def provide_upstream() -> httpx.AsyncClient:
+            return sr_client
+
+        async def provide_cache() -> VmaCache:
+            return cache
+
+        application.dependency_overrides[get_http_client] = provide_upstream
+        application.dependency_overrides[get_vma_cache] = provide_cache
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=application), base_url="http://backend.example"
+        ) as client:
+            yield client
+
+
 async def _let_waiters_queue() -> None:
     for _ in range(SCHEDULER_TURNS):
         await asyncio.sleep(0)
@@ -221,36 +248,20 @@ async def _request_concurrently(*, primed: bool) -> tuple[list[httpx.Response], 
             200, json={"timestamp": "2026-10-05T12:00:00Z", "alerts": [f"call-{call}"]}
         )
 
-    application = create_app(
-        Settings(vma_api_url="https://upstream.example/vmas", vma_timeout_seconds=5)
-    )
-    async with httpx.AsyncClient(transport=httpx.MockTransport(upstream)) as sr_client:
-
-        async def provide_upstream() -> httpx.AsyncClient:
-            return sr_client
-
-        async def provide_cache() -> VmaCache:
-            return cache
-
-        application.dependency_overrides[get_http_client] = provide_upstream
-        application.dependency_overrides[get_vma_cache] = provide_cache
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=application), base_url="http://backend.example"
-        ) as client:
-            async with asyncio.timeout(5):
-                if primed:
-                    await client.get("/api/v1/vmas")
-                    clocks.advance(VMA_CACHE_TTL_SECONDS)
-                requests = [
-                    asyncio.create_task(client.get("/api/v1/vmas"))
-                    for _ in range(CONCURRENT_REQUESTS)
-                ]
-                await started.wait()
-                await _let_waiters_queue()
-                # Every request is still waiting for the single in-flight SR call.
-                assert not any(request.done() for request in requests)
-                release.set()
-                responses = await asyncio.gather(*requests)
+    async with _api(cache, upstream) as client:
+        async with asyncio.timeout(5):
+            if primed:
+                await client.get("/api/v1/vmas")
+                clocks.advance(VMA_CACHE_TTL_SECONDS)
+            requests = [
+                asyncio.create_task(client.get("/api/v1/vmas")) for _ in range(CONCURRENT_REQUESTS)
+            ]
+            await started.wait()
+            await _let_waiters_queue()
+            # Every request is still waiting for the single in-flight SR call.
+            assert not any(request.done() for request in requests)
+            release.set()
+            responses = await asyncio.gather(*requests)
     return responses, upstream_calls
 
 
@@ -334,3 +345,171 @@ def test_cancelled_attempt_lets_a_waiting_request_try_again() -> None:
     assert calls == 2
     assert result.data.alerts == ["after-cancel"]
     assert result.stale is False
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        UpstreamError("upstream_network_error", "Kunde inte ansluta."),
+        UpstreamError("upstream_http_error", "Källan svarade med ett fel."),
+        UpstreamError("upstream_invalid_response", "Ogiltigt svar."),
+        UpstreamError("upstream_timeout", "Tog för lång tid.", status_code=504),
+    ],
+    ids=lambda error: error.code,
+)
+def test_sr_failure_with_cached_feed_returns_stale_feed(error: UpstreamError) -> None:
+    """Returns the last successful feed with its original check time instead of the failure."""
+    clocks = FakeClocks()
+    cache = _cache(clocks)
+    feed = _feed("cached")
+    sr = FakeSr(feed, error)
+    _get(cache, sr)
+
+    clocks.advance(VMA_CACHE_TTL_SECONDS)
+    result = _get(cache, sr)
+
+    assert sr.calls == 2
+    assert result.data == feed
+    assert result.checked_at == START
+    assert result.stale is True
+    assert result.max_age_seconds == 0
+
+
+def test_failed_attempt_is_not_retried_within_the_period() -> None:
+    """Counts the period from the failed attempt, so an outage costs one SR call per TTL."""
+    clocks = FakeClocks()
+    cache = _cache(clocks)
+    sr = FakeSr(_feed("cached"), UpstreamError("upstream_http_error", "Fel."))
+    _get(cache, sr)
+    clocks.advance(VMA_CACHE_TTL_SECONDS)
+    _get(cache, sr)
+
+    for _ in range(5):
+        clocks.advance(11.9)
+        result = _get(cache, sr)
+        assert result.stale is True
+        assert result.checked_at == START
+
+    assert sr.calls == 2
+
+
+@pytest.mark.parametrize(
+    ("code", "status"),
+    [("upstream_network_error", 502), ("upstream_timeout", 504)],
+)
+def test_sr_failure_without_cached_feed_raises_until_the_next_attempt(
+    code: UpstreamErrorCode, status: int
+) -> None:
+    """Raises the documented error, without retrying SR until the period has elapsed."""
+    clocks = FakeClocks()
+    cache = _cache(clocks)
+    error = UpstreamError(code, "Fel.", status_code=status)
+    sr = FakeSr(error, _feed("recovered"))
+
+    for _ in range(2):
+        with pytest.raises(UpstreamError) as raised:
+            _get(cache, sr)
+        assert (raised.value.code, raised.value.status_code) == (code, status)
+        clocks.advance(VMA_CACHE_TTL_SECONDS - 1)
+    assert sr.calls == 1
+
+    clocks.advance(1)
+    result = _get(cache, sr)
+    assert sr.calls == 2
+    assert result.data.alerts == ["recovered"]
+    assert result.stale is False
+
+
+def _scripted_sr(*outcomes: httpx.Response | Exception) -> tuple[UpstreamHandler, list[int]]:
+    """Returns an SR transport handler that plays outcomes in order and a call counter."""
+    queue = list(outcomes)
+    calls = [0]
+
+    async def upstream(_request: httpx.Request) -> httpx.Response:
+        calls[0] += 1
+        outcome = queue.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    return upstream, calls
+
+
+def _sr_feed(*alerts: str) -> httpx.Response:
+    return httpx.Response(200, json={"timestamp": "2026-10-05T12:00:00Z", "alerts": list(alerts)})
+
+
+def test_api_returns_stale_feed_with_no_store_when_sr_fails() -> None:
+    """Keeps serving the cached feed with stale: true when SR fails or sends an invalid feed."""
+
+    async def run() -> list[httpx.Response]:
+        clocks = FakeClocks()
+        upstream, calls = _scripted_sr(
+            _sr_feed("cached"),
+            httpx.Response(503, text="unavailable"),
+            httpx.Response(200, json={"alerts": "invalid"}),
+        )
+        async with _api(_cache(clocks), upstream) as client:
+            responses = [await client.get("/api/v1/vmas")]
+            for _ in range(2):
+                clocks.advance(VMA_CACHE_TTL_SECONDS)
+                responses.append(await client.get("/api/v1/vmas"))
+        assert calls == [3]
+        return responses
+
+    fresh, *stale_responses = asyncio.run(run())
+
+    assert fresh.json()["stale"] is False
+    for response in stale_responses:
+        assert response.status_code == 200
+        assert response.headers["Cache-Control"] == "no-store"
+        assert response.json() == {**fresh.json(), "stale": True}
+        assert response.json()["checkedAt"] == "2026-10-05T12:00:00Z"
+
+
+def test_api_returns_error_without_cached_feed() -> None:
+    """Returns the documented error envelope, never an empty successful feed."""
+
+    async def run() -> list[httpx.Response]:
+        clocks = FakeClocks()
+        request = httpx.Request("GET", "https://upstream.example/vmas")
+        upstream, calls = _scripted_sr(httpx.ConnectError("Connection failed", request=request))
+        async with _api(_cache(clocks), upstream) as client:
+            first = await client.get("/api/v1/vmas")
+            clocks.advance(VMA_CACHE_TTL_SECONDS - 1)
+            second = await client.get("/api/v1/vmas")
+        assert calls == [1]
+        return [first, second]
+
+    for response in asyncio.run(run()):
+        assert response.status_code == 502
+        assert response.headers["Cache-Control"] == "no-store"
+        assert response.json()["error"]["code"] == "upstream_network_error"
+        assert "data" not in response.json()
+
+
+def test_api_recovers_after_sr_failure() -> None:
+    """Returns to fresh data, a new checkedAt and max-age once SR succeeds after the period."""
+
+    async def run() -> list[httpx.Response]:
+        clocks = FakeClocks()
+        upstream, calls = _scripted_sr(_sr_feed("before"), httpx.Response(503), _sr_feed("after"))
+        async with _api(_cache(clocks), upstream) as client:
+            responses = [await client.get("/api/v1/vmas")]
+            clocks.advance(VMA_CACHE_TTL_SECONDS)
+            responses.append(await client.get("/api/v1/vmas"))
+            clocks.advance(VMA_CACHE_TTL_SECONDS)
+            responses.append(await client.get("/api/v1/vmas"))
+        assert calls == [3]
+        return responses
+
+    fresh, stale, recovered = asyncio.run(run())
+
+    assert fresh.headers["Cache-Control"] == f"max-age={VMA_CACHE_TTL_SECONDS}"
+    assert stale.headers["Cache-Control"] == "no-store"
+    assert stale.json()["stale"] is True
+    assert stale.json()["checkedAt"] == "2026-10-05T12:00:00Z"
+    assert recovered.headers["Cache-Control"] == f"max-age={VMA_CACHE_TTL_SECONDS}"
+    assert recovered.json()["stale"] is False
+    assert recovered.json()["checkedAt"] == "2026-10-05T12:02:00Z"
+    assert recovered.json()["data"]["alerts"] == ["after"]
