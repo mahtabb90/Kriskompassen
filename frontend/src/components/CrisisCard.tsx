@@ -23,7 +23,11 @@ function CrisisCard({ item, onToggle }: CrisisCardProps) {
         <span className="h-full flex-1 bg-blue-900 transition-colors group-hover:bg-blue-800" />
         <span className="h-full w-8 bg-amber-400" />
       </div>
-      <Link to={`/crisis/${item.id}`} className="flex flex-1 flex-col p-6 pb-4 sm:p-7 sm:pb-4">
+      <Link
+        to={`/crisis/${item.id}`}
+        // The card clips overflow, so the focus outline is drawn inside the link instead.
+        className="flex flex-1 flex-col p-6 pb-4 focus-visible:-outline-offset-4 sm:p-7 sm:pb-4"
+      >
         <h2 className="text-xl font-bold text-blue-900">{item.title}</h2>
         <p className="mt-3 text-base leading-relaxed text-slate-600">{item.description}</p>
       </Link>

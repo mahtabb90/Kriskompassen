@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import DetailedCrisisCard from "../components/DetailedCrisisCard"
@@ -87,5 +87,73 @@ describe("CrisisInfoPage redirect notices", () => {
     expect(screen.queryByText(offlineNotice)).toBe(null)
     expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(mockCrisisData.length)
     expect(await screen.findAllByText("Inte sparad")).toHaveLength(mockCrisisData.length)
+  })
+})
+
+describe("CrisisInfoPage focus after removing an offline item", () => {
+  async function openOfflineList(count: number) {
+    const saved = mockCrisisData.slice(0, count)
+    vi.mocked(getOfflineItems).mockResolvedValue(saved)
+    vi.mocked(isSavedOffline).mockResolvedValue(true)
+    mountPage("/crisis")
+    fireEvent.click(screen.getByRole("radio", { name: "Offline" }))
+    await screen.findAllByText("Sparad offline")
+    return saved
+  }
+
+  function removeButton(title: string) {
+    return screen.getByRole("button", { name: `Ta bort offlinekopia: ${title}` })
+  }
+
+  function expectFocusOnCardLink(id: string) {
+    expect(document.activeElement?.getAttribute("href")).toBe(`/crisis/${id}`)
+  }
+
+  it("moves focus to the next card's link", async () => {
+    const saved = await openOfflineList(3)
+    const button = removeButton(saved[0].title)
+    button.focus()
+
+    fireEvent.click(button)
+
+    await waitFor(() => expectFocusOnCardLink(saved[1].id))
+  })
+
+  it("moves focus to the previous card's link when the last card is removed", async () => {
+    const saved = await openOfflineList(3)
+    const button = removeButton(saved[2].title)
+    button.focus()
+
+    fireEvent.click(button)
+
+    await waitFor(() => expectFocusOnCardLink(saved[1].id))
+  })
+
+  it("moves focus to the page heading when the list becomes empty", async () => {
+    const saved = await openOfflineList(1)
+    const button = removeButton(saved[0].title)
+    button.focus()
+
+    fireEvent.click(button)
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("heading", { level: 1, name: "Krisinformation" })
+      )
+    )
+    expect(await screen.findByText("Ingen krisinformation är sparad offline.")).toBeTruthy()
+  })
+
+  it("keeps focus where the user put it when another control has focus", async () => {
+    const saved = await openOfflineList(2)
+    const radio = screen.getByRole("radio", { name: "Offline" })
+    radio.focus()
+
+    fireEvent.click(removeButton(saved[0].title))
+
+    await screen.findByText(`"${saved[0].title}" har tagits bort från offlinelagringen.`, {
+      selector: "[role=status]",
+    })
+    expect(document.activeElement).toBe(radio)
   })
 })
