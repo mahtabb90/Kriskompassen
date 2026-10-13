@@ -151,7 +151,7 @@ function BottomNavigation({ navigationRef }: BottomNavigationProps) {
       aria-label="Huvudnavigation"
       data-scrollable={scrollState.overflow || undefined}
       className={
-        "primary-navigation z-20 border-y border-slate-200 bg-white " +
+        "primary-navigation z-20 border-t-2 border-b border-t-[#D7E2EF] border-b-slate-200 bg-white " +
         "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
       }
     >

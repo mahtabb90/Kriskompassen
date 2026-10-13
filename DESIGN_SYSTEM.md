@@ -325,7 +325,7 @@ KrisKompassen uses a single shared navigation component (`BottomNavigation`) tha
   preserves the link's position until selection completes, so clipped links remain tappable.
   Further menu items extend the same row.
 - **Desktop & Wide Viewports (`width >= 48rem`):**
-  Renders in standard document flow directly beneath the header, bordered by `border-y border-slate-200`.
+  Renders in standard document flow directly beneath the header, with a 2px top border in the page canvas colour (`border-t-2 border-t-[#D7E2EF]`) and a 1px bottom border (`border-b border-b-slate-200`).
 - **Short Viewports (`height < 30rem` regardless of width):**
   Remains in standard document flow above page content, preventing the navigation bar from blocking content on landscape phones or at high zoom levels.
   Short viewports and the existing tall-content fallback retain wrapped links and no scroll
