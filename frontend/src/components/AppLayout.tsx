@@ -17,6 +17,8 @@ import type { VmaMessage } from "../types/vma"
  * reveal it; initial loads and hash-only changes preserve browser focus. The measured
  * navigation, VMA and app-update heights reserve scroll space around focused content. VMA
  * requests and the update subscription belong to this persistent layout, not individual routes.
+ * Viewport resizes recheck bottom placement before applying the tall-navigation fallback.
+ * Resize notifications defer measurement to avoid resizing the bar during observer delivery.
  * A selected CAP snapshot, opened from the banner headline or its message list, stays readable
  * in a modal outside main while polling changes its feed validity or it leaves the banner.
  */
@@ -64,6 +66,7 @@ function AppLayout() {
     const previousUpdateHeight = root.style.getPropertyValue("--pwa-update-height")
     const previousNavigationOverflow = navigation.getAttribute("data-overflows-viewport")
     let focusFrame = 0
+    let measurementFrame = 0
 
     const keepFocusedContentVisible = () => {
       const focused = document.activeElement
@@ -129,21 +132,32 @@ function AppLayout() {
       scheduleFocusCheck()
     }
 
-    const observer = new ResizeObserver(updateReservedSpace)
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(measurementFrame)
+      // Changing placement during resize delivery can resize the observed bar again.
+      measurementFrame = requestAnimationFrame(updateReservedSpace)
+    })
     observer.observe(navigation)
     observer.observe(banner)
     observer.observe(updateNotice)
-    window.addEventListener("resize", updateReservedSpace)
+    const onViewportResize = () => {
+      // The wrapped fallback can exceed the height limit even when the fixed row fits.
+      cancelAnimationFrame(measurementFrame)
+      navigation.removeAttribute("data-overflows-viewport")
+      updateReservedSpace()
+    }
+    window.addEventListener("resize", onViewportResize)
     main.addEventListener("focusin", scheduleFocusCheck)
     navigation.addEventListener("focusin", scheduleFocusCheck)
     updateReservedSpace()
 
     return () => {
       observer.disconnect()
-      window.removeEventListener("resize", updateReservedSpace)
+      window.removeEventListener("resize", onViewportResize)
       main.removeEventListener("focusin", scheduleFocusCheck)
       navigation.removeEventListener("focusin", scheduleFocusCheck)
       cancelAnimationFrame(focusFrame)
+      cancelAnimationFrame(measurementFrame)
       if (previousNavigationOverflow === null) {
         navigation.removeAttribute("data-overflows-viewport")
       } else {

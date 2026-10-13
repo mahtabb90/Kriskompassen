@@ -52,6 +52,15 @@ last checked and offers a retry. While the app is open it checks for new warning
 pauses while offline and checks again when the connection returns. Warnings are not stored for
 offline use.
 
+On the "Min info" page, users can save one or more addresses — for example home and work — by
+typing each one or by requesting their device's position; a fetched position is reverse-geocoded
+into a readable address and clearly marked as approximate, and can be corrected or refetched at
+any time. Location permission is only requested when the user chooses to use it, and a denied
+permission, timeout or unsupported browser leaves manual entry available with a clear explanation.
+Each saved address can be labelled (home, work, or a custom label) and one is marked as the active
+address, shown as a discreet link in the header; saved addresses remain available between visits
+and are the starting point for a planned future feature to find nearby shelters.
+
 ## 🛠️ Tech stack
 
 | Technology      | Purpose                                                 |
@@ -69,8 +78,11 @@ offline use.
 
 ## Navigation and accessibility
 
-The app has two main pages: **Hem** (Home) and **Krisinformation** (Crisis information).
-The navigation adapts to phones and larger screens and clearly marks the current page.
+The main navigation links to **Hem** (Home), **Krisinformation** (Crisis information),
+**Min krislåda** (My emergency kit) and **Min info** (My information), and clearly marks the
+current page. On phones, the bottom menu scrolls sideways when its links do not fit; users
+can swipe or select the visible left/right arrows to reach more pages. Larger screens keep
+the navigation above the page content.
 
 Keyboard navigation includes a link to skip directly to the page content and visible focus
 indicators. Pages have descriptive headings and titles.
