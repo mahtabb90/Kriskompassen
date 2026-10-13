@@ -513,3 +513,77 @@ def test_api_recovers_after_sr_failure() -> None:
     assert recovered.json()["stale"] is False
     assert recovered.json()["checkedAt"] == "2026-10-05T12:02:00Z"
     assert recovered.json()["data"]["alerts"] == ["after"]
+
+
+@pytest.mark.parametrize(
+    ("age", "max_age"),
+    [(0, 60), (0.1, 59), (1, 59), (30, 30), (30.9, 29), (59, 1), (59.99, 0)],
+)
+def test_max_age_is_remaining_period_rounded_down(age: float, max_age: int) -> None:
+    """Never lets a browser reuse a response beyond the cache period."""
+    clocks = FakeClocks()
+    cache = _cache(clocks)
+    sr = FakeSr(_feed())
+    _get(cache, sr)
+
+    clocks.advance(age)
+    result = _get(cache, sr)
+
+    assert sr.calls == 1
+    assert result.max_age_seconds == max_age
+
+
+def test_api_max_age_decreases_between_requests() -> None:
+    """Sends max-age for the remaining period, rounded down, and refreshes once it has elapsed."""
+
+    async def run() -> list[httpx.Response]:
+        clocks = FakeClocks()
+        upstream, calls = _scripted_sr(_sr_feed(), _sr_feed())
+        async with _api(_cache(clocks), upstream) as client:
+            responses = []
+            # Binary fractions keep the cumulative age exact: 0, 0.5, 15, 45, 59.75 and 60.
+            for step in [0, 0.5, 14.5, 30, 14.75, 0.25]:
+                clocks.advance(step)
+                responses.append(await client.get("/api/v1/vmas"))
+        assert calls == [2]
+        return responses
+
+    responses = asyncio.run(run())
+
+    assert [response.headers["Cache-Control"] for response in responses] == [
+        "max-age=60",
+        "max-age=59",
+        "max-age=45",
+        "max-age=15",
+        "max-age=0",
+        "max-age=60",
+    ]
+    assert {response.json()["checkedAt"] for response in responses[:-1]} == {"2026-10-05T12:00:00Z"}
+    assert responses[-1].json()["checkedAt"] == "2026-10-05T12:01:00Z"
+
+
+def test_api_never_sends_s_maxage() -> None:
+    """Keeps fresh, stale and error responses out of a shared CDN cache layer."""
+
+    async def run() -> list[httpx.Response]:
+        clocks = FakeClocks()
+        upstream, _calls = _scripted_sr(httpx.Response(503), _sr_feed(), httpx.Response(503))
+        async with _api(_cache(clocks), upstream) as client:
+            responses = []
+            for _ in range(3):
+                responses.append(await client.get("/api/v1/vmas"))
+                clocks.advance(VMA_CACHE_TTL_SECONDS)
+        return responses
+
+    error, fresh, stale = asyncio.run(run())
+
+    assert (error.status_code, fresh.json()["stale"], stale.json()["stale"]) == (502, False, True)
+    assert [response.headers["Cache-Control"] for response in (error, fresh, stale)] == [
+        "no-store",
+        "max-age=60",
+        "no-store",
+    ]
+    for response in (error, fresh, stale):
+        assert "s-maxage" not in response.headers["Cache-Control"]
+        assert "CDN-Cache-Control" not in response.headers
+        assert "Vercel-CDN-Cache-Control" not in response.headers
