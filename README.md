@@ -76,8 +76,11 @@ and are the starting point for a planned future feature to find nearby shelters.
 
 ## Navigation and accessibility
 
-The app has two main pages: **Hem** (Home) and **Krisinformation** (Crisis information).
-The navigation adapts to phones and larger screens and clearly marks the current page.
+The main navigation links to **Hem** (Home), **Krisinformation** (Crisis information),
+**Min krislåda** (My emergency kit) and **Min info** (My information), and clearly marks the
+current page. On phones, the bottom menu scrolls sideways when its links do not fit; users
+can swipe or select the visible left/right arrows to reach more pages. Larger screens keep
+the navigation above the page content.
 
 Keyboard navigation includes a link to skip directly to the page content and visible focus
 indicators. Pages have descriptive headings and titles.

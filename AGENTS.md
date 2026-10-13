@@ -297,6 +297,20 @@ Navigation and accessibility:
 - Each routed page supplies one `h1` with `id="page-heading"` and `tabIndex={-1}`. The layout derives the document title from that heading and focuses it on pathname changes, including back/forward navigation. Initial loads and hash-only changes preserve browser focus.
 - Add public links to the typed `navigationItems` list in `BottomNavigation.tsx` and register their routes in `App.tsx`. Navigation currently uses exact matching; keep the same DOM links across screen sizes.
 - The navigation is fixed at the bottom below `48rem` viewport width when the viewport is at least `30rem` high; otherwise it stays above the content in normal flow. `AppLayout` also keeps it in normal flow when its content exceeds 25% of the viewport height, so enlarged text cannot cover focused controls. It measures the bar with `ResizeObserver` and maintains `--navigation-height` for content and scroll spacing.
+- Only the fixed mobile bottom bar uses a single horizontally scrolling row with full labels
+  and at least 48×48px targets. When its contents exceed the width available without controls,
+  two Swedish-labelled scroll arrows appear; unavailable directions use `aria-disabled` and
+  leave the tab order while retaining focus if already selected. Swiping and arrow actions
+  update direction availability. Arrow actions respect reduced motion; focus from the keyboard
+  or scripts and route changes reveal the relevant link with room for its outline. Pointer focus leaves
+  the link in place until selection completes, so a partially visible link remains tappable.
+  Returning to normal flow hides the controls and restores the existing wrapping layout.
+  New items remain in `navigationItems`;
+  scrolling does not assume a fixed item count or create a second set of links.
+  Viewport resizes recheck bottom placement before applying the 25% height safeguard, so a
+  previously wrapped bar cannot keep an otherwise compact bottom bar in normal flow.
+  ResizeObserver notifications defer layout measurement to an animation frame, allowing
+  placement changes without resizing the observed bar during notification delivery.
 - The VMA notice is sticky above the header and limited to 40dvh, with complete text in a keyboard-scrollable region. The layout measures `--vma-banner-height`, reserves top scroll padding and reveals focused main/navigation content between the notice and any fixed bottom bar. Only the first visible region owns the top safe-area inset. VMA live announcements persist across routes; the warning never takes focus when it arrives.
 - The banner heading contains a 48px underlined button with `aria-haspopup="dialog"` and a pointer
   cursor; the dialog's close button also uses a pointer cursor. The native
@@ -355,6 +369,12 @@ Decided tooling:
 - Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. `fake-indexeddb` and Playwright remain planned and are not installed.
 - Frontend VMA tests cover validation, mapping, transport, banner selection, request state, local time transitions and shared layout integration with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Component/hook integration tests replace `fetch` while retaining real validation/mapping, so no backend is required. No test page or mock mode is bundled with the app. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Manual browser layout checks complement these tests; jsdom does not verify real rendering or spoken screen-reader output.
 - Layout integration tests mount the real `ModeProvider`, mode toggle and connectivity status alongside the VMA banner. They cover keyboard mode changes, title updates, connection loss and recovery while preserving the warning and its single request.
+- Navigation component tests cover overflow controls, scroll limits, reduced motion, focused
+  and current-link visibility, pointer selection/cancellation, changing menu width, normal-flow
+  fallback and observer cleanup
+  using controlled measurements. Layout tests also verify reserved bottom-bar space and
+  restoration after viewport resize while retaining the tall-content fallback. Real
+  responsive rendering, touch gestures and spoken screen-reader output require browser/device checks.
 - Crisis list regression tests mount the real mode provider, toggle and crisis list/detail
   routes with mocked offline storage. They cover the unsaved-item redirect, immediate notice
   removal on returning online, retained offline notices on an online mount and the existing

@@ -197,7 +197,7 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
 ### 4.2 Page Shell and Layout Boundaries
 
 - **Max Width Container:**
-  All main content sections, header content, and navigation links are constrained to `max-w-4xl` (`64rem` / 1024px) and horizontally centered with `mx-auto`.
+  All main content sections, header content, and navigation links are constrained to `max-w-4xl` (`56rem` / 896px) and horizontally centered with `mx-auto`.
 - **Canvas and Surfaces:**
   `#D7E2EF` acts as the main application content canvas behind cards and page content. The header and navigation bars remain clean white surfaces.
 - **Viewport Safe-Area Insets:**
@@ -313,10 +313,26 @@ KrisKompassen uses a single shared navigation component (`BottomNavigation`) tha
 - **Mobile Viewports (`width < 48rem` and `height >= 30rem`):**
   Fixed at the bottom of the screen (`position: fixed; inset-inline: 0; bottom: 0`).
   A subtle top shadow (`box-shadow: 0 -4px 16px rgb(15 23 42 / 0.06)`) distinguishes the navigation from the scrolling page content.
+  Only this fixed bar uses a single horizontal row of full labels with 48×48px minimum
+  targets. Links scroll natively; a thin scrollbar and left/right controls make overflow
+  discoverable. The controls appear only when the contents exceed the width available without
+  arrows. They reuse the white/blue outlined-button palette with redundant, hidden-from-AT SVG
+  chevrons and the Swedish names **Rulla menyn åt vänster** / **Rulla menyn åt höger**.
+  Unavailable directions have `aria-disabled="true"`, reduced opacity and no tab stop; a focused
+  control stays focused when it reaches an edge. Arrow actions scroll most of the visible row,
+  using immediate movement for reduced motion. Focus from the keyboard or scripts, and route
+  changes, reveal their link with padding for the standard outward focus outline. Pointer focus
+  preserves the link's position until selection completes, so clipped links remain tappable.
+  Further menu items extend the same row.
 - **Desktop & Wide Viewports (`width >= 48rem`):**
   Renders in standard document flow directly beneath the header, bordered by `border-y border-slate-200`.
 - **Short Viewports (`height < 30rem` regardless of width):**
   Remains in standard document flow above page content, preventing the navigation bar from blocking content on landscape phones or at high zoom levels.
+  Short viewports and the existing tall-content fallback retain wrapped links and no scroll
+  arrows. If an arrow loses availability because the controls disappear, focus returns to the
+  current link (or the first link when no route is active).
+  Viewport resizes recheck the compact bottom layout before applying the height safeguard;
+  a larger wrapped layout does not permanently prevent a return to the bottom edge.
 
 ### 7.2 Link States and Non-Colour Indicators
 
