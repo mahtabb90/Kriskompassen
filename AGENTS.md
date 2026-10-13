@@ -28,7 +28,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Target users: the general public in Sweden. No login or user accounts are planned.
 - Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level online/offline mode toggle (`ModeToggle`, backed by `ModeContext`) controls whether `/crisis` and `/crisis/:id` show the bundled mock dataset or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
 - A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, a count and expandable list of any other active warnings, and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; the crisis articles still use mock data. Recurring network updates and offline VMA storage are not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
-- `AddressSection` on the home page lets the user confirm an address by typing it or by fetching the device's position through the browser's Geolocation API (permission requested only on that button click). The backend reverse-geocodes the resulting coordinates through OpenStreetMap Nominatim and returns a normalized `{found, address, municipality, county, lat, lon, source}` shape; `found: false` is a resolvable-but-unknown result, not an upstream error. The confirmed address is in-memory only for now (no Dexie table); it is intended as the future starting point for nearby-shelter search, which is not implemented. **A manually typed address is never sent anywhere or validated** — `submitManualAddress()` only trims and stores the text, with no coordinates and no geocoding, unlike a fetched position. It is not yet "an address the app understands" in a geospatial sense; forward-geocoding/validating it is separate future work.
+- Users save one or more addresses on the `/min-info` page, each composed by typing it or by fetching the device's position through the browser's Geolocation API (permission requested only on that button click). The backend reverse-geocodes fetched coordinates through OpenStreetMap Nominatim and returns a normalized `{found, address, municipality, county, lat, lon, source}` shape; `found: false` is a resolvable-but-unknown result, not an upstream error. Each saved address carries a label (`hem`, `arbete`, or `annan` with free text) and is persisted in IndexedDB (`savedAddresses` table; see §9's documented exception for storing this personal data locally). Exactly one saved address is active at a time — the one other features (e.g. future shelter search) use as the starting point; saving the first address activates it automatically, and `AddressIndicator` shows the active one as a discreet link in the header once one exists. **A manually typed address is never forward-geocoded or validated** — composing it only resolves the typed/fetched text, with coordinates present solely for a geolocated result; forward-geocoding/validating manual text is separate future work.
 - The banner title opens the full selected warning in an accessible native dialog with complete
   Swedish text, instructions, source, CAP issue/update time and available affected areas. Closing
   returns to the previous view. Local tests/browser checks do not establish live iPhone or spoken
@@ -106,15 +106,16 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs
     ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
-        ├── components/  # shared layout/header/navigation, VMA banner/dialog, AddressSection, PwaUpdateNotice and crisis/offline controls
+        ├── components/  # shared layout/header/navigation, VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice and crisis/offline controls
         ├── config/      # central backend address, VMA request timeout and the geocode endpoint URL
-        ├── context/     # ModeProvider.tsx + modeContext.ts (context object, Mode type, useMode hook — split to satisfy react-refresh/only-export-components)
+        ├── context/     # ModeProvider.tsx + modeContext.ts and AddressProvider.tsx + addressContext.ts (context object, hook — split to satisfy react-refresh/only-export-components)
         ├── data/        # mock data (mockCrisisData.ts)
         ├── db/          # Dexie database (db.ts)
-        ├── hooks/       # VMA request state/validity, address entry/geolocation state (useAddress) and shared PWA update subscription; adjacent tests
-        ├── pages/       # HomePage, CrisisInfoPage, NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
-        ├── services/    # offline storage, PWA update lifecycle, VMA, geocoding and geolocation services; adjacent unit tests
-        └── types/       # shared crisis/VMA/address types
+        ├── hooks/       # VMA request state/validity, address composition (useAddress), saved-addresses list/active state (useSavedAddresses) and shared PWA update subscription; adjacent tests
+        ├── pages/       # HomePage, CrisisInfoPage, CrisisKitPage, MyInfoPage (/min-info), NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
+        ├── services/    # offline storage, PWA update lifecycle, VMA, geocoding, geolocation and saved-address storage services; adjacent unit tests (addressStorageService has none yet — see §8)
+        ├── types/       # shared crisis/VMA/address types
+        └── utils/       # small pure presentational helpers (e.g. describeAddressLabel)
 ```
 
 - New frontend code goes under `frontend/src/` in the matching folder above.
@@ -385,7 +386,7 @@ Decided tooling:
 - Never commit secrets. `.env` and `.env.*` are git-ignored (except `.env.example`).
 - Do not read, print or edit `.env` files. Document new variables by name only in `frontend/.env.example` or `backend/.env.example`. Backend settings read process environment variables and do not automatically load `.env` files.
 - Anything in the frontend (including `VITE_*` env vars) ends up in the public bundle. Never put API keys or secrets there.
-- Data in IndexedDB is readable on the user's device. Do not store sensitive personal data there.
+- Data in IndexedDB is readable on the user's device. Do not store sensitive personal data there. **Documented exception:** saved addresses (`savedAddresses` table, via `addressStorageService.ts`) are deliberately stored locally — the team approved this because the feature is pointless without persistence, the data is device-local and only ever leaves the device as coordinates sent to the geocode endpoint the user themselves triggered, and nothing else in the app reads or transmits this table. Do not extend this exception to other personal data without the same explicit approval.
 - Treat data from external sources (VMA, etc.) as untrusted. Do not render it as raw HTML. Validate the feed envelope with Pydantic and individual records in the frontend before presentation.
 - VMA responses carry provider and API attribution. The banner and full-message dialog link to the provider; technical API metadata stays in the model. The usage review in `backend/DEVELOPMENT.md` supports intended onward publication, but current VMA-specific terms remain unconfirmed. Clarify terms with SR before public release or adding persistent/offline VMA storage; this integration adds no such storage.
 
@@ -393,7 +394,7 @@ Decided tooling:
 
 - Add, remove or upgrade dependencies, or change `package-lock.json` or `requirements*.txt`.
 - Scaffold the backend.
-- Change the Dexie schema in `frontend/src/db/db.ts`. The current schema is `version(1)`, `crisisItems: "id, title, source, fetchedAt, savedOffline"`. Changes need a new version and a migration plan.
+- Change the Dexie schema in `frontend/src/db/db.ts`. The current schema is `version(3)`: `crisisItems: "id, title, source, fetchedAt, savedOffline"`, `crisisKitItems: "id, category, isOwned, isCustom"`, `savedAddresses: "id, isActive"`. Changes need a new version and a migration plan.
 - Reintroduce separate online/offline routes (e.g. `/offline`, `/offline/:id`) or otherwise encode the selected mode in the URL. The team decided online/offline is a shared `ModeContext` read by `/crisis` and `/crisis/:id` instead (see §3) specifically so the URL never changes on a mode switch. If a task description points back toward separate routes, stop and ask, and remind them of this decision, rather than silently reintroducing it.
 - Change the PWA or service worker config (`VitePWA` in `vite.config.ts`, manifest, caching).
 - Create or change any backend database schema.

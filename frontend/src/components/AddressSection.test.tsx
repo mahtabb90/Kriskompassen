@@ -30,14 +30,20 @@ afterEach(() => {
 })
 
 describe("AddressSection", () => {
-  it("confirms a manually typed address and labels it as manual", () => {
-    render(<AddressSection />)
+  it("confirms a manually typed address, labels it as manual and reports it resolved", () => {
+    const onResolved = vi.fn()
+    render(<AddressSection onResolved={onResolved} />)
 
     fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Testgatan 1" } })
     fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
 
     expect(screen.getByText("Testgatan 1")).toBeTruthy()
     expect(screen.getByText("Angiven manuellt")).toBeTruthy()
+    expect(onResolved).toHaveBeenCalledExactlyOnceWith({
+      text: "Testgatan 1",
+      source: "manual",
+      approximate: false,
+    })
   })
 
   it("fetches and labels an automatically retrieved address as approximate", async () => {
@@ -48,7 +54,7 @@ describe("AddressSection", () => {
       Response.json({ found: true, address: "Drottninggatan 1", lat: 59.3, lon: 18.0 })
     )
 
-    render(<AddressSection />)
+    render(<AddressSection onResolved={vi.fn()} />)
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Hämta min position" }))
     })
@@ -66,7 +72,7 @@ describe("AddressSection", () => {
       }
     )
 
-    render(<AddressSection />)
+    render(<AddressSection onResolved={vi.fn()} />)
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Hämta min position" }))
     })
@@ -81,7 +87,7 @@ describe("AddressSection", () => {
 
   it("disables the location button with an explanation when geolocation is unsupported", () => {
     vi.stubGlobal("navigator", {})
-    render(<AddressSection />)
+    render(<AddressSection onResolved={vi.fn()} />)
 
     const button = screen.getByRole("button", { name: "Hämta min position" }) as HTMLButtonElement
     expect(button.disabled).toBe(true)
@@ -89,7 +95,7 @@ describe("AddressSection", () => {
   })
 
   it("refills and focuses the input with the current address when editing", () => {
-    render(<AddressSection />)
+    render(<AddressSection onResolved={vi.fn()} />)
 
     fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Testgatan 1" } })
     fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))

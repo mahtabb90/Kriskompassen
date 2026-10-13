@@ -14,6 +14,8 @@ export interface Address {
   approximate: boolean
   lat?: number
   lon?: number
+  /** The municipality, when known from reverse geocoding. Not set for a manual address. */
+  municipality?: string
 }
 
 /** Identifies why fetching a readable address from the backend failed. */
@@ -40,3 +42,23 @@ export interface GeocodeNotFoundResult {
 }
 
 export type GeocodeResult = GeocodeFoundResult | GeocodeNotFoundResult
+
+/**
+ * Categorizes a saved address. "annan" carries a user-supplied label, e.g. "Sommarstuga";
+ * "hem" and "arbete" are fixed categories with no additional text.
+ */
+export type AddressLabel = { kind: "hem" } | { kind: "arbete" } | { kind: "annan"; text: string }
+
+/**
+ * An address the user has saved for reuse, distinct from the address currently being composed.
+ *
+ * Exactly one saved address is active at a time (`isActive`): the one used as the starting
+ * point for features like shelter search. Saving the first address activates it automatically;
+ * activating another deactivates the rest.
+ */
+export interface SavedAddress extends Address {
+  id: string
+  label: AddressLabel
+  isActive: boolean
+  savedAt: string
+}

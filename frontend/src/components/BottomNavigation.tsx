@@ -11,6 +11,7 @@ const navigationItems: readonly NavigationItem[] = [
   { to: "/", label: "Hem", end: true },
   { to: "/crisis", label: "Krisinformation", end: true },
   { to: "/crisis-kit", label: "Min krislåda", end: true },
+  { to: "/min-info", label: "Min info", end: true },
 ]
 
 interface BottomNavigationProps {
@@ -32,15 +33,15 @@ function BottomNavigation({ navigationRef }: BottomNavigationProps) {
         "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
       }
     >
-      <ul className="mx-auto flex w-full max-w-4xl flex-wrap gap-2 px-4 py-3 sm:px-6">
+      <ul className="mx-auto flex w-full max-w-4xl flex-nowrap gap-2 px-4 py-1 sm:px-6">
         {navigationItems.map(({ to, label, end }) => (
           <li key={to} className="min-w-0 flex-[1_1_8rem] md:flex-initial">
             <NavLink
               to={to}
               end={end}
               className={({ isActive }) =>
-                "grid h-full min-h-12 min-w-12 place-items-center rounded-xl " +
-                "px-2 py-3 md:px-4 " +
+                "grid h-full min-h-6 min-w-6 place-items-center rounded-xl overflow-none" +
+                "px-2 py-1 md:px-4 " +
                 "text-center text-base leading-normal wrap-anywhere " +
                 (isActive
                   ? "bg-blue-900 font-bold text-white underline decoration-2 underline-offset-4"

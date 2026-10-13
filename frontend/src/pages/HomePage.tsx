@@ -1,5 +1,3 @@
-import AddressSection from "../components/AddressSection"
-
 function HomePage() {
   return (
     <section>
@@ -11,8 +9,6 @@ function HomePage() {
         människor att snabbt hitta tydlig och relevant lokal information vid nödsituationer och
         större samhällsstörningar.
       </p>
-
-      <AddressSection />
     </section>
   )
 }

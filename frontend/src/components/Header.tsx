@@ -1,3 +1,4 @@
+import AddressIndicator from "./AddressIndicator"
 import ConnectionStatus from "./ConnectionStatus"
 import ModeToggle from "./ModeToggle"
 
@@ -15,7 +16,7 @@ function Header({ reserveTopInset = true }: { reserveTopInset?: boolean }) {
         {/* Source order is the mobile order (brand, tagline, status, mode) so reading and tab
             order match what is shown; from md the grid restores the brand and mode in one row. */}
         <div className="flex flex-col items-start gap-3 md:grid md:grid-cols-[1fr_auto] md:gap-0">
-          <div className="flex flex-wrap items-center gap-3 md:col-start-1 md:row-start-1 md:self-center">
+          <div className="flex flex-wrap items-center gap-3 md:col-start-1 md:row-start-1 md:self-start">
             <img src="/kriskompassen-logo.png" alt="" className="h-12 w-12 sm:h-14 sm:w-14" />
 
             <p
@@ -36,8 +37,14 @@ function Header({ reserveTopInset = true }: { reserveTopInset?: boolean }) {
             <ConnectionStatus />
           </div>
 
-          <div className="md:col-start-2 md:row-start-1 md:self-center md:justify-self-end">
+          <div
+            className={
+              "flex flex-col items-start gap-2 md:col-start-2 md:row-start-1 " +
+              "md:items-end md:self-start md:justify-self-end"
+            }
+          >
             <ModeToggle />
+            <AddressIndicator />
           </div>
         </div>
       </div>

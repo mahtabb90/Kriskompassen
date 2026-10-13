@@ -50,12 +50,14 @@ and the message's issue or update time. Users can close it and return to the pag
 The app reports when it cannot check warning information and offers a retry. It checks for new
 warnings when opened; recurring updates and offline storage of warnings are not implemented.
 
-On the home page, users can enter their address by typing it or by requesting their device's
-position; a fetched position is reverse-geocoded into a readable address and clearly marked as
-approximate, and can be corrected or refetched at any time. Location permission is only requested
-when the user chooses to use it, and a denied permission, timeout or unsupported browser leaves
-manual entry available with a clear explanation. This address is not yet saved between visits;
-it is the starting point for a planned future feature to find nearby shelters.
+On the "Min info" page, users can save one or more addresses — for example home and work — by
+typing each one or by requesting their device's position; a fetched position is reverse-geocoded
+into a readable address and clearly marked as approximate, and can be corrected or refetched at
+any time. Location permission is only requested when the user chooses to use it, and a denied
+permission, timeout or unsupported browser leaves manual entry available with a clear explanation.
+Each saved address can be labelled (home, work, or a custom label) and one is marked as the active
+address, shown as a discreet link in the header; saved addresses remain available between visits
+and are the starting point for a planned future feature to find nearby shelters.
 
 ## 🛠️ Tech stack
 

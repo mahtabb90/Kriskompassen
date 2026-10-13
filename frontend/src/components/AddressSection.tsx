@@ -1,21 +1,32 @@
-import { useId, useRef, useState, type FormEvent } from "react"
+import { useEffect, useId, useRef, useState, type FormEvent } from "react"
 import { useAddress } from "../hooks/useAddress"
+import type { Address } from "../types/address"
+
+interface AddressSectionProps {
+  /** Called whenever typing or fetching a position resolves a new address to add. */
+  onResolved: (address: Address) => void
+}
 
 /**
- * Lets the user confirm an address by typing it or by fetching the device's position.
+ * Lets the user compose one address by typing it or by fetching the device's position.
  *
  * Both paths are always visible rather than gated behind a mode switch, so the "Hämta min
  * position" button stays a clearly visible control per the ticket's acceptance criteria.
  * A geolocated address is always labelled approximate; "Ändra adress" refills the form with
- * the current address text for correction rather than hiding either control.
+ * the resolved text for correction rather than hiding either control. Does not save the
+ * address itself — `onResolved` hands it to the caller (e.g. to label and save it).
  */
-function AddressSection() {
+function AddressSection({ onResolved }: AddressSectionProps) {
   const { address, loading, failed, errorMessage, submitManualAddress, requestLocation } =
     useAddress()
   const [inputValue, setInputValue] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
   const helpTextId = useId()
   const geolocationSupported = "geolocation" in navigator
+
+  useEffect(() => {
+    if (address) onResolved(address)
+  }, [address, onResolved])
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -34,18 +45,17 @@ function AddressSection() {
       className="mt-8 rounded-2xl border border-blue-200/80 bg-white p-6 shadow-sm sm:p-8"
     >
       <h2 id="address-heading" className="text-xl font-bold text-blue-900">
-        Din adress
+        Lägg till adress
       </h2>
       <p className="mt-2 max-w-prose text-sm leading-relaxed text-slate-700">
-        Ange din adress eller hämta din position. Adressen kan senare användas som utgångspunkt för
-        att hitta närliggande skyddsrum.
+        Ange en adress eller hämta din position. Du väljer en etikett och sparar den i listan nedan.
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
-        <div className="flex flex-col gap-1 sm:flex-1">
-          <label htmlFor="address-input" className="text-sm font-semibold text-slate-700">
-            Adress
-          </label>
+      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-2">
+        <label htmlFor="address-input" className="text-sm font-semibold text-slate-700">
+          Adress
+        </label>
+        <div className="flex flex-col gap-2 sm:flex-row">
           <input
             id="address-input"
             ref={inputRef}
@@ -56,19 +66,19 @@ function AddressSection() {
             aria-describedby="address-format-hint"
             value={inputValue}
             onChange={(event) => setInputValue(event.target.value)}
-            className="min-h-12 rounded-xl border-2 border-blue-900 px-4 py-2 text-base text-slate-900"
+            className="min-h-12 rounded-xl border-2 border-blue-900 px-4 py-2 text-base text-slate-900 sm:flex-1"
           />
-          <p id="address-format-hint" className="text-xs text-slate-500">
-            Skriv gatuadress, nummer och ort, t.ex. &quot;Storgatan 1, Stockholm&quot;, så blir
-            adressen tydlig och går inte att förväxla med en gata med samma namn på en annan ort.
-          </p>
+          <button
+            type="submit"
+            className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-950"
+          >
+            Bekräfta adress
+          </button>
         </div>
-        <button
-          type="submit"
-          className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-950"
-        >
-          Bekräfta adress
-        </button>
+        <p id="address-format-hint" className="text-xs text-slate-500">
+          Skriv gatuadress, nummer och ort, t.ex. &quot;Storgatan 1, Stockholm&quot;, så blir
+          adressen tydlig och går inte att förväxla med en gata med samma namn på en annan ort.
+        </p>
       </form>
 
       <p className="my-3 text-sm font-medium text-slate-500">eller</p>

@@ -88,6 +88,7 @@ describe("useAddress", () => {
       approximate: true,
       lat: 59.3,
       lon: 18.0,
+      municipality: "Stockholm kommun",
     })
   })
 

@@ -99,6 +99,7 @@ export function useAddress() {
             approximate: true,
             lat: result.lat,
             lon: result.lon,
+            municipality: result.municipality ?? undefined,
           },
           status: "success",
           errorMessage: "",

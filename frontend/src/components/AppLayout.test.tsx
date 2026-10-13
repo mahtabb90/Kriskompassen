@@ -3,11 +3,22 @@ import { StrictMode } from "react"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { AddressProvider } from "../context/AddressProvider"
 import { ModeProvider } from "../context/ModeProvider"
 import { useMode } from "../context/modeContext"
 import { alert, feed, info, multipleAlerts, now } from "../services/__fixtures__/vma"
 import AppLayout from "./AppLayout"
 import { installDialogTestMethods } from "./__fixtures__/dialog"
+
+// This file exercises VMA/layout behavior, not addresses; stub the storage boundary so
+// AddressProvider (rendered by the real Header/AddressIndicator) never touches IndexedDB,
+// which jsdom does not implement.
+vi.mock("../services/addressStorageService", () => ({
+  getSavedAddresses: vi.fn().mockResolvedValue([]),
+  saveAddress: vi.fn(),
+  setActiveAddress: vi.fn(),
+  removeAddress: vi.fn(),
+}))
 
 let fetchMock = vi.fn<typeof fetch>()
 const measureCallbacks: Array<() => void> = []
@@ -27,14 +38,16 @@ function mountLayout() {
   return render(
     <StrictMode>
       <ModeProvider>
-        <MemoryRouter>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route index element={<Page title="Hem" />} />
-              <Route path="crisis" element={<Page title="Krisinformation" />} />
-            </Route>
-          </Routes>
-        </MemoryRouter>
+        <AddressProvider>
+          <MemoryRouter>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route index element={<Page title="Hem" />} />
+                <Route path="crisis" element={<Page title="Krisinformation" />} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </AddressProvider>
       </ModeProvider>
     </StrictMode>
   )
