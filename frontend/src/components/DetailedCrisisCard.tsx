@@ -82,9 +82,9 @@ function DetailedCrisisCard() {
         </p>
         <Link
           to="/crisis"
-          className="mt-6 inline-flex min-h-12 items-center font-medium text-blue-900 underline underline-offset-4"
+          className="mt-6 inline-flex min-h-12 items-center gap-1 font-medium text-blue-900 underline underline-offset-4"
         >
-          ← Tillbaka till krisinformation
+          <span aria-hidden="true">←</span>Tillbaka till krisinformation
         </Link>
       </section>
     )
@@ -113,9 +113,9 @@ function DetailedCrisisCard() {
       <div className="p-6 sm:p-8">
         <Link
           to="/crisis"
-          className="mb-6 inline-flex min-h-12 items-center font-medium text-blue-900 underline underline-offset-4"
+          className="mb-6 inline-flex min-h-12 items-center gap-1 font-medium text-blue-900 underline underline-offset-4"
         >
-          ← Tillbaka till krisinformation
+          <span aria-hidden="true">←</span>Tillbaka till krisinformation
         </Link>
 
         <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
@@ -153,7 +153,7 @@ function DetailedCrisisCard() {
               rel="noopener noreferrer"
               className="mt-2 inline-flex min-h-12 items-center font-medium text-blue-900 underline underline-offset-4"
             >
-              Läs mer på källan
+              Läs mer på källan (öppnas i ny flik)
             </a>
           )}
         </div>

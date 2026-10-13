@@ -4,6 +4,9 @@ import { useMode } from "../context/modeContext"
 /**
  * Shows the browser-reported network connectivity, separate from the selected mode.
  *
+ * The status line is a polite live region, so connectivity changes are announced even when the
+ * mode is not auto-switched and no alert is shown.
+ *
  * Also surfaces a dismissible, visible explanation when the app has just force-switched to
  * offline mode because the connection was lost. Dismissing it moves keyboard focus to the status
  * line, which stays mounted, so focus is not dropped when the dismiss button unmounts.
@@ -19,7 +22,12 @@ function ConnectionStatus() {
 
   return (
     <div className="flex flex-col gap-2">
-      <p ref={statusRef} tabIndex={-1} className="flex items-center gap-2 text-sm text-slate-600">
+      <p
+        ref={statusRef}
+        role="status"
+        tabIndex={-1}
+        className="flex items-center gap-2 text-sm text-slate-600"
+      >
         <span
           aria-hidden="true"
           className={`h-2 w-2 rounded-full ${isOnline ? "bg-green-600" : "bg-red-600"}`}
