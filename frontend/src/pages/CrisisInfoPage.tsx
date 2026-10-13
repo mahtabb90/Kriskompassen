@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useLocation } from "react-router-dom"
 import CrisisCard from "../components/CrisisCard"
 import { useMode, type Mode } from "../context/modeContext"
@@ -14,7 +14,8 @@ type OfflineListState =
  *
  * Online mode shows the full bundled dataset. Offline mode reads only items saved for
  * offline access from IndexedDB, making no network call. Items disappear from the offline
- * list as soon as they are removed. Redirect notices are shown only in the mode that
+ * list as soon as they are removed, and keyboard focus moves to the next remaining card (or the
+ * previous one, or the page heading when none remain) instead of being lost. Redirect notices are shown only in the mode that
  * produced them, including when browser history state survives a reload.
  */
 function CrisisInfoPage() {
@@ -25,6 +26,10 @@ function CrisisInfoPage() {
 
   const [offlineState, setOfflineState] = useState<OfflineListState>({ status: "loading" })
   const [removedMessage, setRemovedMessage] = useState("")
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+  // Card index to focus after the next offline list update, or "heading" when the list empties.
+  const pendingFocus = useRef<number | "heading" | null>(null)
 
   useEffect(() => {
     if (mode !== "offline") return
@@ -44,8 +49,36 @@ function CrisisInfoPage() {
     }
   }, [mode])
 
+  useEffect(() => {
+    const target = pendingFocus.current
+    if (target === null) return
+    pendingFocus.current = null
+
+    if (target === "heading") {
+      headingRef.current?.focus()
+    } else {
+      gridRef.current?.children[target]?.querySelector("a")?.focus()
+    }
+  }, [offlineState])
+
   function handleToggle(item: CrisisItem, saved: boolean) {
     if (saved) return
+
+    if (offlineState.status === "ready") {
+      const index = offlineState.items.findIndex((other) => other.id === item.id)
+      const active = document.activeElement
+      const focusWasInCard =
+        !active ||
+        active === document.body ||
+        Boolean(gridRef.current?.children[index]?.contains(active))
+      const remaining = offlineState.items.length - 1
+
+      // Focus would otherwise fall to the document when the card unmounts. The next card
+      // takes the removed card's index; after removing the last card, the previous one is used.
+      if (index >= 0 && focusWasInCard) {
+        pendingFocus.current = remaining === 0 ? "heading" : Math.min(index, remaining - 1)
+      }
+    }
 
     setOfflineState((current) =>
       current.status === "ready"
@@ -61,7 +94,12 @@ function CrisisInfoPage() {
 
   return (
     <section>
-      <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
+      <h1
+        ref={headingRef}
+        id="page-heading"
+        tabIndex={-1}
+        className="text-3xl font-bold text-blue-900"
+      >
         Krisinformation
       </h1>
 
@@ -112,7 +150,7 @@ function CrisisInfoPage() {
       )}
 
       {mode === "offline" && offlineState.status === "ready" && offlineState.items.length > 0 && (
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
+        <div ref={gridRef} className="mt-6 grid gap-6 sm:grid-cols-2">
           {offlineState.items.map((item) => (
             <CrisisCard key={item.id} item={item} onToggle={(saved) => handleToggle(item, saved)} />
           ))}

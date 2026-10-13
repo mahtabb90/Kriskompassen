@@ -339,7 +339,7 @@ KrisKompassen uses a single shared navigation component (`BottomNavigation`) tha
 A centralized, prominent focus outline is defined in `frontend/src/index.css`:
 
 ```css
-:where(a, button, [tabindex]):focus-visible {
+:where(a, button, summary, [tabindex]):focus-visible {
   outline: 3px solid var(--color-blue-900);
   outline-offset: 4px;
 }
@@ -356,7 +356,7 @@ For users who rely on Windows High Contrast / Forced Colors:
 
 ```css
 @media (forced-colors: active) {
-  :where(a, button, [tabindex]):focus-visible,
+  :where(a, button, summary, [tabindex]):focus-visible,
   .vma-banner:focus-visible,
   .vma-banner :focus-visible {
     outline-color: Highlight;
