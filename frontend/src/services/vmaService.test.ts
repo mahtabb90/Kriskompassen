@@ -3,7 +3,7 @@ import { apiConfig } from "../config/apiConfig"
 import { VmaResponseValidationError } from "./vmaResponseValidator"
 import { fetchVmaResponse, fetchVmas, VmaRequestError } from "./vmaService"
 
-import { alert as validRecord, feed, info, now, source } from "./__fixtures__/vma"
+import { checkedAt, alert as validRecord, feed, info, now, source } from "./__fixtures__/vma"
 
 function requestSignal(options?: RequestInit): AbortSignal {
   if (!options?.signal) throw new Error("Expected a per-request abort signal.")
@@ -57,6 +57,8 @@ describe("fetchVmas", () => {
     await expect(fetchVmas()).resolves.toEqual({
       source,
       feedUpdatedAt: new Date(now).toISOString(),
+      checkedAt: new Date(checkedAt).toISOString(),
+      stale: false,
       evaluatedAt: new Date(now).toISOString(),
       messages: [],
       rejectedCount: 0,
@@ -91,6 +93,8 @@ describe("fetchVmas", () => {
     await expect(fetchVmas()).resolves.toEqual({
       source,
       feedUpdatedAt: new Date(now).toISOString(),
+      checkedAt: new Date(checkedAt).toISOString(),
+      stale: false,
       evaluatedAt: new Date(now).toISOString(),
       messages: [],
       rejectedCount: 0,

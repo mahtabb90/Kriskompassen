@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { alert, feed, info, source } from "./__fixtures__/vma"
+import { alert, cachedResponse, feed, feedData, info, source } from "./__fixtures__/vma"
 import { validateVmaResponse, VmaResponseValidationError } from "./vmaResponseValidator"
 
 describe("validateVmaResponse", () => {
@@ -33,6 +33,8 @@ describe("validateVmaResponse", () => {
     expect(validateVmaResponse(feed([]))).toEqual({
       source,
       feedUpdatedAt: "2026-10-05T12:00:00.000Z",
+      checkedAt: "2026-10-05T12:00:30.000Z",
+      stale: false,
       records: [],
       issues: [],
       rejectedCount: 0,
@@ -49,9 +51,9 @@ describe("validateVmaResponse", () => {
     "[]",
     123,
     true,
-    { ...feed(), timestamp: "invalid" },
-    { ...feed(), alerts: {} },
-    { ...feed(), source: undefined },
+    cachedResponse({ ...feedData(), timestamp: "invalid" }),
+    cachedResponse({ ...feedData(), alerts: {} }),
+    cachedResponse({ ...feedData(), source: undefined }),
   ])("rejects an invalid envelope: %j", (value) => {
     expect(() => validateVmaResponse(value)).toThrow(VmaResponseValidationError)
   })
@@ -334,7 +336,9 @@ describe("validateVmaResponse", () => {
     "rejects unsafe attribution URLs in %s",
     (field) => {
       expect(() =>
-        validateVmaResponse({ ...feed(), source: { ...source, [field]: "javascript:alert(1)" } })
+        validateVmaResponse(
+          cachedResponse({ ...feedData(), source: { ...source, [field]: "javascript:alert(1)" } })
+        )
       ).toThrow(VmaResponseValidationError)
     }
   )
@@ -345,9 +349,9 @@ describe("validateVmaResponse", () => {
       "https://user:pass@example.org/",
       "https://example.org/#secret",
     ]) {
-      expect(() => validateVmaResponse({ ...feed(), source: { ...source, apiUrl } })).toThrow(
-        VmaResponseValidationError
-      )
+      expect(() =>
+        validateVmaResponse(cachedResponse({ ...feedData(), source: { ...source, apiUrl } }))
+      ).toThrow(VmaResponseValidationError)
     }
   })
 
@@ -359,6 +363,6 @@ describe("validateVmaResponse", () => {
     const result = validateVmaResponse(input)
     expect(input).toEqual(before)
     expect(result.records[0].info[0].description).toBe("  Fullständig text.\n\n  ")
-    expect(result.source).not.toBe(input.source)
+    expect(result.source).not.toBe(input.data.source)
   })
 })
