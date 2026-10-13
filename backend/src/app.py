@@ -13,6 +13,7 @@ from src.api import health, vma
 from src.core.config import Settings
 from src.core.errors import UpstreamError
 from src.models.errors import ErrorDetail, ErrorResponse
+from src.services.vma_cache import VmaCache
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     Uses process environment settings when none are supplied. Invalid configuration raises
     a Pydantic validation error before the app serves requests. No upstream calls are made
     at import or startup; the shared client is opened and closed with the application.
+    Each application owns its own in-memory VMA cache.
     """
     app_settings = settings if settings is not None else Settings()
 
@@ -39,6 +41,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     application.state.settings = app_settings
+    application.state.vma_cache = VmaCache()
     application.add_middleware(
         CORSMiddleware,
         allow_origins=app_settings.cors_origins,

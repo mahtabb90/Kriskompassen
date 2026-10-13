@@ -14,7 +14,10 @@ export class VmaResponseValidationError extends Error {
   readonly issues: VmaValidationIssue[]
 
   constructor(issues: VmaValidationIssue[] = []) {
-    super("The VMA response must contain source metadata, a timestamp and a usable alerts array.")
+    super(
+      "The VMA response must contain a check time, a stale flag and data with source metadata, " +
+        "a timestamp and a usable alerts array."
+    )
     this.name = "VmaResponseValidationError"
     this.issues = issues
   }
@@ -210,27 +213,39 @@ function validateInfo(
 }
 
 /**
- * Validates our backend's SR envelope and public Swedish CAP records independently.
+ * Validates our backend's cache wrapper, SR envelope and public Swedish CAP records independently.
  *
  * Excludes technical tests, exercises, drafts, private/restricted records and Ack/Error messages.
  * Preserves valid peers, optional-field diagnostics and Cancel records with no info block.
  * This validates the consumed SR subset, not every field in the complete CAP standard.
  *
- * @param response Decoded JSON from our backend, including backend-supplied source metadata.
- * @returns Validated records, feed time, provenance and diagnostics without mutating the input.
+ * @param response Decoded JSON from our backend: `{ data, checkedAt, stale }`, where data is the SR
+ * envelope with backend-supplied source metadata.
+ * @returns Validated records, feed and check times, staleness, provenance and diagnostics without
+ * mutating the input.
  * @throws {VmaResponseValidationError} For an invalid envelope or only malformed records.
  */
 export function validateVmaResponse(response: unknown): VmaValidationResult {
-  const source = isObject(response) ? sourceMetadata(response.source) : undefined
-  const feedUpdatedAt = isObject(response) ? timestamp(response.timestamp) : undefined
-  if (!isObject(response) || !Array.isArray(response.alerts) || !source || !feedUpdatedAt) {
+  const checkedAt = isObject(response) ? timestamp(response.checkedAt) : undefined
+  const stale = isObject(response) ? response.stale : undefined
+  const feed = isObject(response) ? response.data : undefined
+  const source = isObject(feed) ? sourceMetadata(feed.source) : undefined
+  const feedUpdatedAt = isObject(feed) ? timestamp(feed.timestamp) : undefined
+  if (
+    !checkedAt ||
+    typeof stale !== "boolean" ||
+    !isObject(feed) ||
+    !Array.isArray(feed.alerts) ||
+    !source ||
+    !feedUpdatedAt
+  ) {
     throw new VmaResponseValidationError()
   }
   const records: ValidatedVmaRecord[] = []
   const issues: VmaValidationIssue[] = []
   let rejectedCount = 0
   let excludedCount = 0
-  response.alerts.forEach((item: unknown, index) => {
+  feed.alerts.forEach((item: unknown, index) => {
     if (!isObject(item)) {
       issues.push({ index, field: "$", code: "invalid_record" })
       rejectedCount++
@@ -298,8 +313,8 @@ export function validateVmaResponse(response: unknown): VmaValidationResult {
       info: result.info,
     })
   })
-  if (response.alerts.length > 0 && rejectedCount === response.alerts.length) {
+  if (feed.alerts.length > 0 && rejectedCount === feed.alerts.length) {
     throw new VmaResponseValidationError(issues)
   }
-  return { source, feedUpdatedAt, records, issues, rejectedCount, excludedCount }
+  return { source, feedUpdatedAt, checkedAt, stale, records, issues, rejectedCount, excludedCount }
 }

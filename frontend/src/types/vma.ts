@@ -96,14 +96,18 @@ export interface VmaValidationIssue {
 }
 
 /**
- * Keeps provenance and feed time alongside usable records and partial-data diagnostics.
+ * Keeps provenance, feed and check times alongside usable records and partial-data diagnostics.
  *
+ * checkedAt is the backend's last successful SR check. stale means the backend's latest SR attempt
+ * failed and this earlier feed was returned instead.
  * excludedCount counts non-public/non-Actual, non-display message types and non-Swedish records.
  * A non-empty feed containing only malformed records throws; exclusions are not validation errors.
  */
 export interface VmaValidationResult {
   source: VmaSource
   feedUpdatedAt: string
+  checkedAt: string
+  stale: boolean
   records: ValidatedVmaRecord[]
   issues: VmaValidationIssue[]
   rejectedCount: number

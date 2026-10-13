@@ -5,6 +5,10 @@ from urllib.parse import urlsplit
 from pydantic import AnyHttpUrl, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Team decision, not an SR requirement: SR documents no rate limit. One SR attempt per period
+# and instance keeps upstream load independent of the number of clients polling this backend.
+VMA_CACHE_TTL_SECONDS = 60
+
 
 class Settings(BaseSettings):
     """Configures upstream VMA access and browser origins without loading .env files.
