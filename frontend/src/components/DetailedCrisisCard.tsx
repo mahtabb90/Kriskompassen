@@ -80,7 +80,10 @@ function DetailedCrisisCard() {
           Informationen kunde inte läsas från din enhet. Ladda om sidan och försök igen. Om felet
           kvarstår kan webbläsaren blockera lokal lagring.
         </p>
-        <Link to="/crisis" className="mt-6 inline-block font-medium text-blue-900 underline">
+        <Link
+          to="/crisis"
+          className="mt-6 inline-flex min-h-12 items-center font-medium text-blue-900 underline underline-offset-4"
+        >
           ← Tillbaka till krisinformation
         </Link>
       </section>
@@ -108,7 +111,10 @@ function DetailedCrisisCard() {
       </div>
 
       <div className="p-6 sm:p-8">
-        <Link to="/crisis" className="mb-6 inline-block font-medium text-blue-900 underline">
+        <Link
+          to="/crisis"
+          className="mb-6 inline-flex min-h-12 items-center font-medium text-blue-900 underline underline-offset-4"
+        >
           ← Tillbaka till krisinformation
         </Link>
 
@@ -116,7 +122,7 @@ function DetailedCrisisCard() {
           {item.title}
         </h1>
 
-        <p className="mt-6 text-base leading-relaxed text-slate-700">{item.content}</p>
+        <p className="mt-6 max-w-prose text-base leading-relaxed text-slate-700">{item.content}</p>
 
         {mode === "offline" &&
           (item.savedAt ? (
@@ -145,7 +151,7 @@ function DetailedCrisisCard() {
               href={item.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-block font-medium text-blue-900 underline"
+              className="mt-2 inline-flex min-h-12 items-center font-medium text-blue-900 underline underline-offset-4"
             >
               Läs mer på källan
             </a>
