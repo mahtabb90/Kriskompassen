@@ -100,15 +100,21 @@ describe("createVmaUpdateService", () => {
 
   it("keeps background polls silent and replaces the result on each success", async () => {
     const service = create()
-    const states: string[] = []
-    service.subscribe(() => states.push(service.getSnapshot().checking))
+    const snapshots: ReturnType<typeof service.getSnapshot>[] = []
+    service.subscribe(() => snapshots.push(service.getSnapshot()))
     service.start()
     await advance(0)
-    const later = result({ checkedAt: "2026-10-05T12:01:00Z", messages: [] })
+    const first = service.getSnapshot().result
+    const later = result({ checkedAt: "2026-10-05T12:01:00Z" })
     fetchVmas.mockResolvedValueOnce(later)
     await advance(30_000)
-    expect(states).toEqual(["initial", "none", "none"])
-    expect(service.getSnapshot().result).toBe(later)
+    expect(fetchVmas).toHaveBeenCalledTimes(2)
+    // Start, first result, then only the background poll's result; it never reports checking.
+    expect(snapshots).toEqual([
+      { result: null, failed: false, checking: "initial" },
+      { result: first, failed: false, checking: "none" },
+      { result: later, failed: false, checking: "none" },
+    ])
     service.stop()
   })
 

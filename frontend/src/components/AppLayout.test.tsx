@@ -106,7 +106,8 @@ describe("AppLayout VMA integration", () => {
     expect(dialog.textContent).toContain("Lyssna på lokal P4.")
     fireEvent.click(within(dialog).getByRole("button", { name: "Stäng" }))
     expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Hem" }))
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    // Becoming visible after the polling interval also refreshes the feed once.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("does not switch the open message when the banner selects a newer CAP ID", async () => {
@@ -127,7 +128,7 @@ describe("AppLayout VMA integration", () => {
     )
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Stäng" }))
     expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Hem" }))
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("opens each listed message and returns focus to its list entry", async () => {
@@ -269,7 +270,7 @@ describe("AppLayout VMA integration", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it("shows connection loss alongside a retained warning and keeps offline mode on recovery", async () => {
+  it("shows connection loss alongside a retained warning, keeps offline mode and refetches on recovery", async () => {
     fetchMock.mockResolvedValue(Response.json(feed()))
     mountLayout()
     const warningHeading = await screen.findByRole("heading", { name: info.event })
@@ -298,7 +299,9 @@ describe("AppLayout VMA integration", () => {
     expect(screen.getByRole("alert")).toBe(live)
     expect(live.firstChild).toBe(announcement)
     expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    // Browser connectivity, not the selected offline mode, resumes VMA updates.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
   })
 
   it("shows one valid message and an incomplete-data notice when a record is malformed", async () => {
