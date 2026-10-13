@@ -64,6 +64,11 @@ html {
   outline-color: var(--color-vma-focus);
 }
 
+/* Normal-flow navigation has no scroll controls, even before measurement catches up. */
+.navigation-scroll-control {
+  display: none;
+}
+
 /* Short viewports need the full content area, especially in landscape or at high zoom. */
 @media (width < 48rem) and (height >= 30rem) {
   .primary-navigation {
@@ -72,6 +77,36 @@ html {
     bottom: 0;
     padding-bottom: env(safe-area-inset-bottom);
     box-shadow: 0 -4px 16px rgb(15 23 42 / 0.06);
+  }
+
+  .primary-navigation:not([data-overflows-viewport]) .navigation-scroll-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    padding-inline: 0.5rem;
+  }
+
+  .primary-navigation[data-scrollable]:not([data-overflows-viewport]) .navigation-scroll-shell {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.25rem;
+  }
+
+  .primary-navigation[data-scrollable]:not([data-overflows-viewport]) .navigation-scroll-control {
+    display: flex;
+  }
+
+  .primary-navigation:not([data-overflows-viewport]) .navigation-links {
+    flex-wrap: nowrap;
+    padding: 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 0.5rem;
+    scrollbar-width: thin;
+  }
+
+  .primary-navigation:not([data-overflows-viewport]) .navigation-links > li {
+    flex: 0 0 auto;
+    max-width: 100%;
   }
 }
 
