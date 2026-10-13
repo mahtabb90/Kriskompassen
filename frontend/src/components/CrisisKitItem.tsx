@@ -2,12 +2,18 @@ import type { CrisisKitItem as CrisisKitItemType } from "../types/crisisKit"
 
 interface CrisisKitItemProps {
   item: CrisisKitItemType
+  headingLevel?: 3 | 4
 }
 
 /**
  * Displays an emergency-kit item and its current ownership status.
+ *
+ * @param item The kit item to display.
+ * @param headingLevel Level of the item name heading: 3 directly under a category heading
+ * (default), 4 when nested under a subcategory heading.
  */
-function CrisisKitItem({ item }: CrisisKitItemProps) {
+function CrisisKitItem({ item, headingLevel = 3 }: CrisisKitItemProps) {
+  const Heading = headingLevel === 4 ? "h4" : "h3"
   const today = new Date()
   const todayString = [
     today.getFullYear(),
@@ -21,7 +27,7 @@ function CrisisKitItem({ item }: CrisisKitItemProps) {
     <article className="rounded-2xl border border-blue-200/80 bg-white p-6 text-slate-600 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h3 className="font-semibold text-blue-900">{item.name}</h3>
+          <Heading className="font-semibold text-blue-900">{item.name}</Heading>
           <p className="mt-1 text-sm text-slate-600">{item.category}</p>
         </div>
 

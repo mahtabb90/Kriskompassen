@@ -339,7 +339,7 @@ KrisKompassen uses a single shared navigation component (`BottomNavigation`) tha
 A centralized, prominent focus outline is defined in `frontend/src/index.css`:
 
 ```css
-:where(a, button, [tabindex]):focus-visible {
+:where(a, button, summary, [tabindex]):focus-visible {
   outline: 3px solid var(--color-blue-900);
   outline-offset: 4px;
 }
@@ -356,7 +356,7 @@ For users who rely on Windows High Contrast / Forced Colors:
 
 ```css
 @media (forced-colors: active) {
-  :where(a, button, [tabindex]):focus-visible,
+  :where(a, button, summary, [tabindex]):focus-visible,
   .vma-banner:focus-visible,
   .vma-banner :focus-visible {
     outline-color: Highlight;
@@ -430,6 +430,8 @@ KrisKompassen performs offline storage operations and network calls that must be
   - Text colour: `text-red-800 font-medium text-sm`.
   - Used for action failures (e.g. storage quota exceeded, device storage blocked).
   - Screen readers announce assertively.
+- **Connection status:**
+  - The always-present "Ansluten" / "Ingen internetanslutning" line is a `role="status"` region, so connectivity changes are announced politely. The auto-switch explanation remains a separate `role="alert"`.
 - **VMA warnings and request status:**
   - A persistent, visually hidden `role="alert"` announces the newest active VMA title only when a new message becomes the newest. The visible icon is excluded from this announcement.
   - A persistent, visually hidden polite live region announces changes in the number of active messages (for example *"2 aktiva VMA."*, and *"1 aktivt VMA."* after a drop to one). It stays silent for a single first warning, which the alert already announces.
@@ -481,3 +483,5 @@ When developing new pages or components:
 3. **Preserve Target Size:** Ensure every new interactive element satisfies the 48×48px standard (`min-h-12 min-w-12`).
 4. **Maintain Focus Landmarks:** Every new routed page must include an `<h1 id="page-heading" tabIndex={-1}>` as its primary heading.
 5. **Support Swedish Word Lengths:** Apply `wrap-anywhere` to headings, long titles, and navigation labels.
+6. **Keep Headings Hierarchical:** Nest heading levels logically beneath the page `h1` without skipping levels (for example `h1` → `h2` → `h3`). Choose the level from the document outline, not the visual size.
+7. **Announce Status Changes:** Important visible changes that happen without moving focus (connectivity, save results, errors, update availability) must also be exposed programmatically with `role="status"` or `role="alert"` as described in section 9.1.
