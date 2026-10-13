@@ -75,7 +75,20 @@ export const multipleAlerts = [
   { ...alert },
 ]
 
-/** Wraps synthetic upstream entries in the source-attributed backend response. */
-export function feed(alerts: unknown[] = [alert]) {
+/** Backend time of the last successful SR check, deliberately distinct from the feed time. */
+export const checkedAt = "2026-10-05T12:00:30Z"
+
+/** Wraps synthetic upstream entries in the source-attributed SR envelope. */
+export function feedData(alerts: unknown[] = [alert]) {
   return { source: { ...source }, timestamp: "2026-10-05T12:00:00Z", alerts }
+}
+
+/** Wraps any data in the backend's cache response, fresh unless overridden. */
+export function cachedResponse<T>(data: T, overrides: Record<string, unknown> = {}) {
+  return { data, checkedAt, stale: false, ...overrides }
+}
+
+/** Wraps synthetic upstream entries in the complete fresh backend response. */
+export function feed(alerts: unknown[] = [alert]) {
+  return cachedResponse(feedData(alerts))
 }

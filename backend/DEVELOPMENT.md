@@ -1,8 +1,9 @@
 # Backend and VMA integration
 
-The FastAPI backend fetches VMA from Sveriges Radio's dedicated v3 API. The frontend service
-validates public Swedish CAP records and maps them to a shared presentation model. A shared banner
-shows the most recent active warning. Polling and persistent VMA storage remain separate work;
+The FastAPI backend fetches VMA from Sveriges Radio's dedicated v3 API through a short shared
+in-memory cache. The frontend service validates public Swedish CAP records and maps them to a
+shared presentation model. A shared banner shows the most recent active warning. Frontend polling
+and persistent VMA storage remain separate work;
 general crisis articles still use mock data. The user has confirmed working live integration;
 the verification record below distinguishes that result from active-warning rendering.
 
@@ -69,10 +70,16 @@ release, especially before adding persistent/offline VMA storage. The contact on
 terms page is `simon.taubert@sr.se`; ask for the team responsible for `vmaapi.sr.se`. No contact
 has been sent and no special permission has been obtained by this implementation.
 
-The implementation performs on-demand fetching only, stores no VMA, preserves source message text
-and supplies attribution for the UI. These choices do not themselves prove legal permission.
-Do not add automatic refresh intervals, long-term fixtures containing real warnings, or logo usage
-on the assumption that public HTTP access grants unrestricted reuse.
+The backend contacts SR on demand only, when a request arrives and its cache period has expired.
+It keeps the latest feed in process memory only, for one cache period or as a stale fallback during
+an SR outage, and stores no VMA persistently. It preserves source message text and supplies
+attribution for the UI. These choices do not themselves prove legal permission.
+
+Team decision: the frontend may poll our backend, and the backend cache limits calls to SR to at
+most one per 60 seconds and instance, regardless of the number of clients (see
+[Shared VMA cache](#shared-vma-cache)). Do not add background or scheduled SR fetching, CDN
+caching, persistent VMA storage, long-term fixtures containing real warnings, or logo usage on the
+assumption that public HTTP access grants unrestricted reuse.
 
 ## Geocoding (Nominatim) integration
 
@@ -210,8 +217,9 @@ VITE_API_BASE_URL='https://kriskompassen.vercel.app' npm run dev -- --host 127.0
 
 The backend must allow `http://127.0.0.1:5173`. In the browser's Network panel, verify the request
 uses the intended HTTPS backend and returns JSON. `/health` should return `200 {"status":"ok"}`;
-`/api/v1/vmas` should return `timestamp`, `alerts` and `source`, with `Cache-Control: no-store`
-and `Access-Control-Allow-Origin` matching the frontend. A successful empty feed hides the
+`/api/v1/vmas` should return `data` (with `timestamp`, `alerts` and `source`), `checkedAt` and
+`stale`, with `Cache-Control: max-age=<0-60>` (`no-store` when stale) and
+`Access-Control-Allow-Origin` matching the frontend. A successful empty feed hides the
 banner; request failures must remain explicit. After frontend deployments, also check direct
 route reloads and that static assets and `/sw.js` return their own files rather than HTML.
 
@@ -224,7 +232,7 @@ The router adds attribution from backend configuration, ignoring any upstream `s
 | Route | Response |
 | --- | --- |
 | `GET /health` | `200 {"status":"ok"}`, without contacting SR |
-| `GET /api/v1/vmas` | `200 {"timestamp":"...","alerts":[],"source":{...}}` |
+| `GET /api/v1/vmas` | `200 {"data":{"timestamp":"...","alerts":[],"source":{...}},"checkedAt":"...","stale":false}` |
 | `GET /api/v1/geocode?lat=&lon=` | `200 {"found":true\|false,"address":"...","municipality":"...","county":"...","lat":...,"lon":...,"message":"...","source":{...}}` |
 | `GET /docs` | Interactive backend API documentation |
 | `GET /openapi.json` | Backend API schema |
@@ -234,7 +242,10 @@ alerts container. It preserves malformed individual entries for frontend validat
 peers are not lost. Extra upstream envelope fields are ignored. This is an intentional contract
 change from the previous top-level array; no existing UI consumes that old service contract.
 
-All VMA responses use `Cache-Control: no-store`. Failures never become successful empty feeds:
+`checkedAt` is the backend's wall-clock time of the last successful SR check. `stale` is `true`
+when the latest SR attempt failed and that earlier feed is returned instead. A fresh response uses
+`Cache-Control: max-age=<remaining cache period>`; stale and error responses use `no-store`.
+Failures never become successful empty feeds. Without a cached feed, a failure returns:
 
 | Failure | HTTP | `error.code` |
 | --- | --- | --- |
@@ -249,19 +260,45 @@ and fragments. It is a public endpoint reference, not a reproduction of sensitiv
 Only override the URL with an SR-compatible feed; changing provider requires its own adapter
 and attribution change.
 
+### Shared VMA cache
+
+`src/services/vma_cache.py` holds one `VmaCache` per application instance (`app.state.vma_cache`,
+injected through `get_vma_cache`). Its period is `VMA_CACHE_TTL_SECONDS = 60` in
+`src/core/config.py`, the only place to change it. The value is a team decision because SR
+documents no rate limit; it is not configurable through the environment.
+
+- **On demand only.** SR is contacted when a request arrives and the latest attempt is at least
+  one period old. There is no background job or scheduler, so no requests means no SR calls.
+- **Periods start at every attempt.** Successful and failed attempts both start a new period, so
+  an SR outage causes at most one SR call per period and instance, not one per client request.
+- **Single flight.** An `asyncio.Lock` serializes refreshes. Concurrent requests during a refresh
+  wait and reuse its outcome, so they produce exactly one SR call.
+- **Empty is valid.** A successful feed with no alerts is cached like any other result.
+- **SR failure.** With a cached feed, the response is that feed with `stale: true`, unchanged
+  `checkedAt` and `no-store`. Without one, the documented 502/504 error is returned until the
+  next attempt is due.
+- **Browser reuse.** A fresh response sets `max-age` to the remaining period, rounded down and at
+  least 0. `s-maxage` is never set, to avoid an additional Vercel CDN cache layer.
+- **Clocks.** A monotonic clock measures cache age so wall-clock adjustments do not affect the
+  period; the wall clock only supplies `checkedAt`. Both are injectable for tests.
+
+On Vercel, the cache is per function instance and is lost on cold start. Separate instances may
+each call SR once per period; a shared cache between instances (Redis/CDN) is out of scope.
+
 ## Frontend validation and mapping
 
 | Function | Responsibility |
 | --- | --- |
 | `fetchVmaResponse()` | Fetch and decode JSON without structural interpretation |
-| `validateVmaResponse()` | Validate envelope, attribution and consumed CAP fields; report partial failures |
+| `validateVmaResponse()` | Validate the cache wrapper, envelope, attribution and consumed CAP fields; report partial failures |
 | `mapVmaMessage()` | Map one validated record at an explicit evaluation time |
 | `mapVmaMessages()` | Also apply Update/Cancel references within the current feed |
 | `reevaluateVmaMessages()` | Reapply the same lifecycle rules to the complete mapped feed at a later time, without I/O |
 | `fetchVmas()` | Compose the steps, returning `VmaResult` with an evaluation timestamp |
 
-`VmaResult` always contains `source`, `feedUpdatedAt`, `evaluatedAt`, `messages`, `issues`,
-`rejectedCount` and `excludedCount`. An empty successful upstream feed has zero records and counts.
+`VmaResult` always contains `source`, `feedUpdatedAt`, `checkedAt`, `stale`, `evaluatedAt`,
+`messages`, `issues`, `rejectedCount` and `excludedCount`. `checkedAt` and `stale` are passed
+through from the backend; the banner does not present them yet. An empty successful upstream feed has zero records and counts.
 An invalid envelope or a non-empty feed of only malformed entries throws
 `VmaResponseValidationError`. Excluded-only or partially invalid feeds retain their diagnostics;
 consumers must not label these as a verified absence of warnings without considering the counts.
@@ -340,8 +377,9 @@ the CAP data. Do not invent `/vma` as a fallback or as a working link in manual 
 `AppLayout` owns `useVmaBanner()` so route changes share one request and presentation state.
 The hook calls `fetchVmas()` on mount; React StrictMode effect replays share an in-flight request.
 Manual retry is guarded against concurrent calls. No route change, visibility change or timer
-triggers another network request. Reload the app to fetch newly published warnings after a
-successful check; recurring updates are a separate feature.
+triggers another network request yet. Reload the app to fetch newly published warnings after a
+successful check. Recurring updates are a separate feature; they may poll our backend, whose
+shared cache limits calls to SR (see [Shared VMA cache](#shared-vma-cache)).
 
 `selectVmaBanner()` returns every displayable active message once per CAP ID, ordered by
 `compareVmaMessages()`: latest CAP `sentAt` first (the update time for an Update), equal
@@ -430,14 +468,59 @@ failure/retry behavior and actual screen-reader output were not verified by this
 Tests use synthetic SR-shaped fixtures and deterministic times, never live emergency content.
 They cover valid/empty/mixed/invalid feeds, optional fields, Swedish blocks, exclusions,
 cancellations, supersession, expiry, provenance, safe links, transport failures and timeouts.
-Backend tests use HTTPX MockTransport and ASGITransport without contacting SR. CORS integration
+Backend tests use HTTPX MockTransport and ASGITransport without contacting SR. Cache tests inject
+monotonic and wall clocks instead of sleeping, and hold a mocked SR fetch on an `asyncio.Event`
+while concurrent requests run through `asyncio.gather`. CORS integration
 tests load the origin list from a process environment variable and verify browser-readable
 successes and gateway failures, plus allowed and rejected preflights. No dependencies
 were added for the provider switch. Existing Vitest and pytest tooling is reused.
 
 For manual checking, open `http://localhost:8000/docs` and execute GET `/api/v1/vmas`. Confirm
-`alerts` and `source`, including the configured production or test API address. With Vite running,
-the browser console can also invoke the development module once:
+`data.alerts` and `data.source`, including the configured production or test API address, and
+`checkedAt`/`stale`.
+
+To check the cache, start the backend from `backend/` with Python INFO logging enabled. Uvicorn
+does not log outgoing requests by default; with this command, HTTPX logs one line per SR call.
+
+Git Bash (on macOS/Linux, activate with `source .venv/bin/activate`):
+
+```sh
+source .venv/Scripts/activate
+python -c "import logging, uvicorn; logging.basicConfig(level=logging.INFO); uvicorn.run('src.app:app', port=8000)"
+```
+
+PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+python -c "import logging, uvicorn; logging.basicConfig(level=logging.INFO); uvicorn.run('src.app:app', port=8000)"
+```
+
+In another terminal, run this in Git Bash or another POSIX shell:
+
+```sh
+for i in 1 2 3 4; do
+  curl -s -i http://localhost:8000/api/v1/vmas | grep -ioE '^cache-control: .*|"checkedAt":"[^"]*"'
+  sleep 5
+done
+```
+
+PowerShell alternative:
+
+```powershell
+1..4 | ForEach-Object {
+  $r = Invoke-WebRequest http://localhost:8000/api/v1/vmas
+  $r.Headers['Cache-Control']; ($r.Content | ConvertFrom-Json).checkedAt; Start-Sleep 5
+}
+```
+
+Within one period, `max-age` decreases (for example 59, 54, 49, 44) while `checkedAt` stays the
+same, showing that every response came from the single SR check. The backend terminal shows exactly
+one `HTTP Request: GET https://vmaapi.sr.se/api/v3/alerts` line per period. After 60 seconds
+without a request, the next request gives a new `checkedAt`, a `max-age` close to 60 again and one
+new SR log line.
+
+With Vite running, the browser console can also invoke the development module once:
 
 ```js
 const { fetchVmas } = await import('/src/services/vmaService.ts')
