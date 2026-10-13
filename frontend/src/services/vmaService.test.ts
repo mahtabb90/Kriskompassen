@@ -3,7 +3,16 @@ import { apiConfig } from "../config/apiConfig"
 import { VmaResponseValidationError } from "./vmaResponseValidator"
 import { fetchVmaResponse, fetchVmas, VmaRequestError } from "./vmaService"
 
-import { alert as validRecord, feed, info, now, source } from "./__fixtures__/vma"
+import {
+  cachedResponse,
+  checkedAt,
+  feed,
+  feedData,
+  info,
+  now,
+  source,
+  alert as validRecord,
+} from "./__fixtures__/vma"
 
 function requestSignal(options?: RequestInit): AbortSignal {
   if (!options?.signal) throw new Error("Expected a per-request abort signal.")
@@ -57,12 +66,24 @@ describe("fetchVmas", () => {
     await expect(fetchVmas()).resolves.toEqual({
       source,
       feedUpdatedAt: new Date(now).toISOString(),
+      checkedAt: new Date(checkedAt).toISOString(),
+      stale: false,
       evaluatedAt: new Date(now).toISOString(),
       messages: [],
       rejectedCount: 0,
       excludedCount: 0,
       issues: [],
     })
+  })
+
+  it("keeps stale backend data usable and reports when it was last checked", async () => {
+    fetchMock.mockResolvedValue(Response.json(cachedResponse(feedData(), { stale: true })))
+
+    const result = await fetchVmas()
+
+    expect(result.stale).toBe(true)
+    expect(result.checkedAt).toBe(new Date(checkedAt).toISOString())
+    expect(result.messages.map((message) => message.id)).toEqual([validRecord.identifier])
   })
 
   it("preserves usable messages and reports malformed and excluded peers separately", async () => {
@@ -91,6 +112,8 @@ describe("fetchVmas", () => {
     await expect(fetchVmas()).resolves.toEqual({
       source,
       feedUpdatedAt: new Date(now).toISOString(),
+      checkedAt: new Date(checkedAt).toISOString(),
+      stale: false,
       evaluatedAt: new Date(now).toISOString(),
       messages: [],
       rejectedCount: 0,

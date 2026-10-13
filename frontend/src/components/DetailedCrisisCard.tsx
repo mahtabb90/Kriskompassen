@@ -80,8 +80,11 @@ function DetailedCrisisCard() {
           Informationen kunde inte läsas från din enhet. Ladda om sidan och försök igen. Om felet
           kvarstår kan webbläsaren blockera lokal lagring.
         </p>
-        <Link to="/crisis" className="mt-6 inline-block font-medium text-blue-900 underline">
-          ← Tillbaka till krisinformation
+        <Link
+          to="/crisis"
+          className="mt-6 inline-flex min-h-12 items-center gap-1 font-medium text-blue-900 underline underline-offset-4"
+        >
+          <span aria-hidden="true">←</span>Tillbaka till krisinformation
         </Link>
       </section>
     )
@@ -108,15 +111,18 @@ function DetailedCrisisCard() {
       </div>
 
       <div className="p-6 sm:p-8">
-        <Link to="/crisis" className="mb-6 inline-block font-medium text-blue-900 underline">
-          ← Tillbaka till krisinformation
+        <Link
+          to="/crisis"
+          className="mb-6 inline-flex min-h-12 items-center gap-1 font-medium text-blue-900 underline underline-offset-4"
+        >
+          <span aria-hidden="true">←</span>Tillbaka till krisinformation
         </Link>
 
         <h1 id="page-heading" tabIndex={-1} className="text-3xl font-bold text-blue-900">
           {item.title}
         </h1>
 
-        <p className="mt-6 text-base leading-relaxed text-slate-700">{item.content}</p>
+        <p className="mt-6 max-w-prose text-base leading-relaxed text-slate-700">{item.content}</p>
 
         {mode === "offline" &&
           (item.savedAt ? (
@@ -145,9 +151,9 @@ function DetailedCrisisCard() {
               href={item.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-block font-medium text-blue-900 underline"
+              className="mt-2 inline-flex min-h-12 items-center font-medium text-blue-900 underline underline-offset-4"
             >
-              Läs mer på källan
+              Läs mer på källan (öppnas i ny flik)
             </a>
           )}
         </div>

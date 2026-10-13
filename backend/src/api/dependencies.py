@@ -4,6 +4,7 @@ import httpx
 from fastapi import Request
 
 from src.core.config import Settings
+from src.services.vma_cache import VmaCache
 
 
 async def get_settings(request: Request) -> Settings:
@@ -14,3 +15,8 @@ async def get_settings(request: Request) -> Settings:
 async def get_http_client(request: Request) -> httpx.AsyncClient:
     """Returns the shared client managed by the application's lifespan context."""
     return request.app.state.http_client
+
+
+async def get_vma_cache(request: Request) -> VmaCache:
+    """Returns the VMA cache shared by all requests to this application instance."""
+    return request.app.state.vma_cache

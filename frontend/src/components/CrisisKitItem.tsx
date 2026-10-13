@@ -16,6 +16,18 @@ interface CrisisKitItemProps {
 }
 
 function getTodayString(): string {
+  headingLevel?: 3 | 4
+}
+
+/**
+ * Displays an emergency-kit item and its current ownership status.
+ *
+ * @param item The kit item to display.
+ * @param headingLevel Level of the item name heading: 3 directly under a category heading
+ * (default), 4 when nested under a subcategory heading.
+ */
+function CrisisKitItem({ item, headingLevel = 3 }: CrisisKitItemProps) {
+  const Heading = headingLevel === 4 ? "h4" : "h3"
   const today = new Date()
 
   return [
@@ -231,6 +243,35 @@ function CrisisKitItem({
               }`}
             >
               {item.isOwned ? "Har" : "Saknas"}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <Heading className="font-semibold text-blue-900">{item.name}</Heading>
+          <p className="mt-1 text-sm text-slate-600">{item.category}</p>
+        </div>
+
+        <span
+          className={`shrink-0 rounded-lg border px-3 py-1 text-sm font-medium ${
+            item.isOwned
+              ? "border-blue-200 bg-blue-50 text-blue-900"
+              : "border-slate-200 bg-slate-50 text-slate-700"
+          }`}
+        >
+          {item.isOwned ? "Har" : "Saknas"}
+        </span>
+      </div>
+
+      {item.expirationDate && (
+        <p className="mt-4 text-sm">
+          <span className="font-medium text-slate-700">Utgångsdatum: </span>
+          {new Date(`${item.expirationDate}T12:00:00`).toLocaleDateString("sv-SE", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          })}
+
+          {isExpired && (
+            <span className="mt-2 block font-semibold text-red-800">
+              Utgångsdatumet har passerat.
             </span>
           </div>
 

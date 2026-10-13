@@ -217,8 +217,8 @@ function CrisisKitPage() {
                 key={category}
                 className="group rounded-2xl border border-blue-200/80 bg-white shadow-sm"
               >
-                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl p-4 font-semibold text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:p-5">
-                  <h2 className="text-lg font-semibold">{category}</h2>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl p-4 font-semibold text-blue-900 sm:p-5">
+                  <h2>{category}</h2>
                   <span
                     aria-hidden="true"
                     className="text-xl transition-transform group-open:rotate-180"
@@ -255,6 +255,7 @@ function CrisisKitPage() {
                                   <CrisisKitItem
                                     key={item.id}
                                     item={item}
+                                    headingLevel={4}
                                     onOwnershipChange={handleOwnershipChange}
                                     onExpirationDateSave={handleExpirationDateSave}
                                     onCustomItemSave={handleCustomItemSave}
@@ -303,6 +304,32 @@ function CrisisKitPage() {
                         ))}
                       </div>
                     </section>
+                  {subcategories.map((subcategory) => {
+                    const subcategoryItems = categoryItems.filter(
+                      (item) => item.subcategory === subcategory
+                    )
+
+                    return (
+                      <section key={subcategory}>
+                        <h3 className="mb-3 text-base font-semibold text-blue-900">
+                          {subcategory}
+                        </h3>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {subcategoryItems.map((item) => (
+                            <CrisisKitItem key={item.id} item={item} headingLevel={4} />
+                          ))}
+                        </div>
+                      </section>
+                    )
+                  })}
+
+                  {uncategorizedItems.length > 0 && (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {uncategorizedItems.map((item) => (
+                        <CrisisKitItem key={item.id} item={item} />
+                      ))}
+                    </div>
                   )}
                 </div>
               </details>

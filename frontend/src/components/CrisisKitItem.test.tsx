@@ -33,6 +33,15 @@ function renderItem(item: CrisisKitItemType) {
     />
   )
 }
+describe("CrisisKitItem heading level", () => {
+  it("renders the name as an h3 by default and as an h4 when nested under a subcategory", () => {
+    const { rerender } = render(<CrisisKitItem item={baseItem} />)
+    expect(screen.getByRole("heading", { level: 3, name: "Konserver" })).toBeTruthy()
+
+    rerender(<CrisisKitItem item={baseItem} headingLevel={4} />)
+    expect(screen.getByRole("heading", { level: 4, name: "Konserver" })).toBeTruthy()
+  })
+})
 
 describe("CrisisKitItem expiration dates", () => {
   it("shows a warning when the expiration date has passed", () => {

@@ -89,13 +89,14 @@ def test_allowed_origins_can_read_success_and_failures(
     assert response.headers["Access-Control-Allow-Origin"] == origin
     assert "origin" in response.headers["Vary"].lower()
     assert "Access-Control-Allow-Credentials" not in response.headers
-    assert response.headers["Cache-Control"] == "no-store"
     if error_code is None:
-        assert response.json()["alerts"] == []
-        assert response.json()["source"]["name"] == "Sveriges Radio"
+        assert response.headers["Cache-Control"].startswith("max-age=")
+        assert response.json()["data"]["alerts"] == []
+        assert response.json()["data"]["source"]["name"] == "Sveriges Radio"
     else:
+        assert response.headers["Cache-Control"] == "no-store"
         assert response.json()["error"]["code"] == error_code
-        assert "alerts" not in response.json()
+        assert "data" not in response.json()
 
 
 def test_unlisted_origin_cannot_read_the_response(deployment_settings: Settings) -> None:
