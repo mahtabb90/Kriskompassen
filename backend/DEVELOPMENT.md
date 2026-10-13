@@ -423,7 +423,24 @@ For manual checking, open `http://localhost:8000/docs` and execute GET `/api/v1/
 `data.alerts` and `data.source`, including the configured production or test API address, and
 `checkedAt`/`stale`.
 
-To check the cache, start the backend and run this in Git Bash or another POSIX shell:
+To check the cache, start the backend from `backend/` with Python INFO logging enabled. Uvicorn
+does not log outgoing requests by default; with this command, HTTPX logs one line per SR call.
+
+Git Bash (on macOS/Linux, activate with `source .venv/bin/activate`):
+
+```sh
+source .venv/Scripts/activate
+python -c "import logging, uvicorn; logging.basicConfig(level=logging.INFO); uvicorn.run('src.app:app', port=8000)"
+```
+
+PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+python -c "import logging, uvicorn; logging.basicConfig(level=logging.INFO); uvicorn.run('src.app:app', port=8000)"
+```
+
+In another terminal, run this in Git Bash or another POSIX shell:
 
 ```sh
 for i in 1 2 3 4; do
@@ -442,9 +459,12 @@ PowerShell alternative:
 ```
 
 Within one period, `max-age` decreases (for example 59, 54, 49, 44) while `checkedAt` stays the
-same, showing that every response came from the single SR check. After 60 seconds without a
-request, the next request gives a new `checkedAt` and a `max-age` close to 60 again. With Vite running,
-the browser console can also invoke the development module once:
+same, showing that every response came from the single SR check. The backend terminal shows exactly
+one `HTTP Request: GET https://vmaapi.sr.se/api/v3/alerts` line per period. After 60 seconds
+without a request, the next request gives a new `checkedAt`, a `max-age` close to 60 again and one
+new SR log line.
+
+With Vite running, the browser console can also invoke the development module once:
 
 ```js
 const { fetchVmas } = await import('/src/services/vmaService.ts')
