@@ -93,7 +93,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   │   ├── api/        # routers and dependencies
 │   │   ├── core/       # settings and upstream errors
 │   │   ├── models/     # Pydantic response models
-│   │   └── services/   # upstream fetching and JSON decoding
+│   │   └── services/   # upstream fetching, JSON decoding and the shared VMA cache
 │   └── tests/          # pytest API, CORS and upstream response tests
 └── frontend/            # Vite + React + TypeScript PWA
     ├── .env.example    # frontend variable names only
@@ -243,9 +243,9 @@ Frontend conventions visible in the existing code:
 - Write function components declared with `function Name() {}`, followed by `export default Name`.
 - Use one component per file. Component files use PascalCase (`HomePage.tsx`, `CrisisCard.tsx`).
 - I/O services export named `async` functions (see `services/offlineService.ts` and `services/vmaService.ts`). Pure response validators remain synchronous.
-- `fetchVmas()` returns `VmaResult`: shared messages, provider/API metadata, feed/evaluation times and validation diagnostics. Fetching, per-record validation and mapping stay separate. The source is SR's object envelope with `timestamp` and `alerts`, not the previous assumed Krisinformation news shape. Only Actual/Public Alert, Update and Cancel records are exposed; Swedish `sv-SE` blocks are selected. Technical tests and exercises are excluded.
+- `fetchVmas()` returns `VmaResult`: shared messages, provider/API metadata, feed/evaluation times, the backend's `checkedAt`/`stale` and validation diagnostics. Fetching, per-record validation and mapping stay separate. The source is our backend's `{data, checkedAt, stale}` wrapper around SR's object envelope with `timestamp` and `alerts`, not the previous assumed Krisinformation news shape. Only Actual/Public Alert, Update and Cancel records are exposed; Swedish `sv-SE` blocks are selected. Technical tests and exercises are excluded.
 - VMA models distinguish CAP message IDs from incident IDs and retain complete references. Cancel records may lack title/content because `info: null` is valid. Mapping applies expiry and same-feed Update/Cancel references; unknown validity is explicit. No history is merged between requests. See `backend/DEVELOPMENT.md` for lifecycle and attribution rules.
-- `useVmaBanner()` belongs to the persistent `AppLayout`. It fetches once on mount and on manual retry, sharing an in-flight request during StrictMode effect replays. Failures retain the last successful feed with an explicit status notice and last-check time. Local sent/expiry timers and tab visibility re-evaluate the complete feed through the mapper; they never poll the API. No VMA is persisted.
+- `useVmaBanner()` belongs to the persistent `AppLayout`. It fetches once on mount and on manual retry, sharing an in-flight request during StrictMode effect replays. Failures retain the last successful feed with an explicit status notice and last-check time. Local sent/expiry timers and tab visibility re-evaluate the complete feed through the mapper; they do not poll the API yet. Recurring updates may poll our backend (team decision); the backend's shared cache limits calls to SR. No VMA is persisted.
 - `selectVmaBanner()` returns the displayable active messages once per CAP ID, ordered by `compareVmaMessages()` (newest `sentAt`, ties by ascending CAP ID); change the display order only there. A repeated CAP ID with differing content keeps the first-ranked copy and marks the data uncertain. When several are active, the banner shows a count and a collapsed disclosure list of the others. Rejected/excluded records, validation issues and unknown validity produce an incomplete-information notice alongside any usable active warning. `VmaBanner` only presents state and invokes supplied retry/detail callbacks; it does not fetch or parse data.
 - Selecting the banner title or a listed title opens `VmaMessageDialog` through `AppLayout`. The
   layout retains the selected CAP snapshot and takes its validity from the banner's listed copy,
@@ -334,8 +334,16 @@ Backend conventions:
 - Pydantic models for request and response bodies.
 - Ruff decides formatting and lint rules. `ruff check .` and `ruff format --check .` must pass.
 - The application factory in `src/app.py` creates a shared HTTPX client through FastAPI lifespan. Routers obtain it through dependency injection; upstream fetching and response validation remain separate.
-- `GET /api/v1/vmas` returns `{timestamp, alerts, source}` from SR's VMA API. Pydantic validates the timezone-bearing timestamp and strict JSON alerts list, preserving malformed entries for frontend classification. The backend supplies source/API attribution independently of upstream data, including empty feeds. Public API metadata strips credentials, query parameters and fragments. Individual records must be validated before presentation.
-- Upstream failures use the documented `error.code` / `error.message` envelope and HTTP 502 or 504. Never turn failures into a successful empty result. VMA responses use `Cache-Control: no-store`.
+- `GET /api/v1/vmas` returns `{data, checkedAt, stale}`, where `data` is `{timestamp, alerts, source}` from SR's VMA API. `checkedAt` is the last successful SR check; `stale` is true when the latest SR attempt failed and that earlier feed is returned instead. Pydantic validates the timezone-bearing timestamp and strict JSON alerts list, preserving malformed entries for frontend classification. The backend supplies source/API attribution independently of upstream data, including empty feeds. Public API metadata strips credentials, query parameters and fragments. Individual records must be validated before presentation.
+- Upstream failures use the documented `error.code` / `error.message` envelope and HTTP 502 or 504. Never turn failures into a successful empty result.
+- `VmaCache` (`src/services/vma_cache.py`) is the shared cache behind `GET /api/v1/vmas`:
+  - `VMA_CACHE_TTL_SECONDS` (60 s, a team decision because SR documents no rate limit) is set only in `src/core/config.py`.
+  - SR is contacted on demand, at most once per TTL and instance, counted from the latest attempt, successful or failed. There is no background refresh.
+  - Concurrent requests share one SR call through an `asyncio.Lock`.
+  - The cache is per instance and resets on cold start.
+  - A failure without a cached feed returns the error envelope with HTTP 502 or 504, never a successful empty result. With a cached feed, it returns that feed with `stale: true` and unchanged `checkedAt`.
+  - Fresh responses use `Cache-Control: max-age=<remaining TTL>`; stale and error responses use `no-store`. Never set `s-maxage`.
+  - Cache age uses an injectable monotonic clock; `checkedAt` uses an injectable wall clock.
 - Backend settings use the `KRISKOMPASSEN_` environment prefix. Frontend backend address and request timeout live in `frontend/src/config/apiConfig.ts`. See `backend/DEVELOPMENT.md` for defaults, CORS and the official API evidence.
 
 ## 8. Testing
