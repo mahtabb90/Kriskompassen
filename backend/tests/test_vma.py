@@ -3,15 +3,18 @@
 import asyncio
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
+from datetime import UTC, datetime
 
 import httpx
 import pytest
 
-from src.api.dependencies import get_http_client
+from src.api.dependencies import get_http_client, get_vma_cache
 from src.app import create_app
-from src.core.config import Settings
+from src.core.config import VMA_CACHE_TTL_SECONDS, Settings
+from src.services.vma_cache import VmaCache
 
 UpstreamHandler = Callable[[httpx.Request], httpx.Response | Awaitable[httpx.Response]]
+CHECKED_AT = datetime(2026, 10, 5, 12, 0, 30, tzinfo=UTC)
 
 VMA_RECORD = {
     "identifier": "example-vma-1",
@@ -39,7 +42,14 @@ def _request_vmas(
             async def provide_upstream() -> httpx.AsyncClient:
                 return upstream
 
+            # Frozen clocks keep max-age exact; caching across requests is tested separately.
+            cache = VmaCache(monotonic=lambda: 0.0, wall_clock=lambda: CHECKED_AT)
+
+            async def provide_cache() -> VmaCache:
+                return cache
+
             application.dependency_overrides[get_http_client] = provide_upstream
+            application.dependency_overrides[get_vma_cache] = provide_cache
             async with httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=application),
                 base_url="http://backend.example",
@@ -73,11 +83,14 @@ def test_preserves_json_arrays_for_per_record_validation(payload: list[object]) 
     response = _request_vmas(lambda _request: httpx.Response(200, json=envelope))
 
     assert response.status_code == 200
-    assert response.headers["Cache-Control"] == "no-store"
-    assert response.json()["alerts"] == payload
-    assert response.json()["timestamp"] == envelope["timestamp"]
-    assert response.json()["source"]["name"] == "Sveriges Radio"
-    assert response.json()["source"]["apiUrl"] == "https://upstream.example/vmas"
+    assert response.headers["Cache-Control"] == f"max-age={VMA_CACHE_TTL_SECONDS}"
+    assert response.json()["checkedAt"] == "2026-10-05T12:00:30Z"
+    assert response.json()["stale"] is False
+    data = response.json()["data"]
+    assert data["alerts"] == payload
+    assert data["timestamp"] == envelope["timestamp"]
+    assert data["source"]["name"] == "Sveriges Radio"
+    assert data["source"]["apiUrl"] == "https://upstream.example/vmas"
 
 
 @pytest.mark.parametrize(
@@ -209,7 +222,7 @@ def test_reports_source_even_for_empty_feed_and_ignores_upstream_attribution() -
         upstream_url="https://vmaapi.sr.se/testapi/v3/examples/data?private=value#fragment",
     )
     assert response.status_code == 200
-    assert response.json()["source"] == {
+    assert response.json()["data"]["source"] == {
         "name": "Sveriges Radio",
         "url": "https://www.sverigesradio.se/",
         "apiName": "Sveriges Radios VMA-API",
@@ -228,7 +241,7 @@ def test_omits_credentials_from_public_api_address() -> None:
         upstream_url="https://example-user:example-password@upstream.example/vmas",
     )
     assert response.status_code == 200
-    assert response.json()["source"]["apiUrl"] == "https://upstream.example/vmas"
+    assert response.json()["data"]["source"]["apiUrl"] == "https://upstream.example/vmas"
     assert "example-user" not in response.text
     assert "example-password" not in response.text
 
