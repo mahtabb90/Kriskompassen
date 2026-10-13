@@ -17,7 +17,8 @@ import type { VmaMessage } from "../types/vma"
  * reveal it; initial loads and hash-only changes preserve browser focus. The measured
  * navigation, VMA and app-update heights reserve scroll space around focused content. VMA
  * requests and the update subscription belong to this persistent layout, not individual routes.
- * A selected CAP snapshot stays readable in a modal outside main while its feed validity changes.
+ * A selected CAP snapshot, opened from the banner headline or its message list, stays readable
+ * in a modal outside main while its feed validity changes or it leaves the banner.
  */
 function AppLayout() {
   const { pathname } = useLocation()
@@ -238,7 +239,12 @@ function AppLayout() {
         <VmaMessageDialog
           key={openedVma.message.id}
           message={openedVma.message}
-          currentMessage={vma.messages.find((message) => message.id === openedVma.message.id)}
+          currentMessage={
+            // Prefer the deduplicated copy the banner lists, so a conflicting repeated CAP ID
+            // cannot lend its validity to the opened headline.
+            vma.activeMessages.find((message) => message.id === openedVma.message.id) ??
+            vma.messages.find((message) => message.id === openedVma.message.id)
+          }
           loading={vma.loading}
           failed={vma.failed}
           uncertain={vma.uncertain}

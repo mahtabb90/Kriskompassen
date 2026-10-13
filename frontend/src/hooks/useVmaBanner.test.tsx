@@ -237,14 +237,49 @@ describe("useVmaBanner", () => {
     )
     const { result, unmount } = renderHook(() => useVmaBanner())
     await act(async () => {})
-    expect(result.current).toMatchObject({ message: { id: "newest" }, hasMore: true })
+    expect(result.current).toMatchObject({
+      message: { id: "newest" },
+      activeMessages: [{ id: "newest" }, { id: alert.identifier }],
+    })
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1_000)
     })
-    expect(result.current).toMatchObject({ message: { id: alert.identifier }, hasMore: false })
+    expect(result.current).toMatchObject({
+      message: { id: alert.identifier },
+      activeMessages: [{ id: alert.identifier }],
+    })
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(vi.getTimerCount()).toBeGreaterThan(0)
     unmount()
     expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it("updates the ordered active list as messages become active and expire", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        feed([
+          alert,
+          {
+            ...alert,
+            identifier: "expiring",
+            info: [{ ...info, expires: new Date(now + 1_000).toISOString() }],
+          },
+          { ...alert, identifier: "future", sent: new Date(now + 2_000).toISOString() },
+        ])
+      )
+    )
+    const { result } = renderHook(() => useVmaBanner())
+    await act(async () => {})
+    const ids = () => result.current.activeMessages.map((message) => message.id)
+    expect(ids()).toEqual([alert.identifier, "expiring"])
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000)
+    })
+    expect(ids()).toEqual([alert.identifier])
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000)
+    })
+    expect(ids()).toEqual(["future", alert.identifier])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

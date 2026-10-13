@@ -34,6 +34,47 @@ export const alert = {
   info: [info],
 }
 
+/**
+ * Supplies simultaneous active warnings in deliberately unsorted feed order.
+ *
+ * Display order is the Update (newest sent), then alert and the second alert, whose equal sent
+ * times are ordered by CAP ID. The last entry repeats alert unchanged to exercise deduplication.
+ * The Update references a message absent from the feed, so nothing is superseded.
+ */
+export const multipleAlerts = [
+  alert,
+  {
+    ...alert,
+    identifier: "SRCAP-example-2",
+    incidents: "SRVMA-example-2",
+    info: [
+      {
+        ...info,
+        event: "Gasläcka i Exempelstad",
+        description: "Håll dig borta från hamnområdet.",
+        area: [{ areaDesc: "Exempelstad", geocode: [{ valueName: "Kommun", value: "0181" }] }],
+      },
+    ],
+  },
+  {
+    ...alert,
+    identifier: "SRCAP-example-3",
+    incidents: "SRVMA-example-3",
+    sent: "2026-10-05T13:30:00+02:00",
+    msgType: "Update",
+    references: "https://vmaapi.sr.se/api/v3,SRCAP-example-0,2026-10-05T12:00:00+02:00",
+    info: [
+      {
+        ...info,
+        event: "Förorenat dricksvatten",
+        description: "Koka vattnet innan du dricker det.",
+        area: [{ areaDesc: "Exempellänet", geocode: [{ valueName: "Län", value: "01" }] }],
+      },
+    ],
+  },
+  { ...alert },
+]
+
 /** Wraps synthetic upstream entries in the source-attributed backend response. */
 export function feed(alerts: unknown[] = [alert]) {
   return { source: { ...source }, timestamp: "2026-10-05T12:00:00Z", alerts }
