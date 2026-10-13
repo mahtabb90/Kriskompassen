@@ -2,8 +2,8 @@
 
 The FastAPI backend fetches VMA from Sveriges Radio's dedicated v3 API through a short shared
 in-memory cache. The frontend service validates public Swedish CAP records and maps them to a
-shared presentation model. A shared banner shows the most recent active warning. Frontend polling
-and persistent VMA storage remain separate work;
+shared presentation model. A shared banner shows the most recent active warning. The frontend
+polls our backend while the app is open; persistent VMA storage remains separate work;
 general crisis articles still use mock data. The user has confirmed working live integration;
 the verification record below distinguishes that result from active-warning rendering.
 
@@ -318,12 +318,14 @@ the CAP data. Do not invent `/vma` as a fallback or as a working link in manual 
 
 ### Frontend banner behavior and verification without a backend
 
-`AppLayout` owns `useVmaBanner()` so route changes share one request and presentation state.
-The hook calls `fetchVmas()` on mount; React StrictMode effect replays share an in-flight request.
-Manual retry is guarded against concurrent calls. No route change, visibility change or timer
-triggers another network request yet. Reload the app to fetch newly published warnings after a
-successful check. Recurring updates are a separate feature; they may poll our backend, whose
-shared cache limits calls to SR (see [Shared VMA cache](#shared-vma-cache)).
+`AppLayout` owns `useVmaBanner()`, which runs one `vmaUpdateService` per layout. It fetches on
+start when the device is online, then polls our backend at `apiConfig.vmaPollIntervalMs`, counted
+from the end of the previous attempt, including failed ones. Requests never overlap; StrictMode
+replays and manual retry share the in-flight request. Polling pauses offline and in hidden tabs,
+fetches immediately on reconnection, and fetches on becoming visible when the interval has
+elapsed. The browser may answer a poll from its HTTP cache within the backend's `max-age`; that
+response carries the same `checkedAt` and is a success. The backend's shared cache limits calls
+to SR (see [Shared VMA cache](#shared-vma-cache)).
 
 `selectVmaBanner()` returns every displayable active message once per CAP ID, ordered by
 `compareVmaMessages()`: latest CAP `sentAt` first (the update time for an Update), equal
@@ -341,19 +343,26 @@ the banner, and takes its validity from the banner's listed copy before the comp
 
 The presentation distinguishes these states:
 
-- Initial loading: `Kontrollerar VMA…`.
+- Loading without a successful result: `Kontrollerar VMA…`. Background polls and manual retry
+  with retained data do not change the banner; a manual retry disables its button as
+  `Kontrollerar…`.
 - Successful result with no active or uncertain data: no visible notice and no all-clear claim.
-- Failed request: `VMA-status kunde inte kontrolleras.` with `Försök igen`.
+- No successful result: `VMA-information inte tillgänglig.` (plus `Ingen internetanslutning.`
+  offline), with `Försök igen` while online.
+- Backend `stale: true`, a failed request or offline with retained data: the feed stays visible
+  with `VMA-informationen kan vara inaktuell. Senast kontrollerad kl. {time}.` (date added when
+  not today, plus `Ingen internetanslutning.` offline).
 - Rejected/excluded records, validation issues or unknown validity: an incomplete-information
   notice, with any usable active message still shown. Exclusion counts do not distinguish
   technical tests from other excluded records, so the UI treats them conservatively.
-- Retrying/failure after a successful check: retain that feed, display the status and last
-  successful check time, and continue evaluating its validity. No VMA is persisted offline.
+- An open message missing from a successful feed: `Meddelandet är inte längre aktivt.` in the
+  dialog.
 
 The hook re-evaluates the entire retained feed at the next `sentAt`/expiry boundary and when a
 tab becomes visible again. This reuses the mapper's expiry and same-feed Update/Cancel rules.
-`lastCheckedAt` remains the time of the successful request; local time checks cannot make data
-appear freshly fetched. Expiry never means that the underlying incident is over.
+`lastCheckedAt` is the backend's `checkedAt`, the last successful SR check. A failed request
+keeps the previous value, and local time checks cannot make data appear freshly fetched. Expiry
+never means that the underlying incident is over.
 
 The sticky notice occupies normal layout space and at most 40dvh. Complete long titles can be
 scrolled inside its keyboard-focusable region. Its measured height updates top scroll padding,
@@ -476,4 +485,4 @@ date; do not alter their dates to suggest they are live. Real production message
 still merit an end-to-end check. The banner can be verified with simulated responses without a
 backend; keep those results separate from the user-reported live integration check above.
 Repeat the connection checks in [Deployed setup](#deployed-setup) after deployment changes.
-Polling and offline VMA storage remain outside this implementation.
+Offline VMA storage remains outside this implementation.
