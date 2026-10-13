@@ -14,11 +14,13 @@ import { createVmaUpdateService } from "../services/vmaUpdateService"
  * in-flight request across StrictMode effect replays and retry. Failures retain the last
  * successful feed. Local timers and visibility changes re-evaluate CAP validity of that feed
  * without changing its check time. lastCheckedAt is the backend's last successful SR check.
- * Loading is reported only while no result exists or a manual retry is pending; background polls
- * leave the presentation unchanged until they complete.
+ * Loading is reported only while no result exists, so retained warnings stay visible during every
+ * check; retrying marks a pending manual retry. Without a result the state is otherwise
+ * unavailable. A result is stale when the backend reports it, the latest request failed or the
+ * device is offline. Background polls leave the presentation unchanged until they complete.
  *
  * @returns Banner selection with the ordered active messages, the complete retained feed for
- * detail validity, request state and retry.
+ * detail validity, whether any successful result exists, request state and retry.
  */
 export function useVmaBanner() {
   const { isOnline } = useMode()
@@ -91,13 +93,18 @@ export function useVmaBanner() {
     }
   }, [result])
 
+  // Before the first attempt completes there is nothing to report as unavailable yet.
+  const loading = !result && isOnline && (state.checking !== "none" || !state.failed)
   return {
     ...selectVmaBanner(result),
     messages: result?.messages ?? [],
-    loading: state.checking === "manual" || (state.checking === "initial" && !result),
+    hasResult: Boolean(result),
+    loading,
     retrying: state.checking === "manual",
-    // Without any result, an offline device cannot check; never present that as no warnings.
-    failed: state.failed || (!result && !isOnline),
+    unavailable: !result && !loading,
+    // Offline, retained data can no longer be refreshed and is presented as possibly outdated.
+    stale: Boolean(result && (result.stale || state.failed || !isOnline)),
+    offline: !isOnline,
     lastCheckedAt: result?.checkedAt ?? null,
     retry,
   }

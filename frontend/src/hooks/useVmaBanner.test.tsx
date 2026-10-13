@@ -64,7 +64,8 @@ describe("useVmaBanner", () => {
       message: { id: alert.identifier, title: info.event },
       messages: [{ id: alert.identifier, status: "active" }],
       loading: false,
-      failed: false,
+      stale: false,
+      unavailable: false,
       uncertain: false,
       lastCheckedAt,
     })
@@ -107,7 +108,12 @@ describe("useVmaBanner", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30_000)
     })
-    expect(result.current).toMatchObject({ message: null, activeMessages: [], failed: false })
+    expect(result.current).toMatchObject({
+      message: null,
+      activeMessages: [],
+      stale: false,
+      unavailable: false,
+    })
   })
 
   it("keeps the warning and its last check time when a poll fails, then recovers on the next poll", async () => {
@@ -120,7 +126,7 @@ describe("useVmaBanner", () => {
     })
     expect(result.current).toMatchObject({
       message: { id: alert.identifier },
-      failed: true,
+      stale: true,
       loading: false,
       lastCheckedAt,
     })
@@ -128,8 +134,48 @@ describe("useVmaBanner", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30_000)
     })
-    expect(result.current).toMatchObject({ message: null, failed: false })
+    expect(result.current).toMatchObject({ message: null, stale: false, unavailable: false })
     expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it("marks a backend stale response as possibly outdated with its check time", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json(cachedResponse(feedData(), { stale: true })))
+    const { result } = renderVmaHook()
+    await act(async () => {})
+    expect(result.current).toMatchObject({
+      message: { id: alert.identifier },
+      stale: true,
+      unavailable: false,
+      lastCheckedAt,
+    })
+  })
+
+  it("marks retained data as outdated as soon as the device goes offline", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json(feed()))
+    const { result } = renderVmaHook()
+    await act(async () => {})
+    expect(result.current.stale).toBe(false)
+    act(() => setConnectivity(false))
+    expect(result.current).toMatchObject({
+      message: { id: alert.identifier },
+      stale: true,
+      offline: true,
+      lastCheckedAt,
+    })
+  })
+
+  it("reports unavailable information after a failure until a background poll succeeds", async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"))
+    fetchMock.mockImplementationOnce(() => new Promise(() => {}))
+    const { result } = renderVmaHook()
+    await act(async () => {})
+    expect(result.current).toMatchObject({ unavailable: true, loading: false })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000)
+    })
+    // A silent background poll must not replace the unavailable notice with loading.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result.current).toMatchObject({ unavailable: true, loading: false })
   })
 
   it("keeps an active warning visible and loading unset while a background poll is pending", async () => {
@@ -170,13 +216,22 @@ describe("useVmaBanner", () => {
       await vi.advanceTimersByTimeAsync(60_000)
     })
     expect(fetchMock).not.toHaveBeenCalled()
-    expect(result.current).toMatchObject({ message: null, loading: false, failed: true })
+    expect(result.current).toMatchObject({
+      message: null,
+      loading: false,
+      unavailable: true,
+      offline: true,
+    })
 
     act(() => setConnectivity(true))
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(result.current.loading).toBe(true)
     await act(async () => {})
-    expect(result.current).toMatchObject({ message: { id: alert.identifier }, failed: false })
+    expect(result.current).toMatchObject({
+      message: { id: alert.identifier },
+      stale: false,
+      unavailable: false,
+    })
   })
 
   it("pauses polling offline, keeps the warning and fetches immediately on reconnection", async () => {
@@ -222,7 +277,8 @@ describe("useVmaBanner", () => {
     await act(async () => {})
     expect(result.current).toMatchObject({
       message: null,
-      failed: false,
+      stale: false,
+      unavailable: false,
       loading: false,
       uncertain: false,
       messages: [],
@@ -241,7 +297,7 @@ describe("useVmaBanner", () => {
     await act(async () => {})
     expect(result.current).toMatchObject({
       message: null,
-      failed: true,
+      unavailable: true,
       loading: false,
       lastCheckedAt: null,
     })
@@ -251,7 +307,7 @@ describe("useVmaBanner", () => {
     fetchMock.mockRejectedValueOnce(new TypeError("Offline"))
     const { result } = renderVmaHook()
     await act(async () => {})
-    expect(result.current.failed).toBe(true)
+    expect(result.current.unavailable).toBe(true)
     fetchMock.mockResolvedValueOnce(Response.json(feed([])))
     act(() => {
       result.current.retry()
@@ -262,7 +318,8 @@ describe("useVmaBanner", () => {
     await act(async () => {})
     expect(result.current).toMatchObject({
       message: null,
-      failed: false,
+      stale: false,
+      unavailable: false,
       loading: false,
       retrying: false,
     })
@@ -282,7 +339,7 @@ describe("useVmaBanner", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(apiConfig.timeoutMs)
     })
-    expect(result.current).toMatchObject({ message: null, failed: true, loading: false })
+    expect(result.current).toMatchObject({ message: null, unavailable: true, loading: false })
   })
 
   it("keeps valid records when a peer is rejected and reports incomplete information", async () => {
@@ -292,7 +349,8 @@ describe("useVmaBanner", () => {
     expect(result.current).toMatchObject({
       message: { id: alert.identifier },
       uncertain: true,
-      failed: false,
+      stale: false,
+      unavailable: false,
     })
   })
 
@@ -308,13 +366,13 @@ describe("useVmaBanner", () => {
     act(() => result.current.retry())
     expect(result.current.message?.id).toBe(alert.identifier)
     await act(async () => {})
-    expect(result.current).toMatchObject({ message: { id: alert.identifier }, failed: true })
+    expect(result.current).toMatchObject({ message: { id: alert.identifier }, stale: true })
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1_000)
     })
     expect(result.current).toMatchObject({
       message: null,
-      failed: true,
+      stale: true,
       lastCheckedAt,
       messages: [{ id: alert.identifier, status: "inactive", inactiveReason: "expired" }],
     })
@@ -327,7 +385,12 @@ describe("useVmaBanner", () => {
     await act(async () => {})
     fetchMock.mockResolvedValueOnce(Response.json(feed([])))
     await act(async () => result.current.retry())
-    expect(result.current).toMatchObject({ message: null, failed: false, uncertain: false })
+    expect(result.current).toMatchObject({
+      message: null,
+      stale: false,
+      unavailable: false,
+      uncertain: false,
+    })
   })
 
   it("applies a cancellation when its future sent time is reached", async () => {
@@ -352,7 +415,12 @@ describe("useVmaBanner", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1_000)
     })
-    expect(result.current).toMatchObject({ message: null, uncertain: false, failed: false })
+    expect(result.current).toMatchObject({
+      message: null,
+      uncertain: false,
+      stale: false,
+      unavailable: false,
+    })
     expect(
       result.current.messages.find((message) => message.id === alert.identifier)
     ).toMatchObject({
@@ -390,7 +458,7 @@ describe("useVmaBanner", () => {
     const second = renderVmaHook()
     await act(async () => {})
     await act(async () => finishOldRequest(Response.json(feed())))
-    expect(second.result.current).toMatchObject({ message: null, failed: false })
+    expect(second.result.current).toMatchObject({ message: null, stale: false, unavailable: false })
     second.unmount()
     expect(vi.getTimerCount()).toBe(0)
   })

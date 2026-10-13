@@ -1,13 +1,12 @@
 import { useId, useLayoutEffect, useRef } from "react"
+import { vmaStatusLines, type VmaStatus } from "../services/vmaStatusText"
 import type { VmaMessage } from "../types/vma"
 
 interface VmaMessageDialogProps {
   message: VmaMessage
   currentMessage: VmaMessage | undefined
-  loading: boolean
-  failed: boolean
-  uncertain: boolean
-  lastCheckedAt: string | null
+  hasResult: boolean
+  status: VmaStatus
   onClose: () => void
 }
 
@@ -17,8 +16,12 @@ const timeFormat = new Intl.DateTimeFormat("sv-SE", {
   timeZone: "Europe/Stockholm",
 })
 
-function validityNotice(message: VmaMessage | undefined): string | null {
-  if (!message) return "Meddelandets aktuella status kan inte verifieras."
+function validityNotice(message: VmaMessage | undefined, hasResult: boolean): string | null {
+  if (!message) {
+    return hasResult
+      ? "Meddelandet är inte längre aktivt."
+      : "Meddelandets aktuella status kan inte verifieras."
+  }
   if (message.status === "unknown") return "Meddelandets giltighet kan inte fastställas."
   if (message.status === "active") return null
   switch (message.inactiveReason) {
@@ -62,32 +65,23 @@ function informationUrls(message: VmaMessage): string[] {
  *
  * @param message The snapshot selected from the banner; content never switches to another CAP ID.
  * @param currentMessage The same ID in the latest evaluated feed, or undefined if no longer present.
- * @param loading Indicates an in-flight feed request, not an additional dialog request.
- * @param failed Indicates a failed feed request while previously fetched content remains readable.
- * @param uncertain Indicates incomplete feed information independently of this message's validity.
- * @param lastCheckedAt The last successful fetch time, separate from CAP publication/update time.
+ * @param hasResult Indicates a successful feed, so a missing currentMessage is no longer active.
+ * @param status The shared feed request state, separate from this message's validity and from
+ * its CAP publication/update time; the dialog performs no request of its own.
  * @param onClose Releases the selected snapshot and restores focus to a surviving trigger or heading.
  */
 function VmaMessageDialog({
   message,
   currentMessage,
-  loading,
-  failed,
-  uncertain,
-  lastCheckedAt,
+  hasResult,
+  status,
   onClose,
 }: VmaMessageDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const headingId = useId()
-  const validity = validityNotice(currentMessage)
-  const requestNotice = loading
-    ? "Kontrollerar VMA…"
-    : failed
-      ? "VMA-status kunde inte kontrolleras."
-      : uncertain
-        ? "VMA-informationen kan vara ofullständig."
-        : null
+  const validity = validityNotice(currentMessage, hasResult)
+  const statusLines = vmaStatusLines(status)
   const links = informationUrls(message)
 
   useLayoutEffect(() => {
@@ -182,19 +176,15 @@ function VmaMessageDialog({
             role="status"
             aria-atomic="true"
             className={
-              validity || requestNotice
+              validity || statusLines.length
                 ? "mt-4 rounded-xl border border-slate-300 bg-slate-100 p-4"
                 : "sr-only"
             }
           >
             {validity ? <p>{validity}</p> : null}
-            {requestNotice ? <p>{requestNotice}</p> : null}
-            {requestNotice && lastCheckedAt ? (
-              <p className="mt-2 text-sm">
-                Senast kontrollerat{" "}
-                <time dateTime={lastCheckedAt}>{timeFormat.format(new Date(lastCheckedAt))}</time>.
-              </p>
-            ) : null}
+            {statusLines.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
           </div>
           {message.details.map((detail, index) => (
             <section key={index} className="mt-6 border-t border-slate-200 pt-5">

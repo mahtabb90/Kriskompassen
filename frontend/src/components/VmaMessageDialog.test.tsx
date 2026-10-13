@@ -2,7 +2,7 @@
 import { StrictMode } from "react"
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { feed, now, source } from "../services/__fixtures__/vma"
+import { checkedAt, feed, now, source } from "../services/__fixtures__/vma"
 import { mapVmaMessages } from "../services/vmaMapper"
 import { validateVmaResponse } from "../services/vmaResponseValidator"
 import { installDialogTestMethods } from "./__fixtures__/dialog"
@@ -12,16 +12,22 @@ const message = mapVmaMessages(validateVmaResponse(feed()).records, source, now)
 const base = {
   message,
   currentMessage: message,
-  loading: false,
-  failed: false,
-  uncertain: false,
-  lastCheckedAt: null,
+  hasResult: true,
+  status: {
+    loading: false,
+    unavailable: false,
+    stale: false,
+    offline: false,
+    uncertain: false,
+    lastCheckedAt: checkedAt,
+  },
   onClose: vi.fn(),
 }
 let restoreDialog: () => void
 
 beforeEach(() => {
   restoreDialog = installDialogTestMethods()
+  vi.spyOn(Date, "now").mockReturnValue(now)
 })
 afterEach(() => {
   cleanup()
@@ -29,6 +35,7 @@ afterEach(() => {
   document.documentElement.style.removeProperty("overflow")
   document.body.style.removeProperty("overflow")
   vi.clearAllMocks()
+  vi.restoreAllMocks()
 })
 
 describe("VmaMessageDialog", () => {
@@ -165,27 +172,38 @@ describe("VmaMessageDialog", () => {
       expect(screen.getByRole("status").textContent).toContain("inte att faran är över")
   })
 
+  it("states that a message missing from a successful feed is no longer active", () => {
+    render(<VmaMessageDialog {...base} currentMessage={undefined} />)
+    expect(screen.getByRole("status").textContent).toBe("Meddelandet är inte längre aktivt.")
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(message.title)
+  })
+
   it("shows missing/unknown validity and request diagnostics separately from the message date", () => {
     const { rerender } = render(
       <VmaMessageDialog
         {...base}
         currentMessage={undefined}
-        failed
-        lastCheckedAt={new Date(now).toISOString()}
+        hasResult={false}
+        status={{ ...base.status, unavailable: true, offline: true, lastCheckedAt: null }}
       />
     )
-    expect(screen.getByRole("status").textContent).toContain("aktuella status kan inte verifieras")
-    expect(screen.getByRole("status").textContent).toContain("VMA-status kunde inte kontrolleras")
-    expect(screen.getByRole("status").querySelector("time")?.dateTime).toBe(
-      new Date(now).toISOString()
-    )
+    const status = () => screen.getByRole("status").textContent
+    expect(status()).toContain("aktuella status kan inte verifieras")
+    expect(status()).toContain("VMA-information inte tillgänglig.")
+    expect(status()).toContain("Ingen internetanslutning.")
+
+    rerender(<VmaMessageDialog {...base} status={{ ...base.status, stale: true }} />)
+    expect(status()).toBe("VMA-informationen kan vara inaktuell. Senast kontrollerad kl. 14:00.")
     rerender(
-      <VmaMessageDialog {...base} currentMessage={{ ...message, status: "unknown" }} uncertain />
+      <VmaMessageDialog
+        {...base}
+        currentMessage={{ ...message, status: "unknown" }}
+        status={{ ...base.status, uncertain: true }}
+      />
     )
-    expect(screen.getByRole("status").textContent).toContain("giltighet kan inte fastställas")
-    expect(screen.getByRole("status").textContent).toContain("informationen kan vara ofullständig")
-    rerender(<VmaMessageDialog {...base} loading />)
-    expect(screen.getByRole("status").textContent).toContain("Kontrollerar VMA")
+    expect(status()).toContain("giltighet kan inte fastställas")
+    expect(status()).toContain("informationen kan vara ofullständig")
+    expect(status()).not.toContain("Senast kontrollerad")
   })
 
   it("focuses the heading, ignores queued close events while reopened, and restores scroll styles", () => {

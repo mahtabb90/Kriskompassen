@@ -198,20 +198,51 @@ describe("AppLayout VMA integration", () => {
     await screen.findByRole("button", { name: info.event })
     fetchMock.mockRejectedValueOnce(new TypeError("Offline"))
     fireEvent.click(screen.getByRole("button", { name: "Försök igen" }))
+    const outdated = "VMA-informationen kan vara inaktuell. Senast kontrollerad kl. 14:00."
     await waitFor(() =>
       expect(within(screen.getByRole("complementary")).getByRole("status").textContent).toContain(
-        "VMA-status kunde inte kontrolleras"
+        outdated
       )
     )
     fireEvent.click(screen.getByRole("button", { name: info.event }))
     const dialog = screen.getByRole("dialog")
     expect(dialog.textContent).toContain("Gå inomhus")
+    expect(within(dialog).getByRole("status").textContent).toContain(outdated)
     expect(within(dialog).getByRole("status").textContent).toContain(
-      "VMA-status kunde inte kontrolleras"
+      "VMA-informationen kan vara ofullständig."
     )
-    expect(within(dialog).getByRole("status").textContent).toContain("Senast kontrollerat")
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
+  it("updates an open message when a poll no longer contains it", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json(feed()))
+    mountLayout()
+    fireEvent.click(await screen.findByRole("button", { name: info.event }))
+    const dialog = screen.getByRole("dialog", { name: info.event })
+    expect(within(dialog).getByRole("status").textContent).toBe("")
+
+    fetchMock.mockResolvedValueOnce(Response.json(feed([])))
+    vi.spyOn(Date, "now").mockReturnValue(now + 30_000)
+    fireEvent(document, new Event("visibilitychange"))
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBe(null))
+    expect(screen.getByRole("dialog", { name: info.event })).toBe(dialog)
+    expect(within(dialog).getByRole("status").textContent).toBe(
+      "Meddelandet är inte längre aktivt."
+    )
+    expect(dialog.textContent).toContain("Gå inomhus och stäng dörrar och fönster.")
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("states that VMA information is unavailable on an offline start without fetching", () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+    mountLayout()
+    const notice = screen.getByRole("complementary", { name: "VMA-status" })
+    expect(within(notice).getByRole("status").textContent).toBe(
+      "VMA-information inte tillgänglig.Ingen internetanslutning."
+    )
+    expect(within(notice).queryByRole("button")).toBe(null)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it("preserves the same banner and request across routes while focusing the new page heading", async () => {
     fetchMock.mockResolvedValue(Response.json(feed()))
     mountLayout()
@@ -233,8 +264,8 @@ describe("AppLayout VMA integration", () => {
     fetchMock.mockRejectedValueOnce(new TypeError("Offline"))
     mountLayout()
     const button = await screen.findByRole("button", { name: "Försök igen" })
-    expect(within(screen.getByRole("complementary")).getByRole("status").textContent).toContain(
-      "VMA-status kunde inte kontrolleras"
+    expect(within(screen.getByRole("complementary")).getByRole("status").textContent).toBe(
+      "VMA-information inte tillgänglig."
     )
     fetchMock.mockResolvedValueOnce(Response.json(feed([])))
     fireEvent.click(button)

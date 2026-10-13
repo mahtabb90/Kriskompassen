@@ -18,7 +18,7 @@ import type { VmaMessage } from "../types/vma"
  * navigation, VMA and app-update heights reserve scroll space around focused content. VMA
  * requests and the update subscription belong to this persistent layout, not individual routes.
  * A selected CAP snapshot, opened from the banner headline or its message list, stays readable
- * in a modal outside main while its feed validity changes or it leaves the banner.
+ * in a modal outside main while polling changes its feed validity or it leaves the banner.
  */
 function AppLayout() {
   const { pathname } = useLocation()
@@ -29,7 +29,9 @@ function AppLayout() {
   const updateRef = useRef<HTMLDivElement>(null)
   const vma = useVmaBanner()
   const update = usePwaUpdate()
-  const noticeVisible = Boolean(vma.message || vma.loading || vma.failed || vma.uncertain)
+  const noticeVisible = Boolean(
+    vma.message || vma.loading || vma.unavailable || vma.stale || vma.uncertain
+  )
   const [openedVma, setOpenedVma] = useState<{
     message: VmaMessage
     trigger: HTMLButtonElement
@@ -245,10 +247,8 @@ function AppLayout() {
             vma.activeMessages.find((message) => message.id === openedVma.message.id) ??
             vma.messages.find((message) => message.id === openedVma.message.id)
           }
-          loading={vma.loading}
-          failed={vma.failed}
-          uncertain={vma.uncertain}
-          lastCheckedAt={vma.lastCheckedAt}
+          hasResult={vma.hasResult}
+          status={vma}
           onClose={closeMessage}
         />
       ) : null}
