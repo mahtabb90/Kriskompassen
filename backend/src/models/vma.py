@@ -41,3 +41,15 @@ class VmaResponse(UpstreamVmaResponse):
     """Keeps provenance available even when a successful feed contains no alerts."""
 
     source: VmaSource
+
+
+class VmaCachedResponse(BaseModel):
+    """Wraps the shared cached feed with the time of its SR check and its freshness.
+
+    checkedAt is the last successful SR check, not the time of this response. stale is true
+    when the latest SR attempt failed and that earlier feed is returned instead.
+    """
+
+    data: VmaResponse
+    checkedAt: datetime
+    stale: bool

@@ -5,6 +5,7 @@ import { CRISIS_KIT_CATEGORIES } from "../types/crisisKit"
 
 interface CrisisKitItemProps {
   item: CrisisKitItemType
+  headingLevel?: 3 | 4
   onOwnershipChange: (item: CrisisKitItemType, isOwned: boolean) => Promise<void>
   onExpirationDateSave: (item: CrisisKitItemType, expirationDate: string | null) => Promise<void>
   onCustomItemSave: (
@@ -15,6 +16,13 @@ interface CrisisKitItemProps {
   onCustomItemDelete: (item: CrisisKitItemType) => Promise<void>
 }
 
+/**
+ * Displays an emergency-kit item and its current ownership status.
+ *
+ * @param item The kit item to display.
+ * @param headingLevel Level of the item name heading: 3 directly under a category heading
+ * (default), 4 when nested under a subcategory heading.
+ */
 function getTodayString(): string {
   const today = new Date()
 
@@ -28,13 +36,16 @@ function getTodayString(): string {
 /**
  * Displays an emergency-kit item and allows editing and deleting custom items.
  */
+
 function CrisisKitItem({
   item,
+  headingLevel = 3,
   onOwnershipChange,
   onExpirationDateSave,
   onCustomItemSave,
   onCustomItemDelete,
 }: CrisisKitItemProps) {
+  const Heading = headingLevel === 4 ? "h4" : "h3"
   const [isSavingOwnership, setIsSavingOwnership] = useState(false)
   const [isSavingExpiration, setIsSavingExpiration] = useState(false)
   const [ownershipError, setOwnershipError] = useState<string | null>(null)
@@ -219,7 +230,7 @@ function CrisisKitItem({
         <>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h3 className="font-semibold text-blue-900">{item.name}</h3>
+              <Heading className="font-semibold text-blue-900">{item.name}</Heading>
               <p className="mt-1 text-sm text-slate-600">{item.category}</p>
             </div>
 

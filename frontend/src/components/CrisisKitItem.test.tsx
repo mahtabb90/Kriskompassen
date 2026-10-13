@@ -1,13 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import CrisisKitItem from "./CrisisKitItem"
 import type { CrisisKitItem as CrisisKitItemType } from "../types/crisisKit"
-
-afterEach(() => {
-  cleanup()
-  vi.clearAllMocks()
-})
 
 const baseItem: CrisisKitItemType = {
   id: "test-item",
@@ -22,10 +17,24 @@ const onExpirationDateSave = vi.fn().mockResolvedValue(undefined)
 const onCustomItemSave = vi.fn().mockResolvedValue(undefined)
 const onCustomItemDelete = vi.fn().mockResolvedValue(undefined)
 
-function renderItem(item: CrisisKitItemType) {
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+  vi.resetAllMocks()
+})
+
+beforeEach(() => {
+  onOwnershipChange.mockResolvedValue(undefined)
+  onExpirationDateSave.mockResolvedValue(undefined)
+  onCustomItemSave.mockResolvedValue(undefined)
+  onCustomItemDelete.mockResolvedValue(undefined)
+})
+
+function renderItem(item: CrisisKitItemType, headingLevel: 3 | 4 = 3) {
   return render(
     <CrisisKitItem
       item={item}
+      headingLevel={headingLevel}
       onOwnershipChange={onOwnershipChange}
       onExpirationDateSave={onExpirationDateSave}
       onCustomItemSave={onCustomItemSave}
@@ -33,6 +42,17 @@ function renderItem(item: CrisisKitItemType) {
     />
   )
 }
+
+describe("CrisisKitItem heading level", () => {
+  it("renders the name as an h3 by default and as an h4 when nested under a subcategory", () => {
+    renderItem(baseItem)
+    expect(screen.getByRole("heading", { level: 3, name: "Konserver" })).toBeTruthy()
+
+    cleanup()
+    renderItem(baseItem, 4)
+    expect(screen.getByRole("heading", { level: 4, name: "Konserver" })).toBeTruthy()
+  })
+})
 
 describe("CrisisKitItem expiration dates", () => {
   it("shows a warning when the expiration date has passed", () => {
@@ -167,7 +187,6 @@ describe("CrisisKitItem interactions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Spara ändringar" }))
 
     expect((await screen.findByRole("alert")).textContent).toContain("Storage error")
-
     expect(screen.getByLabelText("Namn")).toBeTruthy()
     expect(screen.getByRole("button", { name: "Spara ändringar" })).toBeTruthy()
   })

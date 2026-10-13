@@ -255,6 +255,7 @@ function CrisisKitPage() {
                                   <CrisisKitItem
                                     key={item.id}
                                     item={item}
+                                    headingLevel={4}
                                     onOwnershipChange={handleOwnershipChange}
                                     onExpirationDateSave={handleExpirationDateSave}
                                     onCustomItemSave={handleCustomItemSave}
@@ -295,6 +296,7 @@ function CrisisKitPage() {
                           <CrisisKitItem
                             key={item.id}
                             item={item}
+                            headingLevel={4}
                             onOwnershipChange={handleOwnershipChange}
                             onExpirationDateSave={handleExpirationDateSave}
                             onCustomItemSave={handleCustomItemSave}
