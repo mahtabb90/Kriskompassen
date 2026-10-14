@@ -120,7 +120,7 @@ To ensure accessible contrast ratios, eliminate visual glare, and provide comfor
   separators or extra colours are introduced. With one message, none of these elements appear.
 - **Links and controls:** Source attribution stays underlined. The compact retry button uses inherited foreground colour, a 1px `border-current`, `rounded-md`, a 14px semibold label and `disabled:opacity-70`. Links and buttons retain at least 48×48 CSS pixel targets. This warning-surface variant preserves legibility without introducing a second button background.
 - **Focus and contrast:** White text, icon strokes, enabled control borders and focus outlines against the installed Tailwind `red-900` value (`oklch(0.396 0.141 25.723)`) have approximately **10.06:1** contrast. The banner's own outline is inset by 4px to remain visible at the viewport edge; control outlines use the standard 4px outward offset. Forced colours use the system `Highlight` outline and allow the icon to inherit the system foreground. Recheck contrast when changing these tokens.
-- **Request states:** Without an active message, loading, failed checks and incomplete information use `bg-slate-100 text-slate-900 border-slate-300` with explicit status text and no warning triangle. A successful empty result hides the banner. A failed check never claims that no VMA exists. If a still-active message is retained after a failed check, its warning styling stays visible alongside the failure text and last successful check time.
+- **Request states:** Without an active message, loading, unavailable information (no successful check yet), possibly outdated information (stale or failed check, with the last successful check time) and incomplete information use `bg-slate-100 text-slate-900 border-slate-300` with explicit status text and no warning triangle. A successful empty result hides the banner. A failed check never claims that no VMA exists. If a still-active message is retained after a failed check, its warning styling stays visible alongside the possibly-outdated notice and last successful check time.
 
 ### 2.5 Contrast Targets and Verification
 
@@ -453,6 +453,7 @@ KrisKompassen performs offline storage operations and network calls that must be
   - A persistent, visually hidden polite live region announces changes in the number of active messages (for example *"2 aktiva VMA."*, and *"1 aktivt VMA."* after a drop to one). It stays silent for a single first warning, which the alert already announces.
   - Banner title and list buttons use `aria-haspopup="dialog"` and reference their metadata line with `aria-describedby`. The disclosure uses `aria-expanded` and `aria-controls`. If a focused list entry disappears, focus moves to the disclosure, or to the newest headline when the list is gone; arriving messages never take focus.
   - Loading, failure and incomplete-information messages use `role="status"`. Their text inherits the foreground of the warning or neutral status surface defined in section 2.4.1.
+  - Background polling does not change the status text; it is announced only when the state changes. A separate visually hidden polite region announces *"VMA-informationen är uppdaterad."* when outdated or unavailable information is successfully updated.
 
 ### 9.2 Symbol Representation
 

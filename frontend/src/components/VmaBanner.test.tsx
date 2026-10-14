@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
-import { afterEach, describe, expect, it, vi } from "vitest"
-import { feed, info, multipleAlerts, now, source } from "../services/__fixtures__/vma"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { checkedAt, feed, info, multipleAlerts, now, source } from "../services/__fixtures__/vma"
 import { selectVmaBanner } from "../services/vmaBannerSelection"
 import { mapVmaMessages } from "../services/vmaMapper"
 import { validateVmaResponse } from "../services/vmaResponseValidator"
@@ -21,13 +21,22 @@ const empty = {
   uncertain: false,
   loading: false,
   retrying: false,
-  failed: false,
+  unavailable: false,
+  stale: false,
+  offline: false,
   lastCheckedAt: null,
   retry: vi.fn(),
   openMessage: vi.fn(),
 }
 
-afterEach(cleanup)
+beforeEach(() => {
+  vi.spyOn(Date, "now").mockReturnValue(now)
+})
+
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 describe("VmaBanner", () => {
   it("opens the selected CAP message through a labelled dialog trigger", () => {
@@ -54,7 +63,7 @@ describe("VmaBanner", () => {
     expect(screen.getByRole("alert").textContent?.trim()).toBe(`VMA: ${info.event}`)
   })
 
-  it.each(["loading", "failed", "uncertain"] as const)(
+  it.each(["loading", "unavailable", "stale", "uncertain"] as const)(
     "removes the warning icon when only a %s status remains",
     (state) => {
       const { rerender } = render(<VmaBanner {...empty} message={message} />)
@@ -230,29 +239,117 @@ describe("VmaBanner", () => {
     expect(screen.getByRole("button", { name: "Försök igen" })).toBeTruthy()
   })
 
+  it("states that VMA information is unavailable, never that there are no warnings", () => {
+    const retry = vi.fn()
+    const { rerender } = render(<VmaBanner {...empty} unavailable retry={retry} />)
+    expect(screen.getByRole("complementary", { name: "VMA-status" })).toBeTruthy()
+    expect(screen.getByRole("status").textContent).toBe("VMA-information inte tillgänglig.")
+    expect(screen.getByRole("alert").textContent).toBe("")
+    fireEvent.click(screen.getByRole("button", { name: "Försök igen" }))
+    expect(retry).toHaveBeenCalledTimes(1)
+
+    rerender(<VmaBanner {...empty} unavailable offline retry={retry} />)
+    expect(screen.getByRole("status").textContent).toBe(
+      "VMA-information inte tillgänglig.Ingen internetanslutning."
+    )
+    expect(screen.queryByRole("button", { name: "Försök igen" })).toBe(null)
+  })
+
   it("keeps the retry control in place and blocks another click while a retry is pending", () => {
     const retry = vi.fn()
-    const { rerender } = render(<VmaBanner {...empty} failed retry={retry} />)
+    const { rerender } = render(<VmaBanner {...empty} unavailable retry={retry} />)
     const button = screen.getByRole<HTMLButtonElement>("button", { name: "Försök igen" })
     button.focus()
     fireEvent.click(button)
     expect(retry).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole("status").textContent).toBe("VMA-status kunde inte kontrolleras.")
     rerender(<VmaBanner {...empty} loading retrying retry={retry} />)
-    expect(screen.getByRole("button", { name: "Försöker igen…" })).toBe(button)
+    expect(screen.getByRole("status").textContent).toBe("Kontrollerar VMA…")
+    expect(screen.getByRole("button", { name: "Kontrollerar…" })).toBe(button)
     expect(button.disabled).toBe(true)
     fireEvent.click(button)
     expect(retry).toHaveBeenCalledTimes(1)
   })
 
-  it("displays retained warning text and the time of its last successful check alongside a failure", () => {
-    render(
-      <VmaBanner {...empty} message={message} failed lastCheckedAt={new Date(now).toISOString()} />
+  it("keeps an active warning and its status unchanged while a manual retry is pending", () => {
+    const stale = {
+      ...empty,
+      message,
+      activeMessages: [message],
+      stale: true,
+      lastCheckedAt: checkedAt,
+    }
+    const { rerender } = render(<VmaBanner {...stale} />)
+    const heading = screen.getByRole("heading", { name: info.event })
+    const statusText = screen.getByRole("status").textContent
+    rerender(<VmaBanner {...stale} retrying />)
+    expect(screen.getByRole("heading", { name: info.event })).toBe(heading)
+    expect(screen.getByRole("status").textContent).toBe(statusText)
+    expect(screen.queryByText("Kontrollerar VMA…")).toBe(null)
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Kontrollerar…" }).disabled).toBe(
+      true
+    )
+  })
+
+  it("shows a retained warning as possibly outdated with the backend's last check time", () => {
+    const { rerender } = render(
+      <VmaBanner
+        {...empty}
+        message={message}
+        activeMessages={[message]}
+        stale
+        lastCheckedAt={checkedAt}
+      />
     )
     expect(screen.getByRole("heading").textContent).toBe(info.event)
+    expect(screen.getByRole("status").textContent).toBe(
+      "VMA-informationen kan vara inaktuell. Senast kontrollerad kl. 14:00."
+    )
+    expect(screen.getByRole("button", { name: "Försök igen" })).toBeTruthy()
+
+    vi.spyOn(Date, "now").mockReturnValue(now + 86_400_000)
+    rerender(
+      <VmaBanner
+        {...empty}
+        message={message}
+        activeMessages={[message]}
+        stale
+        offline
+        lastCheckedAt={checkedAt}
+      />
+    )
+    expect(screen.getByRole("status").textContent).toBe(
+      "VMA-informationen kan vara inaktuell. Senast kontrollerad den 5 oktober kl. 14:00." +
+        "Ingen internetanslutning."
+    )
+    expect(screen.queryByRole("button", { name: "Försök igen" })).toBe(null)
+  })
+
+  it("keeps the status region unchanged when a poll leaves the state unchanged", () => {
+    const stale = { ...empty, stale: true, lastCheckedAt: checkedAt }
+    const { rerender } = render(<VmaBanner {...stale} />)
     const status = screen.getByRole("status")
-    expect(status.textContent).toContain("VMA-status kunde inte kontrolleras.")
-    expect(status.textContent).toContain("Senast kontrollerat")
-    expect(status.querySelector("time")?.dateTime).toBe(new Date(now).toISOString())
+    const line = status.firstChild
+    rerender(<VmaBanner {...stale} />)
+    expect(screen.getByRole("status")).toBe(status)
+    expect(status.firstChild).toBe(line)
+  })
+
+  it("announces recovery from outdated or unavailable information, but not the first load", () => {
+    const { container, rerender } = render(<VmaBanner {...empty} loading />)
+    const recovery = () => container.querySelectorAll("[aria-live='polite']")[1].textContent
+    rerender(<VmaBanner {...empty} />)
+    expect(recovery()).toBe("")
+
+    rerender(<VmaBanner {...empty} stale lastCheckedAt={checkedAt} />)
+    expect(recovery()).toBe("")
+    rerender(<VmaBanner {...empty} lastCheckedAt={checkedAt} />)
+    expect(recovery()).toBe("VMA-informationen är uppdaterad.")
+
+    rerender(<VmaBanner {...empty} unavailable />)
+    expect(recovery()).toBe("")
+    rerender(<VmaBanner {...empty} loading retrying />)
+    expect(recovery()).toBe("")
+    rerender(<VmaBanner {...empty} message={message} activeMessages={[message]} />)
+    expect(recovery()).toBe("VMA-informationen är uppdaterad.")
   })
 })

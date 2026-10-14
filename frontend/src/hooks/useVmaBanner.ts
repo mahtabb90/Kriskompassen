@@ -1,75 +1,61 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react"
+import { useMode } from "../context/modeContext"
 import type { VmaResult } from "../types/vma"
 import { selectVmaBanner } from "../services/vmaBannerSelection"
 import { reevaluateVmaMessages } from "../services/vmaMapper"
 import { fetchVmas } from "../services/vmaService"
-
-interface RequestState {
-  result: VmaResult | null
-  status: "loading" | "retrying" | "success" | "error"
-  lastCheckedAt: string | null
-}
+import { createVmaUpdateService } from "../services/vmaUpdateService"
 
 /**
- * Loads VMA once per layout mount and exposes presentation state plus manual retry.
+ * Keeps VMA information current for the layout and exposes presentation state plus manual retry.
  *
- * Shares an in-flight request across StrictMode effect replays. Ignores completion after unmount
- * and retains the last successful feed on failure. Local timers and visibility changes re-evaluate
- * CAP validity without polling or persistent storage. Errors become explicit UI state, never [];
- * the last successful check time stays separate from local validity evaluation time.
+ * Owns one update service for the lifetime of the layout: it fetches on start when ModeProvider
+ * reports connectivity, polls our backend, pauses offline and in hidden tabs, and shares one
+ * in-flight request across StrictMode effect replays and retry. Failures retain the last
+ * successful feed. Local timers and visibility changes re-evaluate CAP validity of that feed
+ * without changing its check time. lastCheckedAt is the backend's last successful SR check.
+ * Loading is reported only while no result exists, so retained warnings stay visible during every
+ * check; retrying marks a pending manual retry. Without a result the state is otherwise
+ * unavailable. A result is stale when the backend reports it, the latest request failed or the
+ * device is offline. Background polls leave the presentation unchanged until they complete.
  *
  * @returns Banner selection with the ordered active messages, the complete retained feed for
- * detail validity, request state and retry.
+ * detail validity, whether any successful result exists, request state and retry.
  */
 export function useVmaBanner() {
-  const [state, setState] = useState<RequestState>({
-    result: null,
-    status: "loading",
-    lastCheckedAt: null,
-  })
-  const mounted = useRef(false)
-  const pending = useRef<Promise<VmaResult> | null>(null)
-
-  const request = useCallback(() => {
-    if (pending.current) return
-    const response = fetchVmas()
-    pending.current = response
-    void response
-      .then(
-        (result) => {
-          if (mounted.current) {
-            setState({ result, status: "success", lastCheckedAt: result.evaluatedAt })
-          }
-        },
-        () => {
-          if (mounted.current) setState((previous) => ({ ...previous, status: "error" }))
-        }
-      )
-      .finally(() => {
-        pending.current = null
-      })
-  }, [])
+  const { isOnline } = useMode()
+  const [service] = useState(() => createVmaUpdateService({ fetchVmas, document }, isOnline))
+  const state = useSyncExternalStore(service.subscribe, service.getSnapshot)
+  const [evaluated, setEvaluated] = useState<{
+    from: VmaResult | null
+    result: VmaResult | null
+  }>({ from: state.result, result: state.result })
+  let current = evaluated
+  // A newly fetched feed replaces any locally re-evaluated copy of the previous one.
+  if (evaluated.from !== state.result) {
+    current = { from: state.result, result: state.result }
+    setEvaluated(current)
+  }
+  const result = current.result
 
   useEffect(() => {
-    mounted.current = true
-    request()
-    return () => {
-      mounted.current = false
-    }
-  }, [request])
+    service.start()
+    return () => service.stop()
+  }, [service])
+
+  useEffect(() => {
+    service.setOnline(isOnline)
+  }, [service, isOnline])
 
   const retry = useCallback(() => {
-    if (pending.current || !mounted.current) return
-    setState((previous) => ({ ...previous, status: "retrying" }))
-    request()
-  }, [request])
+    void service.retry()
+  }, [service])
 
   useEffect(() => {
-    const result = state.result
     if (!result) return
 
     const reevaluate = () => {
-      setState((previous) => {
+      setEvaluated((previous) => {
         if (!previous.result) return previous
         const evaluatedAt = Date.now()
         return {
@@ -105,15 +91,21 @@ export function useVmaBanner() {
       clearTimeout(timer)
       document.removeEventListener("visibilitychange", onVisibilityChange)
     }
-  }, [state.result])
+  }, [result])
 
+  // Before the first attempt completes there is nothing to report as unavailable yet.
+  const loading = !result && isOnline && (state.checking !== "none" || !state.failed)
   return {
-    ...selectVmaBanner(state.result),
-    messages: state.result?.messages ?? [],
-    loading: state.status === "loading" || state.status === "retrying",
-    retrying: state.status === "retrying",
-    failed: state.status === "error",
-    lastCheckedAt: state.lastCheckedAt,
+    ...selectVmaBanner(result),
+    messages: result?.messages ?? [],
+    hasResult: Boolean(result),
+    loading,
+    retrying: state.checking === "manual",
+    unavailable: !result && !loading,
+    // Offline, retained data can no longer be refreshed and is presented as possibly outdated.
+    stale: Boolean(result && (result.stale || state.failed || !isOnline)),
+    offline: !isOnline,
+    lastCheckedAt: result?.checkedAt ?? null,
     retry,
   }
 }
