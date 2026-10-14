@@ -3,11 +3,22 @@ import { StrictMode } from "react"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { AddressProvider } from "../context/AddressProvider"
 import { ModeProvider } from "../context/ModeProvider"
 import { useMode } from "../context/modeContext"
 import { alert, feed, info, multipleAlerts, now } from "../services/__fixtures__/vma"
 import AppLayout from "./AppLayout"
 import { installDialogTestMethods } from "./__fixtures__/dialog"
+
+// This file exercises VMA/layout behavior, not addresses; stub the storage boundary so
+// AddressProvider (rendered by the real Header/AddressIndicator) never touches IndexedDB,
+// which jsdom does not implement.
+vi.mock("../services/addressStorageService", () => ({
+  getSavedAddresses: vi.fn().mockResolvedValue([]),
+  saveAddress: vi.fn(),
+  setActiveAddress: vi.fn(),
+  removeAddress: vi.fn(),
+}))
 
 let fetchMock = vi.fn<typeof fetch>()
 const measureCallbacks: Array<() => void> = []
@@ -27,14 +38,16 @@ function mountLayout() {
   return render(
     <StrictMode>
       <ModeProvider>
-        <MemoryRouter>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route index element={<Page title="Hem" />} />
-              <Route path="crisis" element={<Page title="Krisinformation" />} />
-            </Route>
-          </Routes>
-        </MemoryRouter>
+        <AddressProvider>
+          <MemoryRouter>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route index element={<Page title="Hem" />} />
+                <Route path="crisis" element={<Page title="Krisinformation" />} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </AddressProvider>
       </ModeProvider>
     </StrictMode>
   )
@@ -49,11 +62,16 @@ beforeEach(() => {
   vi.stubGlobal(
     "ResizeObserver",
     class {
+      callback: () => void
       constructor(callback: () => void) {
+        this.callback = callback
         measureCallbacks.push(callback)
       }
       observe() {}
-      disconnect() {}
+      disconnect() {
+        const index = measureCallbacks.indexOf(this.callback)
+        if (index >= 0) measureCallbacks.splice(index, 1)
+      }
     }
   )
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
@@ -312,21 +330,84 @@ describe("AppLayout VMA integration", () => {
   })
 
   it("reserves measured space and reveals keyboard focus beneath the sticky banner", async () => {
+    const originalStyle = window.getComputedStyle.bind(window)
+    vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+      const style = originalStyle(element)
+      if (element.tagName === "NAV") style.setProperty("position", "fixed")
+      return style
+    })
     fetchMock.mockResolvedValue(Response.json(feed()))
     const { unmount } = mountLayout()
     const notice = await screen.findByRole("complementary")
     const slot = notice.parentElement!
+    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
     vi.spyOn(slot, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 390, 120))
+    vi.spyOn(navigation, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 770, 390, 74))
+    Object.defineProperty(navigation, "scrollHeight", { configurable: true, value: 72 })
+    const previousHeight = document.documentElement.style.getPropertyValue("--navigation-height")
     for (const measure of measureCallbacks) measure()
-    expect(document.documentElement.style.getPropertyValue("--vma-banner-height")).toBe("120px")
+    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe(
+      previousHeight
+    )
+    await waitFor(() =>
+      expect(document.documentElement.style.getPropertyValue("--vma-banner-height")).toBe("120px")
+    )
+    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("74px")
     const heading = screen.getByRole("heading", { name: "Hem" })
     vi.spyOn(heading, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 50, 100, 40))
     heading.focus()
     await waitFor(() =>
       expect(window.scrollBy).toHaveBeenCalledWith({ top: -78, behavior: "instant" })
     )
+    vi.useFakeTimers()
+    for (const measure of measureCallbacks) measure()
     unmount()
+    vi.runAllTimers()
+    vi.useRealTimers()
     expect(document.documentElement.style.getPropertyValue("--vma-banner-height")).toBe("")
     expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("")
+  })
+
+  it("reconsiders the bottom bar after resize while preserving the tall-content fallback", async () => {
+    const originalStyle = window.getComputedStyle.bind(window)
+    vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+      const style = originalStyle(element)
+      if (element.tagName === "NAV") {
+        style.setProperty(
+          "position",
+          element.hasAttribute("data-overflows-viewport") ? "static" : "fixed"
+        )
+      }
+      return style
+    })
+    vi.stubGlobal("innerHeight", 500)
+    fetchMock.mockResolvedValue(Response.json(feed([])))
+    mountLayout()
+    await screen.findByRole("heading", { name: "Hem" })
+    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
+    let bottomContentHeight = 64
+    Object.defineProperty(navigation, "scrollHeight", {
+      configurable: true,
+      get: () => (navigation.hasAttribute("data-overflows-viewport") ? 380 : bottomContentHeight),
+    })
+    vi.spyOn(navigation, "getBoundingClientRect").mockImplementation(
+      () => new DOMRect(0, 500 - bottomContentHeight - 2, 360, bottomContentHeight + 2)
+    )
+    navigation.setAttribute("data-overflows-viewport", "")
+    for (const measure of measureCallbacks) measure()
+    expect(navigation.hasAttribute("data-overflows-viewport")).toBe(true)
+    await waitFor(() =>
+      expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("0px")
+    )
+
+    fireEvent.resize(window)
+    expect(navigation.hasAttribute("data-overflows-viewport")).toBe(false)
+    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("66px")
+
+    bottomContentHeight = 200
+    for (const measure of measureCallbacks) measure()
+    fireEvent.resize(window)
+    expect(navigation.hasAttribute("data-overflows-viewport")).toBe(true)
+    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("0px")
   })
 })

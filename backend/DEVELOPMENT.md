@@ -81,6 +81,58 @@ most one per 60 seconds and instance, regardless of the number of clients (see
 caching, persistent VMA storage, long-term fixtures containing real warnings, or logo usage on the
 assumption that public HTTP access grants unrestricted reuse.
 
+## Geocoding (Nominatim) integration
+
+The backend reverse-geocodes a latitude/longitude pair into a readable Swedish address through
+[Nominatim](https://nominatim.org/), OpenStreetMap's public geocoder:
+
+```text
+GET https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=..&lon=..&zoom=18&addressdetails=1&accept-language=sv
+Accept: application/json
+User-Agent: KrisKompassen/0.1
+```
+
+Nominatim's [usage policy](https://operations.osmfoundation.org/policies/nominatim/) requires an
+identifying `User-Agent` (a stock HTTP-library default is not accepted) and asks for roughly one
+request per second; this integration does on-demand lookups only, no polling or bulk geocoding.
+Data is licensed under [ODbL](https://www.openstreetmap.org/copyright); the frontend must show the
+OpenStreetMap attribution wherever a reverse-geocoded address is displayed.
+
+A coordinate Nominatim cannot resolve, or a response that cannot be read as a complete address,
+is reported as a normal `200 {"found": false, "message": "...", "source": {...}}` — **not** an
+`UpstreamError`. `upstream_invalid_response` is reserved for JSON that fails to decode at all.
+Missing or out-of-range `lat`/`lon` query parameters are rejected by FastAPI itself with its own
+`422 {"detail": [...]}` shape, which does not match the `{"error": {...}}` envelope used for every
+other failure documented below — this is a deliberate FastAPI validation-layer behavior, not a bug.
+
+### Verification against the live endpoint
+
+On 2026-10-12, a manual request through the backend's default configuration (no environment
+overrides) to `GET /api/v1/geocode?lat=59.3326&lon=18.0649` (Sergels torg, Stockholm) returned
+`200` with `found: true`, `address: "Sergelfontänen, Sergels Torg, Klara, Norrmalm, ...,
+Stockholm, Stockholms kommun, Stockholms län, 111 51, Sverige"`, `municipality: "Stockholms
+kommun"` and `county: "Stockholms län"`. The real Nominatim endpoint accepted the configured
+`User-Agent: KrisKompassen/0.1` without rejecting the request. This confirms the live upstream
+shape matches `UpstreamGeocodeResult` and the municipality/county mapping for at least one real
+Swedish address; it does not establish behavior for every address, for Nominatim's documented
+no-result case against a real (non-synthetic) coordinate, or for sustained request volume beyond
+Nominatim's ~1 request/second usage policy.
+
+A second live check exercised the full chain end-to-end through the running frontend and a
+browser-injected real coordinate (59.3268, 18.0717, the Royal Palace, Stockholm): a real
+`fetch()` from `AddressSection` reached this backend, which reached the real Nominatim endpoint,
+and correctly rendered "Inre borggården, Gamla stan, ..., Stockholm, Stockholms kommun,
+Stockholms län, ..." with the approximate-position badge and OSM attribution. Confirmed via both
+the browser's network log and this server's access log.
+
+A third check used the user's own device (Firefox on Linux, no GPS hardware) with a genuinely
+granted permission. The first attempt returned the browser's own `TIMEOUT`, correctly surfaced as
+the documented Swedish message. A retry succeeded but resolved to an address roughly 15-20 km
+from the user's actual location (Upplands Väsby instead of Viksjö, Järfälla) — a real example of
+the browser's own network-based position estimate being inaccurate, not a backend or Nominatim
+fault; reverse-geocoding the (wrong) coordinate was itself correct. This is why an automatically
+fetched address is always labelled approximate and correctable rather than presented as exact.
+
 ## Local setup
 
 Use Python 3.13, recorded in `.python-version`. From `backend/`:
@@ -110,6 +162,9 @@ Settings read process environment variables, not `.env` files. `.env.example` li
 | --- | --- | --- |
 | `KRISKOMPASSEN_VMA_API_URL` | `https://vmaapi.sr.se/api/v3/alerts` | SR-compatible feed endpoint |
 | `KRISKOMPASSEN_VMA_TIMEOUT_SECONDS` | `8` | Total upstream deadline, including the response body |
+| `KRISKOMPASSEN_GEOCODE_API_URL` | `https://nominatim.openstreetmap.org/reverse` | Nominatim-compatible reverse-geocoding endpoint |
+| `KRISKOMPASSEN_GEOCODE_TIMEOUT_SECONDS` | `8` | Total upstream deadline for one reverse-geocode lookup |
+| `KRISKOMPASSEN_GEOCODE_USER_AGENT` | `KrisKompassen/0.1` | Identifying User-Agent sent to Nominatim; set a real contact before production use |
 | `KRISKOMPASSEN_CORS_ORIGINS` | `["http://localhost:5173","http://127.0.0.1:5173"]` | Exact allowed browser origins |
 | `VITE_API_BASE_URL` | `http://localhost:8000` | Public backend base URL |
 
@@ -178,6 +233,7 @@ The router adds attribution from backend configuration, ignoring any upstream `s
 | --- | --- |
 | `GET /health` | `200 {"status":"ok"}`, without contacting SR |
 | `GET /api/v1/vmas` | `200 {"data":{"timestamp":"...","alerts":[],"source":{...}},"checkedAt":"...","stale":false}` |
+| `GET /api/v1/geocode?lat=&lon=` | `200 {"found":true\|false,"address":"...","municipality":"...","county":"...","lat":...,"lon":...,"message":"...","source":{...}}` |
 | `GET /docs` | Interactive backend API documentation |
 | `GET /openapi.json` | Backend API schema |
 
