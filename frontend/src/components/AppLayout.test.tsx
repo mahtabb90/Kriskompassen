@@ -3,13 +3,26 @@ import { StrictMode } from "react"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { AddressProvider } from "../context/AddressProvider"
 import { ModeProvider } from "../context/ModeProvider"
 import { useMode } from "../context/modeContext"
-import { alert, feed, info, now } from "../services/__fixtures__/vma"
+import { alert, feed, info, multipleAlerts, now } from "../services/__fixtures__/vma"
 import AppLayout from "./AppLayout"
+import { installDialogTestMethods } from "./__fixtures__/dialog"
+
+// This file exercises VMA/layout behavior, not addresses; stub the storage boundary so
+// AddressProvider (rendered by the real Header/AddressIndicator) never touches IndexedDB,
+// which jsdom does not implement.
+vi.mock("../services/addressStorageService", () => ({
+  getSavedAddresses: vi.fn().mockResolvedValue([]),
+  saveAddress: vi.fn(),
+  setActiveAddress: vi.fn(),
+  removeAddress: vi.fn(),
+}))
 
 let fetchMock = vi.fn<typeof fetch>()
 const measureCallbacks: Array<() => void> = []
+let restoreDialog: () => void
 
 function Page({ title }: { title: string }) {
   const { mode } = useMode()
@@ -25,20 +38,23 @@ function mountLayout() {
   return render(
     <StrictMode>
       <ModeProvider>
-        <MemoryRouter>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route index element={<Page title="Hem" />} />
-              <Route path="crisis" element={<Page title="Krisinformation" />} />
-            </Route>
-          </Routes>
-        </MemoryRouter>
+        <AddressProvider>
+          <MemoryRouter>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route index element={<Page title="Hem" />} />
+                <Route path="crisis" element={<Page title="Krisinformation" />} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </AddressProvider>
       </ModeProvider>
     </StrictMode>
   )
 }
 
 beforeEach(() => {
+  restoreDialog = installDialogTestMethods()
   vi.spyOn(Date, "now").mockReturnValue(now)
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true)
   fetchMock = vi.fn<typeof fetch>()
@@ -46,11 +62,16 @@ beforeEach(() => {
   vi.stubGlobal(
     "ResizeObserver",
     class {
+      callback: () => void
       constructor(callback: () => void) {
+        this.callback = callback
         measureCallbacks.push(callback)
       }
       observe() {}
-      disconnect() {}
+      disconnect() {
+        const index = measureCallbacks.indexOf(this.callback)
+        if (index >= 0) measureCallbacks.splice(index, 1)
+      }
     }
   )
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
@@ -63,12 +84,183 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  restoreDialog()
   measureCallbacks.length = 0
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
 
 describe("AppLayout VMA integration", () => {
+  it("opens the banner message without fetching and returns focus to its trigger on repeated use", async () => {
+    fetchMock.mockResolvedValue(Response.json(feed()))
+    mountLayout()
+    const trigger = await screen.findByRole("button", { name: info.event })
+    const live = screen.getByRole("alert").firstChild
+    for (let index = 0; index < 2; index++) {
+      trigger.focus()
+      fireEvent.click(trigger)
+      const dialog = screen.getByRole("dialog", { name: info.event })
+      expect(document.activeElement).toBe(within(dialog).getByRole("heading", { level: 2 }))
+      expect(dialog.textContent).toContain("Gå inomhus och stäng dörrar och fönster.")
+      expect(screen.getByRole("main").contains(dialog)).toBe(false)
+      expect(document.title).toBe("Hem | KrisKompassen")
+      fireEvent.click(within(dialog).getByRole("button", { name: "Stäng" }))
+      expect(screen.queryByRole("dialog")).toBe(null)
+      expect(document.activeElement).toBe(trigger)
+    }
+    expect(screen.getByRole("alert").firstChild).toBe(live)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the selected message after expiry and returns to the page when the banner disappears", async () => {
+    fetchMock.mockResolvedValue(Response.json(feed()))
+    mountLayout()
+    fireEvent.click(await screen.findByRole("button", { name: info.event }))
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse(info.expires) + 1)
+    fireEvent(document, new Event("visibilitychange"))
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBe(null))
+    const dialog = screen.getByRole("dialog", { name: info.event })
+    expect(within(dialog).getByRole("status").textContent).toContain("giltighetstid har gått ut")
+    expect(dialog.textContent).toContain("Lyssna på lokal P4.")
+    fireEvent.click(within(dialog).getByRole("button", { name: "Stäng" }))
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Hem" }))
+    // Becoming visible after the polling interval also refreshes the feed once.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not switch the open message when the banner selects a newer CAP ID", async () => {
+    const newer = {
+      ...alert,
+      identifier: "newer-cap-id",
+      sent: new Date(now + 60_000).toISOString(),
+      info: [{ ...info, event: "Nyare varning", description: "En annan varning." }],
+    }
+    fetchMock.mockResolvedValue(Response.json(feed([alert, newer])))
+    mountLayout()
+    fireEvent.click(await screen.findByRole("button", { name: info.event }))
+    vi.spyOn(Date, "now").mockReturnValue(now + 60_001)
+    fireEvent(document, new Event("visibilitychange"))
+    await screen.findByRole("button", { name: "Nyare varning" })
+    expect(screen.getByRole("dialog", { name: info.event }).textContent).not.toContain(
+      "En annan varning."
+    )
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Stäng" }))
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Hem" }))
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("opens each listed message and returns focus to its list entry", async () => {
+    fetchMock.mockResolvedValue(Response.json(feed(multipleAlerts)))
+    mountLayout()
+    await screen.findByText("3 aktiva VMA")
+    fireEvent.click(screen.getByRole("button", { name: "Visa 2 fler VMA" }))
+    for (const [title, text] of [
+      [info.event, "Gå inomhus och stäng dörrar och fönster."],
+      ["Gasläcka i Exempelstad", "Håll dig borta från hamnområdet."],
+    ]) {
+      const trigger = screen.getByRole("button", { name: title })
+      trigger.focus()
+      fireEvent.click(trigger)
+      const dialog = screen.getByRole("dialog", { name: title })
+      expect(dialog.textContent).toContain(text)
+      fireEvent.click(within(dialog).getByRole("button", { name: "Stäng" }))
+      expect(document.activeElement).toBe(trigger)
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps an open listed message when it leaves the banner and returns focus to the page", async () => {
+    const [newest, listed, update] = multipleAlerts
+    const expiring = {
+      ...listed,
+      info: [{ ...listed.info[0], expires: new Date(now + 1_000).toISOString() }],
+    }
+    fetchMock.mockResolvedValue(Response.json(feed([newest, expiring, update])))
+    mountLayout()
+    fireEvent.click(await screen.findByRole("button", { name: "Visa 2 fler VMA" }))
+    const trigger = screen.getByRole("button", { name: "Gasläcka i Exempelstad" })
+    trigger.focus()
+    fireEvent.click(trigger)
+    const dialog = screen.getByRole("dialog", { name: "Gasläcka i Exempelstad" })
+    const dialogHeading = within(dialog).getByRole("heading", { level: 2 })
+    expect(document.activeElement).toBe(dialogHeading)
+
+    vi.spyOn(Date, "now").mockReturnValue(now + 1_001)
+    fireEvent(document, new Event("visibilitychange"))
+    await screen.findByText("2 aktiva VMA")
+    expect(trigger.isConnected).toBe(false)
+    expect(screen.getByRole("dialog", { name: "Gasläcka i Exempelstad" })).toBe(dialog)
+    expect(dialog.textContent).toContain("Håll dig borta från hamnområdet.")
+    expect(within(dialog).getByRole("status").textContent).toContain("giltighetstid har gått ut")
+    expect(document.activeElement).toBe(dialogHeading)
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Stäng" }))
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Hem" }))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("takes dialog validity from the copy the banner lists when a CAP ID repeats", async () => {
+    const expiredCopy = { ...alert, info: [{ ...info, expires: new Date(now).toISOString() }] }
+    const activeCopy = { ...alert, sent: new Date(now).toISOString() }
+    fetchMock.mockResolvedValue(Response.json(feed([expiredCopy, activeCopy])))
+    mountLayout()
+    fireEvent.click(await screen.findByRole("button", { name: info.event }))
+    const status = within(screen.getByRole("dialog", { name: info.event })).getByRole("status")
+    expect(status.textContent).not.toContain("giltighetstid har gått ut")
+    expect(status.textContent).toContain("VMA-informationen kan vara ofullständig.")
+  })
+
+  it("shows retained data with request diagnostics in the dialog after retry fails", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json(feed([alert, null])))
+    mountLayout()
+    await screen.findByRole("button", { name: info.event })
+    fetchMock.mockRejectedValueOnce(new TypeError("Offline"))
+    fireEvent.click(screen.getByRole("button", { name: "Försök igen" }))
+    const outdated = "VMA-informationen kan vara inaktuell. Senast kontrollerad kl. 14:00."
+    await waitFor(() =>
+      expect(within(screen.getByRole("complementary")).getByRole("status").textContent).toContain(
+        outdated
+      )
+    )
+    fireEvent.click(screen.getByRole("button", { name: info.event }))
+    const dialog = screen.getByRole("dialog")
+    expect(dialog.textContent).toContain("Gå inomhus")
+    expect(within(dialog).getByRole("status").textContent).toContain(outdated)
+    expect(within(dialog).getByRole("status").textContent).toContain(
+      "VMA-informationen kan vara ofullständig."
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+  it("updates an open message when a poll no longer contains it", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json(feed()))
+    mountLayout()
+    fireEvent.click(await screen.findByRole("button", { name: info.event }))
+    const dialog = screen.getByRole("dialog", { name: info.event })
+    expect(within(dialog).getByRole("status").textContent).toBe("")
+
+    fetchMock.mockResolvedValueOnce(Response.json(feed([])))
+    vi.spyOn(Date, "now").mockReturnValue(now + 30_000)
+    fireEvent(document, new Event("visibilitychange"))
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBe(null))
+    expect(screen.getByRole("dialog", { name: info.event })).toBe(dialog)
+    expect(within(dialog).getByRole("status").textContent).toBe(
+      "Meddelandet är inte längre aktivt."
+    )
+    expect(dialog.textContent).toContain("Gå inomhus och stäng dörrar och fönster.")
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("states that VMA information is unavailable on an offline start without fetching", () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+    mountLayout()
+    const notice = screen.getByRole("complementary", { name: "VMA-status" })
+    expect(within(notice).getByRole("status").textContent).toBe(
+      "VMA-information inte tillgänglig.Ingen internetanslutning."
+    )
+    expect(within(notice).queryByRole("button")).toBe(null)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it("preserves the same banner and request across routes while focusing the new page heading", async () => {
     fetchMock.mockResolvedValue(Response.json(feed()))
     mountLayout()
@@ -90,8 +282,8 @@ describe("AppLayout VMA integration", () => {
     fetchMock.mockRejectedValueOnce(new TypeError("Offline"))
     mountLayout()
     const button = await screen.findByRole("button", { name: "Försök igen" })
-    expect(within(screen.getByRole("complementary")).getByRole("status").textContent).toContain(
-      "VMA-status kunde inte kontrolleras"
+    expect(within(screen.getByRole("complementary")).getByRole("status").textContent).toBe(
+      "VMA-information inte tillgänglig."
     )
     fetchMock.mockResolvedValueOnce(Response.json(feed([])))
     fireEvent.click(button)
@@ -127,7 +319,7 @@ describe("AppLayout VMA integration", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it("shows connection loss alongside a retained warning and keeps offline mode on recovery", async () => {
+  it("shows connection loss alongside a retained warning, keeps offline mode and refetches on recovery", async () => {
     fetchMock.mockResolvedValue(Response.json(feed()))
     mountLayout()
     const warningHeading = await screen.findByRole("heading", { name: info.event })
@@ -156,7 +348,9 @@ describe("AppLayout VMA integration", () => {
     expect(screen.getByRole("alert")).toBe(live)
     expect(live.firstChild).toBe(announcement)
     expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    // Browser connectivity, not the selected offline mode, resumes VMA updates.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
   })
 
   it("shows one valid message and an incomplete-data notice when a record is malformed", async () => {
@@ -170,21 +364,84 @@ describe("AppLayout VMA integration", () => {
   })
 
   it("reserves measured space and reveals keyboard focus beneath the sticky banner", async () => {
+    const originalStyle = window.getComputedStyle.bind(window)
+    vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+      const style = originalStyle(element)
+      if (element.tagName === "NAV") style.setProperty("position", "fixed")
+      return style
+    })
     fetchMock.mockResolvedValue(Response.json(feed()))
     const { unmount } = mountLayout()
     const notice = await screen.findByRole("complementary")
     const slot = notice.parentElement!
+    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
     vi.spyOn(slot, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 390, 120))
+    vi.spyOn(navigation, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 770, 390, 74))
+    Object.defineProperty(navigation, "scrollHeight", { configurable: true, value: 72 })
+    const previousHeight = document.documentElement.style.getPropertyValue("--navigation-height")
     for (const measure of measureCallbacks) measure()
-    expect(document.documentElement.style.getPropertyValue("--vma-banner-height")).toBe("120px")
+    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe(
+      previousHeight
+    )
+    await waitFor(() =>
+      expect(document.documentElement.style.getPropertyValue("--vma-banner-height")).toBe("120px")
+    )
+    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("74px")
     const heading = screen.getByRole("heading", { name: "Hem" })
     vi.spyOn(heading, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 50, 100, 40))
     heading.focus()
     await waitFor(() =>
       expect(window.scrollBy).toHaveBeenCalledWith({ top: -78, behavior: "instant" })
     )
+    vi.useFakeTimers()
+    for (const measure of measureCallbacks) measure()
     unmount()
+    vi.runAllTimers()
+    vi.useRealTimers()
     expect(document.documentElement.style.getPropertyValue("--vma-banner-height")).toBe("")
     expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("")
+  })
+
+  it("reconsiders the bottom bar after resize while preserving the tall-content fallback", async () => {
+    const originalStyle = window.getComputedStyle.bind(window)
+    vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+      const style = originalStyle(element)
+      if (element.tagName === "NAV") {
+        style.setProperty(
+          "position",
+          element.hasAttribute("data-overflows-viewport") ? "static" : "fixed"
+        )
+      }
+      return style
+    })
+    vi.stubGlobal("innerHeight", 500)
+    fetchMock.mockResolvedValue(Response.json(feed([])))
+    mountLayout()
+    await screen.findByRole("heading", { name: "Hem" })
+    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
+    let bottomContentHeight = 64
+    Object.defineProperty(navigation, "scrollHeight", {
+      configurable: true,
+      get: () => (navigation.hasAttribute("data-overflows-viewport") ? 380 : bottomContentHeight),
+    })
+    vi.spyOn(navigation, "getBoundingClientRect").mockImplementation(
+      () => new DOMRect(0, 500 - bottomContentHeight - 2, 360, bottomContentHeight + 2)
+    )
+    navigation.setAttribute("data-overflows-viewport", "")
+    for (const measure of measureCallbacks) measure()
+    expect(navigation.hasAttribute("data-overflows-viewport")).toBe(true)
+    await waitFor(() =>
+      expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("0px")
+    )
+
+    fireEvent.resize(window)
+    expect(navigation.hasAttribute("data-overflows-viewport")).toBe(false)
+    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("66px")
+
+    bottomContentHeight = 200
+    for (const measure of measureCallbacks) measure()
+    fireEvent.resize(window)
+    expect(navigation.hasAttribute("data-overflows-viewport")).toBe(true)
+    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("0px")
   })
 })

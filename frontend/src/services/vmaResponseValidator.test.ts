@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { alert, feed, info, source } from "./__fixtures__/vma"
+import { alert, cachedResponse, feed, feedData, info, source } from "./__fixtures__/vma"
 import { validateVmaResponse, VmaResponseValidationError } from "./vmaResponseValidator"
 
 describe("validateVmaResponse", () => {
@@ -33,6 +33,8 @@ describe("validateVmaResponse", () => {
     expect(validateVmaResponse(feed([]))).toEqual({
       source,
       feedUpdatedAt: "2026-10-05T12:00:00.000Z",
+      checkedAt: "2026-10-05T12:00:30.000Z",
+      stale: false,
       records: [],
       issues: [],
       rejectedCount: 0,
@@ -49,11 +51,48 @@ describe("validateVmaResponse", () => {
     "[]",
     123,
     true,
-    { ...feed(), timestamp: "invalid" },
-    { ...feed(), alerts: {} },
-    { ...feed(), source: undefined },
+    cachedResponse({ ...feedData(), timestamp: "invalid" }),
+    cachedResponse({ ...feedData(), alerts: {} }),
+    cachedResponse({ ...feedData(), source: undefined }),
   ])("rejects an invalid envelope: %j", (value) => {
     expect(() => validateVmaResponse(value)).toThrow(VmaResponseValidationError)
+  })
+
+  it.each([
+    { name: "the former unwrapped feed", value: feedData() },
+    { name: "a missing check time", value: { data: feedData(), stale: false } },
+    { name: "a null check time", value: cachedResponse(feedData(), { checkedAt: null }) },
+    { name: "an invalid check time", value: cachedResponse(feedData(), { checkedAt: "invalid" }) },
+    {
+      name: "a check time without timezone",
+      value: cachedResponse(feedData(), { checkedAt: "2026-10-05T12:00:30" }),
+    },
+    {
+      name: "a missing stale flag",
+      value: { data: feedData(), checkedAt: "2026-10-05T12:00:30Z" },
+    },
+    { name: "a string stale flag", value: cachedResponse(feedData(), { stale: "false" }) },
+    { name: "a numeric stale flag", value: cachedResponse(feedData(), { stale: 0 }) },
+    { name: "a null stale flag", value: cachedResponse(feedData(), { stale: null }) },
+    { name: "missing data", value: cachedResponse(undefined) },
+    { name: "null data", value: cachedResponse(null) },
+    { name: "array data", value: cachedResponse([feedData()]) },
+    { name: "text data", value: cachedResponse("feed") },
+  ])("rejects a cache wrapper with $name", ({ value }) => {
+    expect(() => validateVmaResponse(value)).toThrow(VmaResponseValidationError)
+  })
+
+  it("passes through stale data and normalizes the backend's check time", () => {
+    expect(
+      validateVmaResponse(
+        cachedResponse(feedData(), { checkedAt: "2026-10-05T14:00:30.123456+02:00", stale: true })
+      )
+    ).toMatchObject({
+      checkedAt: "2026-10-05T12:00:30.123Z",
+      stale: true,
+      feedUpdatedAt: "2026-10-05T12:00:00.000Z",
+      records: [{ identifier: alert.identifier }],
+    })
   })
 
   it.each([null, 1, "message", [], {}, { status: "Test" }])(
@@ -334,7 +373,9 @@ describe("validateVmaResponse", () => {
     "rejects unsafe attribution URLs in %s",
     (field) => {
       expect(() =>
-        validateVmaResponse({ ...feed(), source: { ...source, [field]: "javascript:alert(1)" } })
+        validateVmaResponse(
+          cachedResponse({ ...feedData(), source: { ...source, [field]: "javascript:alert(1)" } })
+        )
       ).toThrow(VmaResponseValidationError)
     }
   )
@@ -345,9 +386,9 @@ describe("validateVmaResponse", () => {
       "https://user:pass@example.org/",
       "https://example.org/#secret",
     ]) {
-      expect(() => validateVmaResponse({ ...feed(), source: { ...source, apiUrl } })).toThrow(
-        VmaResponseValidationError
-      )
+      expect(() =>
+        validateVmaResponse(cachedResponse({ ...feedData(), source: { ...source, apiUrl } }))
+      ).toThrow(VmaResponseValidationError)
     }
   })
 
@@ -359,6 +400,6 @@ describe("validateVmaResponse", () => {
     const result = validateVmaResponse(input)
     expect(input).toEqual(before)
     expect(result.records[0].info[0].description).toBe("  Fullständig text.\n\n  ")
-    expect(result.source).not.toBe(input.source)
+    expect(result.source).not.toBe(input.data.source)
   })
 })

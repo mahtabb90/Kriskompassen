@@ -107,9 +107,20 @@ To ensure accessible contrast ratios, eliminate visual glare, and provide comfor
 - **Meaning:** Red/white styling and the warning triangle appear only when an active VMA message is displayed. They do not encode different severity levels.
 - **Icon and label:** A 24×24 CSS pixel inline SVG triangle with an exclamation mark sits beside **"VMA · Viktigt meddelande"**, with an 8px gap. Its 2px rounded stroke uses `currentColor`. The icon does not shrink or require a downloaded asset. It is redundant with the visible label, so it has `aria-hidden="true"` and `focusable="false"` and creates no extra screen-reader announcement or keyboard stop.
 - **Text and layout:** The bold heading is 18px, rising to 20px at `sm`. Titles wrap without truncation. The icon and VMA label remain visible while the banner scrolls internally, with the same opaque warning background. The outer banner stays above the header, is limited to 40dvh and remains keyboard-scrollable.
+- **Full message:** The heading contains an underlined button with `aria-haspopup="dialog"`,
+  a pointer cursor, a minimum 48×48px target and the white warning focus outline. Source/retry controls remain
+  separate; the warning surface itself is not a nested click target.
+- **Multiple messages:** With more than one active message, a semibold count (**"3 aktiva VMA"**)
+  sits below the VMA label, and the newest headline gains a 14px metadata line with its area names
+  and **Utfärdat**/**Uppdaterat** time, because CAP titles are often the same generic VMA label. A
+  disclosure button (**"Visa 2 fler VMA"** / **"Dölj fler VMA"**) reuses the compact retry-button
+  style in its own block, so the source link always starts on a new line. It is collapsed by
+  default and controls a list of the other messages in display order, each a bold, underlined,
+  48×48px title button with its own metadata line. The list scrolls within the 40dvh banner. No
+  separators or extra colours are introduced. With one message, none of these elements appear.
 - **Links and controls:** Source attribution stays underlined. The compact retry button uses inherited foreground colour, a 1px `border-current`, `rounded-md`, a 14px semibold label and `disabled:opacity-70`. Links and buttons retain at least 48×48 CSS pixel targets. This warning-surface variant preserves legibility without introducing a second button background.
 - **Focus and contrast:** White text, icon strokes, enabled control borders and focus outlines against the installed Tailwind `red-900` value (`oklch(0.396 0.141 25.723)`) have approximately **10.06:1** contrast. The banner's own outline is inset by 4px to remain visible at the viewport edge; control outlines use the standard 4px outward offset. Forced colours use the system `Highlight` outline and allow the icon to inherit the system foreground. Recheck contrast when changing these tokens.
-- **Request states:** Without an active message, loading, failed checks and incomplete information use `bg-slate-100 text-slate-900 border-slate-300` with explicit status text and no warning triangle. A successful empty result hides the banner. A failed check never claims that no VMA exists. If a still-active message is retained after a failed check, its warning styling stays visible alongside the failure text and last successful check time.
+- **Request states:** Without an active message, loading, unavailable information (no successful check yet), possibly outdated information (stale or failed check, with the last successful check time) and incomplete information use `bg-slate-100 text-slate-900 border-slate-300` with explicit status text and no warning triangle. A successful empty result hides the banner. A failed check never claims that no VMA exists. If a still-active message is retained after a failed check, its warning styling stays visible alongside the possibly-outdated notice and last successful check time.
 
 ### 2.5 Contrast Targets and Verification
 
@@ -186,7 +197,7 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
 ### 4.2 Page Shell and Layout Boundaries
 
 - **Max Width Container:**
-  All main content sections, header content, and navigation links are constrained to `max-w-4xl` (`64rem` / 1024px) and horizontally centered with `mx-auto`.
+  All main content sections, header content, and navigation links are constrained to `max-w-4xl` (`56rem` / 896px) and horizontally centered with `mx-auto`.
 - **Canvas and Surfaces:**
   `#D7E2EF` acts as the main application content canvas behind cards and page content. The header and navigation bars remain clean white surfaces.
 - **Viewport Safe-Area Insets:**
@@ -302,10 +313,26 @@ KrisKompassen uses a single shared navigation component (`BottomNavigation`) tha
 - **Mobile Viewports (`width < 48rem` and `height >= 30rem`):**
   Fixed at the bottom of the screen (`position: fixed; inset-inline: 0; bottom: 0`).
   A subtle top shadow (`box-shadow: 0 -4px 16px rgb(15 23 42 / 0.06)`) distinguishes the navigation from the scrolling page content.
+  Only this fixed bar uses a single horizontal row of full labels with 48×48px minimum
+  targets. Links scroll natively; a thin scrollbar and left/right controls make overflow
+  discoverable. The controls appear only when the contents exceed the width available without
+  arrows. They reuse the white/blue outlined-button palette with redundant, hidden-from-AT SVG
+  chevrons and the Swedish names **Rulla menyn åt vänster** / **Rulla menyn åt höger**.
+  Unavailable directions have `aria-disabled="true"`, reduced opacity and no tab stop; a focused
+  control stays focused when it reaches an edge. Arrow actions scroll most of the visible row,
+  using immediate movement for reduced motion. Focus from the keyboard or scripts, and route
+  changes, reveal their link with padding for the standard outward focus outline. Pointer focus
+  preserves the link's position until selection completes, so clipped links remain tappable.
+  Further menu items extend the same row.
 - **Desktop & Wide Viewports (`width >= 48rem`):**
-  Renders in standard document flow directly beneath the header, bordered by `border-y border-slate-200`.
+  Renders in standard document flow directly beneath the header, with a 2px top border in the page canvas colour (`border-t-2 border-t-[#D7E2EF]`) and a 1px bottom border (`border-b border-b-slate-200`).
 - **Short Viewports (`height < 30rem` regardless of width):**
   Remains in standard document flow above page content, preventing the navigation bar from blocking content on landscape phones or at high zoom levels.
+  Short viewports and the existing tall-content fallback retain wrapped links and no scroll
+  arrows. If an arrow loses availability because the controls disappear, focus returns to the
+  current link (or the first link when no route is active).
+  Viewport resizes recheck the compact bottom layout before applying the height safeguard;
+  a larger wrapped layout does not permanently prevent a return to the bottom edge.
 
 ### 7.2 Link States and Non-Colour Indicators
 
@@ -328,7 +355,7 @@ KrisKompassen uses a single shared navigation component (`BottomNavigation`) tha
 A centralized, prominent focus outline is defined in `frontend/src/index.css`:
 
 ```css
-:where(a, button, [tabindex]):focus-visible {
+:where(a, button, summary, [tabindex]):focus-visible {
   outline: 3px solid var(--color-blue-900);
   outline-offset: 4px;
 }
@@ -345,7 +372,7 @@ For users who rely on Windows High Contrast / Forced Colors:
 
 ```css
 @media (forced-colors: active) {
-  :where(a, button, [tabindex]):focus-visible,
+  :where(a, button, summary, [tabindex]):focus-visible,
   .vma-banner:focus-visible,
   .vma-banner :focus-visible {
     outline-color: Highlight;
@@ -360,6 +387,25 @@ This ensures that system focus outlines adapt to the user's chosen high-contrast
 - **Heading Target:** Every routed page renders a single `h1` with `id="page-heading"` and `tabIndex={-1}`.
 - **Focus Shift:** On pathname transitions, `AppLayout` moves keyboard focus to the `h1` element and scrolls only as needed to reveal it (`block: "nearest", inline: "nearest"`).
 - **Document Title:** The document title (`document.title`) is automatically synchronized with the `h1` text: `${heading} | KrisKompassen`.
+
+### 8.4 Full VMA Message Dialog
+
+- A native modal dialog sits outside `main` in the browser's top layer with a dimmed backdrop.
+  Use a white `rounded-2xl` reading surface, blue headings, slate body text and a visible VMA label.
+  The full message does not use the red banner surface, since its validity can change while open.
+- Limit its width to 48rem and the available viewport width; limit height using `100dvh` minus
+  safe-area insets and outer margins. Keep the Stäng row above a separate scrolling content region.
+  Long titles/text/links wrap. Paragraphs have spacing and single line breaks are preserved.
+- Opening focuses the heading (`tabIndex={-1}`); `aria-labelledby` names the dialog without
+  announcing the entire message through `aria-describedby`. The background is inert and scroll
+  locked. Tab/Shift+Tab wrap at boundary controls; Stäng/Escape close it and backdrop clicks do not.
+- Restore focus to the originating title button if it still represents the selected CAP ID,
+  otherwise the page heading. Opening/closing leaves the route, document title and mode intact.
+- Keep selected text readable after expiry, replacement or cancellation. Neutral status copy
+  explains validity/request uncertainty, and expiry never claims the danger has ended. Source
+  and validated SR information links announce that they open in a new tab.
+- The close button uses a pointer cursor. The information link falls back to the source homepage
+  when no message link is supplied or SR's unavailable `/vma` address is supplied.
 
 ---
 
@@ -400,9 +446,14 @@ KrisKompassen performs offline storage operations and network calls that must be
   - Text colour: `text-red-800 font-medium text-sm`.
   - Used for action failures (e.g. storage quota exceeded, device storage blocked).
   - Screen readers announce assertively.
+- **Connection status:**
+  - The always-present "Ansluten" / "Ingen internetanslutning" line is a `role="status"` region, so connectivity changes are announced politely. The auto-switch explanation remains a separate `role="alert"`.
 - **VMA warnings and request status:**
-  - A persistent, visually hidden `role="alert"` announces the selected active VMA and any indication that more warnings exist. The visible icon is excluded from this announcement.
+  - A persistent, visually hidden `role="alert"` announces the newest active VMA title only when a new message becomes the newest. The visible icon is excluded from this announcement.
+  - A persistent, visually hidden polite live region announces changes in the number of active messages (for example *"2 aktiva VMA."*, and *"1 aktivt VMA."* after a drop to one). It stays silent for a single first warning, which the alert already announces.
+  - Banner title and list buttons use `aria-haspopup="dialog"` and reference their metadata line with `aria-describedby`. The disclosure uses `aria-expanded` and `aria-controls`. If a focused list entry disappears, focus moves to the disclosure, or to the newest headline when the list is gone; arriving messages never take focus.
   - Loading, failure and incomplete-information messages use `role="status"`. Their text inherits the foreground of the warning or neutral status surface defined in section 2.4.1.
+  - Background polling does not change the status text; it is announced only when the state changes. A separate visually hidden polite region announces *"VMA-informationen är uppdaterad."* when outdated or unavailable information is successfully updated.
 
 ### 9.2 Symbol Representation
 
@@ -449,3 +500,5 @@ When developing new pages or components:
 3. **Preserve Target Size:** Ensure every new interactive element satisfies the 48×48px standard (`min-h-12 min-w-12`).
 4. **Maintain Focus Landmarks:** Every new routed page must include an `<h1 id="page-heading" tabIndex={-1}>` as its primary heading.
 5. **Support Swedish Word Lengths:** Apply `wrap-anywhere` to headings, long titles, and navigation labels.
+6. **Keep Headings Hierarchical:** Nest heading levels logically beneath the page `h1` without skipping levels (for example `h1` → `h2` → `h3`). Choose the level from the document outline, not the visual size.
+7. **Announce Status Changes:** Important visible changes that happen without moving focus (connectivity, save results, errors, update availability) must also be exposed programmatically with `role="status"` or `role="alert"` as described in section 9.1.

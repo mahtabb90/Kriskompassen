@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react"
+import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import { useVmaBanner } from "../hooks/useVmaBanner"
 import { usePwaUpdate } from "../hooks/usePwaUpdate"
@@ -6,6 +6,8 @@ import BottomNavigation from "./BottomNavigation"
 import Header from "./Header"
 import VmaBanner from "./VmaBanner"
 import PwaUpdateNotice from "./PwaUpdateNotice"
+import VmaMessageDialog from "./VmaMessageDialog"
+import type { VmaMessage } from "../types/vma"
 
 /**
  * Provides shared landmarks, navigation spacing and accessible route transitions.
@@ -15,6 +17,10 @@ import PwaUpdateNotice from "./PwaUpdateNotice"
  * reveal it; initial loads and hash-only changes preserve browser focus. The measured
  * navigation, VMA and app-update heights reserve scroll space around focused content. VMA
  * requests and the update subscription belong to this persistent layout, not individual routes.
+ * Viewport resizes recheck bottom placement before applying the tall-navigation fallback.
+ * Resize notifications defer measurement to avoid resizing the bar during observer delivery.
+ * A selected CAP snapshot, opened from the banner headline or its message list, stays readable
+ * in a modal outside main while polling changes its feed validity or it leaves the banner.
  */
 function AppLayout() {
   const { pathname } = useLocation()
@@ -25,7 +31,27 @@ function AppLayout() {
   const updateRef = useRef<HTMLDivElement>(null)
   const vma = useVmaBanner()
   const update = usePwaUpdate()
-  const noticeVisible = Boolean(vma.message || vma.loading || vma.failed || vma.uncertain)
+  const noticeVisible = Boolean(
+    vma.message || vma.loading || vma.unavailable || vma.stale || vma.uncertain
+  )
+  const [openedVma, setOpenedVma] = useState<{
+    message: VmaMessage
+    trigger: HTMLButtonElement
+  } | null>(null)
+
+  const openMessage = (message: VmaMessage, trigger: HTMLButtonElement) => {
+    setOpenedVma({ message, trigger })
+  }
+  const closeMessage = useCallback(() => {
+    if (!openedVma) return
+    setOpenedVma(null)
+    const { message, trigger } = openedVma
+    const target =
+      trigger.isConnected && trigger.dataset.vmaId === message.id
+        ? trigger
+        : mainRef.current?.querySelector<HTMLElement>("#page-heading")
+    target?.focus({ preventScroll: true })
+  }, [openedVma])
 
   useLayoutEffect(() => {
     const main = mainRef.current
@@ -40,6 +66,7 @@ function AppLayout() {
     const previousUpdateHeight = root.style.getPropertyValue("--pwa-update-height")
     const previousNavigationOverflow = navigation.getAttribute("data-overflows-viewport")
     let focusFrame = 0
+    let measurementFrame = 0
 
     const keepFocusedContentVisible = () => {
       const focused = document.activeElement
@@ -105,21 +132,32 @@ function AppLayout() {
       scheduleFocusCheck()
     }
 
-    const observer = new ResizeObserver(updateReservedSpace)
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(measurementFrame)
+      // Changing placement during resize delivery can resize the observed bar again.
+      measurementFrame = requestAnimationFrame(updateReservedSpace)
+    })
     observer.observe(navigation)
     observer.observe(banner)
     observer.observe(updateNotice)
-    window.addEventListener("resize", updateReservedSpace)
+    const onViewportResize = () => {
+      // The wrapped fallback can exceed the height limit even when the fixed row fits.
+      cancelAnimationFrame(measurementFrame)
+      navigation.removeAttribute("data-overflows-viewport")
+      updateReservedSpace()
+    }
+    window.addEventListener("resize", onViewportResize)
     main.addEventListener("focusin", scheduleFocusCheck)
     navigation.addEventListener("focusin", scheduleFocusCheck)
     updateReservedSpace()
 
     return () => {
       observer.disconnect()
-      window.removeEventListener("resize", updateReservedSpace)
+      window.removeEventListener("resize", onViewportResize)
       main.removeEventListener("focusin", scheduleFocusCheck)
       navigation.removeEventListener("focusin", scheduleFocusCheck)
       cancelAnimationFrame(focusFrame)
+      cancelAnimationFrame(measurementFrame)
       if (previousNavigationOverflow === null) {
         navigation.removeAttribute("data-overflows-viewport")
       } else {
@@ -194,7 +232,7 @@ function AppLayout() {
         Hoppa till huvudinnehållet
       </a>
       <div ref={bannerRef} className="sticky top-0 z-30">
-        <VmaBanner {...vma} />
+        <VmaBanner {...vma} openMessage={openMessage} />
       </div>
       <Header reserveTopInset={!noticeVisible} />
       <BottomNavigation navigationRef={navigationRef} />
@@ -213,6 +251,21 @@ function AppLayout() {
         </div>
         <Outlet />
       </main>
+      {openedVma ? (
+        <VmaMessageDialog
+          key={openedVma.message.id}
+          message={openedVma.message}
+          currentMessage={
+            // Prefer the deduplicated copy the banner lists, so a conflicting repeated CAP ID
+            // cannot lend its validity to the opened headline.
+            vma.activeMessages.find((message) => message.id === openedVma.message.id) ??
+            vma.messages.find((message) => message.id === openedVma.message.id)
+          }
+          hasResult={vma.hasResult}
+          status={vma}
+          onClose={closeMessage}
+        />
+      ) : null}
     </div>
   )
 }

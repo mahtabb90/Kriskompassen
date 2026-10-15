@@ -15,7 +15,7 @@ html {
 }
 
 /* Keep outlines visible even when a component also supplies a Tailwind focus ring. */
-:where(a, button, [tabindex]):focus-visible {
+:where(a, button, summary, [tabindex]):focus-visible {
   outline: 3px solid var(--color-blue-900);
   outline-offset: 4px;
 }
@@ -28,6 +28,15 @@ html {
 
 .pwa-update-slot {
   display: flow-root;
+}
+
+/* The close row stays outside the scrolling message, including short landscape viewports. */
+.vma-message-dialog {
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem);
+  max-width: min(
+    48rem,
+    calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 2rem)
+  );
 }
 
 .pwa-update-region {
@@ -55,6 +64,11 @@ html {
   outline-color: var(--color-vma-focus);
 }
 
+/* Normal-flow navigation has no scroll controls, even before measurement catches up. */
+.navigation-scroll-control {
+  display: none;
+}
+
 /* Short viewports need the full content area, especially in landscape or at high zoom. */
 @media (width < 48rem) and (height >= 30rem) {
   .primary-navigation {
@@ -63,6 +77,36 @@ html {
     bottom: 0;
     padding-bottom: env(safe-area-inset-bottom);
     box-shadow: 0 -4px 16px rgb(15 23 42 / 0.06);
+  }
+
+  .primary-navigation:not([data-overflows-viewport]) .navigation-scroll-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    padding-inline: 0.5rem;
+  }
+
+  .primary-navigation[data-scrollable]:not([data-overflows-viewport]) .navigation-scroll-shell {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.25rem;
+  }
+
+  .primary-navigation[data-scrollable]:not([data-overflows-viewport]) .navigation-scroll-control {
+    display: flex;
+  }
+
+  .primary-navigation:not([data-overflows-viewport]) .navigation-links {
+    flex-wrap: nowrap;
+    padding: 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 0.5rem;
+    scrollbar-width: thin;
+  }
+
+  .primary-navigation:not([data-overflows-viewport]) .navigation-links > li {
+    flex: 0 0 auto;
+    max-width: 100%;
   }
 }
 
@@ -74,7 +118,7 @@ html {
 }
 
 @media (forced-colors: active) {
-  :where(a, button, [tabindex]):focus-visible,
+  :where(a, button, summary, [tabindex]):focus-visible,
   .vma-banner:focus-visible,
   .vma-banner :focus-visible {
     outline-color: Highlight;

@@ -30,7 +30,8 @@ export class VmaRequestError extends Error {
  * Sends no credentials. Each call has its own abort controller and a timeout that includes reading
  * the response body. Does not retry, cache, or convert failures to empty results.
  *
- * @returns Unvalidated JSON, including the envelope around a successful empty alerts list.
+ * @returns Unvalidated JSON: the backend's `{ data, checkedAt, stale }` wrapper, including the
+ * envelope around a successful empty alerts list.
  * @throws {VmaRequestError} For network failures, non-successful HTTP status, timeout or invalid JSON.
  */
 export async function fetchVmaResponse(): Promise<unknown> {
@@ -79,8 +80,9 @@ export async function fetchVmaResponse(): Promise<unknown> {
 /**
  * Fetches, validates and maps VMA messages while preserving partial-response diagnostics.
  *
- * @returns Shared presentation models and counts/issues for excluded or rejected records.
- * A successful empty upstream response returns an empty messages list and zero counts.
+ * @returns Shared presentation models, the backend's SR check time and staleness, and
+ * counts/issues for excluded or rejected records. A successful empty upstream response returns
+ * an empty messages list and zero counts.
  * @throws {VmaRequestError} If fetching or decoding the response fails.
  * @throws {VmaResponseValidationError} For an invalid container or only malformed records.
  */
