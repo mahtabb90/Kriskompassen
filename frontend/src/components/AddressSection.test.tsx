@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import AddressSection from "./AddressSection"
 
@@ -115,5 +115,40 @@ describe("AddressSection", () => {
     const input = screen.getByLabelText("Adress") as HTMLInputElement
     expect(input.value).toBe("Testgatan 1")
     expect(document.activeElement).toBe(input)
+  })
+
+  it("keeps the label picker and save button in the same preview card as the address actions", () => {
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Testgatan 1" } })
+    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+
+    const previewCard = screen.getByRole("status")
+    expect(within(previewCard).getByRole("button", { name: "Ändra adress" })).toBeTruthy()
+    expect(within(previewCard).getByText("Vad är det här för plats?")).toBeTruthy()
+    expect(within(previewCard).getByRole("radio", { name: "Hem" })).toBeTruthy()
+    expect(within(previewCard).getByRole("button", { name: "Spara adress" })).toBeTruthy()
+  })
+
+  it("reports a label change and submits via onSave when saving", () => {
+    const onLabelKindChange = vi.fn()
+    const onSave = vi.fn((event: { preventDefault: () => void }) => event.preventDefault())
+    render(
+      <AddressSection
+        onResolved={vi.fn()}
+        {...baseProps()}
+        onLabelKindChange={onLabelKindChange}
+        onSave={onSave}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Testgatan 1" } })
+    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+
+    fireEvent.click(screen.getByRole("radio", { name: "Arbete" }))
+    expect(onLabelKindChange).toHaveBeenCalledExactlyOnceWith("arbete")
+
+    fireEvent.click(screen.getByRole("button", { name: "Spara adress" }))
+    expect(onSave).toHaveBeenCalledTimes(1)
   })
 })
