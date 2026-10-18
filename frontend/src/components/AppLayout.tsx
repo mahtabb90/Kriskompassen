@@ -70,6 +70,10 @@ function AppLayout() {
 
     const keepFocusedContentVisible = () => {
       const focused = document.activeElement
+
+      // Don't scroll based on the bounds of the entire main content area.
+      if (focused === main) return
+
       const stickyUpdate = getComputedStyle(updateNotice).position === "sticky"
       if (
         !(focused instanceof HTMLElement) ||
