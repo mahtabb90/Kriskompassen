@@ -16,6 +16,17 @@ function makePositionError(code: 1 | 2 | 3): GeolocationPositionError {
 const getCurrentPosition = vi.fn()
 let fetchMock = vi.fn<typeof fetch>()
 
+function baseProps() {
+  return {
+    labelKind: "hem" as const,
+    customLabelText: "",
+    onLabelKindChange: vi.fn(),
+    onCustomLabelTextChange: vi.fn(),
+    onSave: vi.fn(),
+    saveError: "",
+  }
+}
+
 beforeEach(() => {
   getCurrentPosition.mockReset()
   fetchMock = vi.fn<typeof fetch>()
@@ -32,7 +43,7 @@ afterEach(() => {
 describe("AddressSection", () => {
   it("confirms a manually typed address, labels it as manual and reports it resolved", () => {
     const onResolved = vi.fn()
-    render(<AddressSection onResolved={onResolved} />)
+    render(<AddressSection onResolved={onResolved} {...baseProps()} />)
 
     fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Testgatan 1" } })
     fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
@@ -54,7 +65,7 @@ describe("AddressSection", () => {
       Response.json({ found: true, address: "Drottninggatan 1", lat: 59.3, lon: 18.0 })
     )
 
-    render(<AddressSection onResolved={vi.fn()} />)
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Hämta min position" }))
     })
@@ -72,7 +83,7 @@ describe("AddressSection", () => {
       }
     )
 
-    render(<AddressSection onResolved={vi.fn()} />)
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Hämta min position" }))
     })
@@ -87,7 +98,7 @@ describe("AddressSection", () => {
 
   it("disables the location button with an explanation when geolocation is unsupported", () => {
     vi.stubGlobal("navigator", {})
-    render(<AddressSection onResolved={vi.fn()} />)
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
 
     const button = screen.getByRole("button", { name: "Hämta min position" }) as HTMLButtonElement
     expect(button.disabled).toBe(true)
@@ -95,7 +106,7 @@ describe("AddressSection", () => {
   })
 
   it("refills and focuses the input with the current address when editing", () => {
-    render(<AddressSection onResolved={vi.fn()} />)
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
 
     fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Testgatan 1" } })
     fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
