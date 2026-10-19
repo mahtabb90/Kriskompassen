@@ -38,7 +38,9 @@ The project is in an early stage of development.
 Our initial focus is to establish the project structure and a working development-to-deployment workflow. Features, including offline support, will be developed incrementally based on priorities and feedback.
 
 The current version includes a home page, crisis preparedness summaries and detailed articles
-based on example information. Users can save and remove articles locally for offline access,
+based on manually maintained preparedness information from Krisinformation.se. Online articles
+are delivered by the project’s server; this is not an automatic news feed. Users can save and
+remove articles locally for offline access,
 and switch between online and offline mode with a visible, keyboard-accessible control. Losing
 the internet connection switches the app to offline mode automatically, with an explanation;
 switching back to online mode is always a manual choice.
@@ -73,8 +75,84 @@ and are the starting point for a planned future feature to find nearby shelters.
 | IndexedDB       | Storing saved crisis information locally in the browser |
 | Dexie           | Simplifying access to IndexedDB                         |
 | vite-plugin-pwa | PWA integration and service worker generation           |
-| Python / FastAPI | Retrieving public warnings from Sveriges Radio        |
+| Python / FastAPI | Serving preparedness articles and retrieving public warnings |
 | Pydantic        | Validating external API response structure              |
+
+## Run locally
+
+### Requirements
+
+- Node.js **24.x** with npm (the version used by the project is recorded in `frontend/.nvmrc`).
+- Python **3.13** (recorded in `backend/.python-version`).
+- A modern web browser.
+
+Download and extract the repository, or clone it, then open **two terminals in the project root**
+(the folder containing `frontend/` and `backend/`). Both servers must keep running while you use
+the app. No database, API key or `.env` file is needed for the default local setup.
+Installing dependencies, fetching live warnings and resolving a device position require internet access.
+
+### 1. Install and start the backend
+
+On **macOS or Linux**, ensure `python3` selects Python 3.13, then run:
+
+```sh
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+uvicorn src.app:app --reload --port 8000
+```
+
+On **Windows PowerShell**, run:
+
+```powershell
+cd backend
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m uvicorn src.app:app --reload --port 8000
+```
+
+The Windows commands use the virtual environment's Python directly, so activation is not needed.
+The backend listens on port **8000**. Open [the API documentation](http://localhost:8000/docs)
+to inspect its endpoints.
+
+### 2. Install and start the frontend
+
+In the **second terminal**, starting in the project root, run the commands for your shell.
+
+**macOS or Linux:**
+
+```sh
+cd frontend
+npm ci
+VITE_API_BASE_URL=http://localhost:8000 npm run dev -- --port 5173 --strictPort
+```
+
+**Windows PowerShell:**
+
+```powershell
+cd frontend
+npm ci
+$env:VITE_API_BASE_URL = "http://localhost:8000"
+npm run dev -- --port 5173 --strictPort
+```
+
+Open [http://localhost:5173](http://localhost:5173) to use the app. The frontend connects to the
+local backend on port 8000. Port 5173 matches the backend's default allowed browser origins;
+`--strictPort` stops Vite from silently choosing another port if it is already occupied.
+
+### Stopping and starting again
+
+Press **Ctrl+C** in each terminal to stop the servers. On later runs, reuse `.venv` and skip the
+environment creation and dependency installation steps unless dependencies have changed.
+On macOS/Linux, activate `.venv` again before starting the backend in a new terminal.
+
+The development server does not install the production service worker. PWA installation and
+opening the whole app offline require a production build; previously saved articles can still
+be viewed using the app's offline mode during development.
+
+For configuration, alternative ports and further development instructions, see the
+[backend development guide](backend/DEVELOPMENT.md).
 
 ## Navigation and accessibility
 
@@ -119,7 +197,9 @@ Information that users choose to save offline is stored locally in the browser u
 
 ### Online updates
 
-When an internet connection is available, information can be retrieved and refreshed from external sources.
+Returning to online mode fetches the current articles from the server. If they cannot be retrieved,
+the app shows an explanation and offers a retry. Previously saved offline copies remain as saved;
+they are not automatically replaced by online updates.
 
 Offline access is limited to previously cached app files and saved information. New information and updates require an internet connection.
 
