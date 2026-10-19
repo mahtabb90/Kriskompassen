@@ -1,8 +1,20 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react"
 import { useAddress } from "../hooks/useAddress"
-import type { Address, AddressLabel } from "../types/address"
+import { LOW_ACCURACY_THRESHOLD_METERS, type Address, type AddressLabel } from "../types/address"
 
 type LabelKind = AddressLabel["kind"]
+
+/** Flags an address as particularly imprecise when its device fix was unusually uncertain. */
+function describeGeolocatedAddress(address: Address): string {
+  if (address.accuracy !== undefined && address.accuracy > LOW_ACCURACY_THRESHOLD_METERS) {
+    const radiusKm = (address.accuracy / 1000).toFixed(1)
+    return (
+      `Hämtad automatiskt – positionen är mycket osäker (ca ±${radiusKm} km), ` +
+      "kontrollera adressen extra noga"
+    )
+  }
+  return "Hämtad automatiskt – ungefärlig position, kontrollera att den stämmer"
+}
 
 interface AddressSectionProps {
   /** Called whenever typing or fetching a position resolves a new address to add. */
@@ -129,7 +141,7 @@ function AddressSection({
             <p className="text-sm text-slate-600">
               {address.source === "manual"
                 ? "Angiven manuellt"
-                : "Hämtad automatiskt – ungefärlig position, kontrollera att den stämmer"}
+                : describeGeolocatedAddress(address)}
             </p>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

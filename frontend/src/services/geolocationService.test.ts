@@ -23,14 +23,18 @@ afterEach(() => {
 })
 
 describe("requestCurrentPosition", () => {
-  it("resolves with the device coordinates on success", async () => {
+  it("resolves with the device coordinates and accuracy on success", async () => {
     getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
       onSuccess({
-        coords: { latitude: 59.334591, longitude: 18.06324 },
+        coords: { latitude: 59.334591, longitude: 18.06324, accuracy: 25 },
       } as GeolocationPosition)
     })
 
-    await expect(requestCurrentPosition()).resolves.toEqual({ lat: 59.334591, lon: 18.06324 })
+    await expect(requestCurrentPosition()).resolves.toEqual({
+      lat: 59.334591,
+      lon: 18.06324,
+      accuracy: 25,
+    })
   })
 
   it("rejects with unsupported, without calling getCurrentPosition, when geolocation is absent", async () => {
