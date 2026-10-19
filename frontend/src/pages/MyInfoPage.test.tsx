@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { installDialogTestMethods } from "../components/__fixtures__/dialog"
 import { AddressProvider } from "../context/AddressProvider"
 import {
   getSavedAddresses,
@@ -35,7 +36,10 @@ const work: SavedAddress = {
   isActive: false,
 }
 
+let restoreDialog: () => void
+
 beforeEach(() => {
+  restoreDialog = installDialogTestMethods()
   vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn() } })
   vi.mocked(getSavedAddresses).mockResolvedValue([])
   vi.mocked(setActiveAddress).mockResolvedValue(undefined)
@@ -44,6 +48,9 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  restoreDialog()
+  document.documentElement.style.removeProperty("overflow")
+  document.body.style.removeProperty("overflow")
   vi.unstubAllGlobals()
   vi.clearAllMocks()
   vi.restoreAllMocks()
@@ -78,14 +85,51 @@ describe("MyInfoPage", () => {
     await waitFor(() => expect(setActiveAddress).toHaveBeenCalledWith("2"))
   })
 
-  it("removes a saved address", async () => {
+  it("shows a confirmation dialog naming the address before removing it", async () => {
     vi.mocked(getSavedAddresses).mockResolvedValue([home])
     mount()
     await screen.findByText("Hemgatan 1")
 
     fireEvent.click(screen.getByRole("button", { name: /Ta bort/ }))
+    const dialog = screen.getByRole("dialog")
+    expect(dialog.textContent).toContain("Hem")
+    expect(dialog.textContent).toContain("Hemgatan 1")
+    expect(removeAddress).not.toHaveBeenCalled()
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ta bort" }))
 
     await waitFor(() => expect(removeAddress).toHaveBeenCalledWith("1"))
+  })
+
+  it("cancelling the confirmation dialog leaves the address unchanged", async () => {
+    vi.mocked(getSavedAddresses).mockResolvedValue([home])
+    mount()
+    await screen.findByText("Hemgatan 1")
+
+    fireEvent.click(screen.getByRole("button", { name: /Ta bort/ }))
+    const dialog = screen.getByRole("dialog")
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Avbryt" }))
+
+    expect(removeAddress).not.toHaveBeenCalled()
+    expect(screen.getByText("Hemgatan 1")).toBeTruthy()
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("shows an error and keeps the address when removal fails", async () => {
+    vi.mocked(getSavedAddresses).mockResolvedValue([home])
+    vi.mocked(removeAddress).mockRejectedValue(new Error("storage error"))
+    mount()
+    await screen.findByText("Hemgatan 1")
+
+    fireEvent.click(screen.getByRole("button", { name: /Ta bort/ }))
+    const dialog = screen.getByRole("dialog")
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole("button", { name: "Ta bort" }))
+    })
+
+    expect(await screen.findByText("Det gick inte att ta bort adressen. Försök igen.")).toBeTruthy()
+    expect(screen.getByText("Hemgatan 1")).toBeTruthy()
   })
 
   it("saves a newly resolved address with a fixed label", async () => {
