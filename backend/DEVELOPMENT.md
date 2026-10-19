@@ -1,10 +1,10 @@
-# Backend and VMA integration
+# Backend API and information sources
 
 The FastAPI backend fetches VMA from Sveriges Radio's dedicated v3 API through a short shared
 in-memory cache. The frontend service validates public Swedish CAP records and maps them to a
 shared presentation model. A shared banner shows the most recent active warning. The frontend
 polls our backend while the app is open; persistent VMA storage remains separate work;
-general crisis articles still use mock data. The user has confirmed working live integration;
+curated preparedness articles are served from a bundled JSON file through their own API. The user has confirmed working live integration;
 the verification record below distinguishes that result from active-warning rendering.
 
 ## Separate information sources
@@ -12,6 +12,7 @@ the verification record below distinguishes that result from active-warning rend
 | Information | Provider | Integration status |
 | --- | --- | --- |
 | VMA warnings, updates and cancellations | Sveriges Radio VMA API v3 | Implemented through the backend and frontend service |
+| Preparedness articles | Manually maintained summaries attributed to Krisinformation.se | File-backed article API; no automatic source fetching |
 | General crisis news | Krisinformation.se news API v3 | Chosen source for future work; no news fetching service or route is implemented |
 
 Do not feed news records into the VMA validator or silently fall back to news if VMA fetching fails.
@@ -19,6 +20,58 @@ The former assumption that Krisinformation VMA records have the news format is n
 The [Krisinformation open-data page](https://www.krisinformation.se/om-krisinformation.se/oppen-data/)
 documents general news. Its [publication policy](https://www.krisinformation.se/om-krisinformation/publiceringsdokument-for-krisinformation.se/)
 says its own VMA information is updated through an API from Sveriges Radio.
+
+## Curated preparedness articles
+
+`src/data/crisis.json` is the single runtime source for preparedness articles. It is a UTF-8
+array in display order. `src/services/crisis.py` reads it relative to the service module,
+validates the whole array and rejects duplicate IDs on every request. The synchronous FastAPI
+routes run this file I/O in the worker thread pool. Imports and application startup do not read
+the file, so a data error does not disable unrelated API endpoints. No external service or
+database is involved in article retrieval, and no runtime endpoint writes this file.
+
+Each article has string fields `id`, `title`, `description`, `content`, `source`, `fetchedAt`
+and an optional `sourceUrl`. Required text is nonblank. IDs contain only letters, digits,
+underscores and hyphens; retain existing IDs so saved offline copies continue to match.
+Links must be absolute HTTP(S) URLs without credentials, whitespace or backslashes.
+`fetchedAt` is a valid UTC timestamp in `YYYY-MM-DDTHH:mm:ss.sssZ` format recording when the
+content was compiled. Serving an article does not verify the source again or change that time.
+The file rejects unknown fields, including `savedOffline` and `savedAt`; those belong only to
+the user's device. An absent source link is omitted from API responses.
+
+`GET /api/v1/crisis` returns the complete array, including full article text so list cards can
+save offline copies without another request. `GET /api/v1/crisis/{id}` returns one article.
+A valid empty array gives `200 []`; an unknown ID after successful full-source validation gives
+`404 {"error":{"code":"crisis_not_found","message":"Den informationen hittades inte."}}`.
+Unreadable/missing files, invalid UTF-8/JSON, invalid fields and duplicate IDs give
+`500 {"error":{"code":"crisis_data_unavailable","message":"Krisinformationen kunde inte läsas."}}`.
+All article responses use `Cache-Control: no-store`, including errors, and retain the app's
+existing exact-origin CORS policy. Responses and warning logs never expose file paths or content.
+
+The frontend validates the list/detail shape and source links independently and rejects
+duplicate list IDs or a detail whose ID differs from the request. Only the documented detail
+404 is treated as a missing article; HTML or unrelated 404 responses remain retryable failures.
+Its per-request deadline covers both headers and body, including a stalled error body.
+Mode/ID changes abort requests and discard older results; returning online fetches anew.
+Offline mode reads IndexedDB only. Existing local copies, including those without `savedAt`,
+remain readable and are never automatically overwritten by online responses.
+
+### Updating and publishing article content
+
+1. Edit `src/data/crisis.json`, preserving stable IDs, source attribution and complete text.
+   Update `fetchedAt` only when compiling/verifying the content again; do not set it per request.
+2. Run the backend checks from this guide and inspect list/detail responses in `/docs`.
+3. Publish the backend through the team's existing manual process. The JSON file is part of the
+   backend source deployment; no database, file upload or new environment setting is needed.
+4. For the initial API migration, publish backend **before frontend**. Verify both article
+   endpoints at the deployed backend, then publish the frontend and check its browser requests
+   and CORS. This repository change does not establish production verification.
+5. After a content-only publication, a fresh online visit/mode entry retrieves the new articles.
+   Saved offline copies retain their saved content until explicitly removed and saved again.
+
+The Python runtime includes project files in its function bundle; see
+[Vercel's Python bundling documentation](https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled).
+Do not add runtime writes to this deployment file as a substitute for durable database storage.
 
 ## Official VMA API and verification
 
@@ -168,7 +221,8 @@ Settings read process environment variables, not `.env` files. `.env.example` li
 | `KRISKOMPASSEN_CORS_ORIGINS` | `["http://localhost:5173","http://127.0.0.1:5173"]` | Exact allowed browser origins |
 | `VITE_API_BASE_URL` | `http://localhost:8000` | Public backend base URL |
 
-The frontend's `src/config/apiConfig.ts` appends `/api/v1/vmas` and sets a 10,000 ms deadline.
+The frontend's `src/config/apiConfig.ts` configures `/api/v1/crisis`, `/api/v1/vmas` and
+`/api/v1/geocode`, with a 10,000 ms total deadline.
 The shorter upstream deadline leaves time to return a controlled backend error. Credentials are
 not needed for SR; do not add them. CORS permits GET with Accept, without browser credentials.
 
@@ -231,6 +285,8 @@ The router adds attribution from backend configuration, ignoring any upstream `s
 
 | Route | Response |
 | --- | --- |
+| `GET /api/v1/crisis` | `200` array of complete articles, including full text |
+| `GET /api/v1/crisis/{id}` | `200` article, documented `404 crisis_not_found`, or `500 crisis_data_unavailable` |
 | `GET /health` | `200 {"status":"ok"}`, without contacting SR |
 | `GET /api/v1/vmas` | `200 {"data":{"timestamp":"...","alerts":[],"source":{...}},"checkedAt":"...","stale":false}` |
 | `GET /api/v1/geocode?lat=&lon=` | `200 {"found":true\|false,"address":"...","municipality":"...","county":"...","lat":...,"lon":...,"message":"...","source":{...}}` |

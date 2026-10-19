@@ -15,13 +15,21 @@ export class GeolocationRequestError extends Error {
 export interface Coordinates {
   lat: number
   lon: number
+  /** The browser's own radius of uncertainty for this fix, in meters. */
+  accuracy: number
 }
 
-// The result is always presented as approximate, so a faster first response matters more
-// than enableHighAccuracy's extra precision and battery/time cost.
+// The result is always presented as approximate, so a faster first response matters more than
+// enableHighAccuracy's extra precision and battery/time cost. enableHighAccuracy also only helps
+// devices with a GPS chip; on desktops without one (the environment this was tested in) it would
+// just add delay for no accuracy gain, so it stays off regardless of device type.
+//
+// timeout was raised from 10s to 15s after real desktop testing (no GPS hardware) hit a timeout
+// at the original value: resolving a position without GPS commonly relies on slower Wi-Fi/IP
+// based lookups.
 const POSITION_OPTIONS: PositionOptions = {
   enableHighAccuracy: false,
-  timeout: 10_000,
+  timeout: 15_000,
   maximumAge: 0,
 }
 
@@ -66,7 +74,12 @@ export function requestCurrentPosition(): Promise<Coordinates> {
 
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
-      (position) => resolve({ lat: position.coords.latitude, lon: position.coords.longitude }),
+      (position) =>
+        resolve({
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        }),
       (error) => reject(mapPositionError(error)),
       POSITION_OPTIONS
     )
