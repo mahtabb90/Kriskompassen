@@ -308,9 +308,7 @@ function CrisisKitItem({
               <span className="min-w-0 flex-1">
                 {item.expirationDate ? (
                   <>
-                    <span className="block text-sm font-medium text-slate-500">
-                      Kontrolldatum
-                    </span>
+                    <span className="block text-sm font-medium text-slate-500">Kontrolldatum</span>
                     <span className="block text-sm font-medium text-slate-800">
                       {item.expirationDate}
                     </span>
@@ -403,9 +401,11 @@ function CrisisKitItem({
                   {expirationDate && (
                     <button
                       type="button"
-                      onClick={() => handleExpirationDateChange({
-                        target: { value: "" },
-                      } as ChangeEvent<HTMLInputElement>)}
+                      onClick={() =>
+                        handleExpirationDateChange({
+                          target: { value: "" },
+                        } as ChangeEvent<HTMLInputElement>)
+                      }
                       disabled={isSavingExpiration}
                       className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
