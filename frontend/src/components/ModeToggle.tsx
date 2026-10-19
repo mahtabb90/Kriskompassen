@@ -18,9 +18,9 @@ function ModeToggle() {
   const blocked = saved && !isOnline
 
   const helpText = blocked
-    ? "Visar information som är sparad på enheten. Du kan stänga av det när internetanslutningen är tillbaka."
+    ? "Visar endast information som är sparad på enheten. Du kan stänga av det när internetanslutningen är tillbaka."
     : saved
-      ? "Visar information som är sparad på enheten."
+      ? "Visar endast information som är sparad på enheten."
       : "Visar aktuell information från internet."
 
   function handleClick() {
@@ -29,7 +29,9 @@ function ModeToggle() {
   }
 
   return (
-    <div className="flex max-w-xs flex-col items-start gap-1">
+    // The header's md+ column is auto-sized, so a fixed width keeps the block from shifting when
+    // the help text changes length between states; w-full alone would follow the content there.
+    <div className="flex w-full max-w-xs flex-col items-start gap-1 md:w-xs">
       <button
         type="button"
         role="switch"
@@ -67,7 +69,8 @@ function ModeToggle() {
         </span>
       </button>
 
-      <p id={helpTextId} className="text-sm text-slate-600">
+      {/* Matches the button's horizontal padding so the help text lines up with the label. */}
+      <p id={helpTextId} className="px-2 text-sm text-slate-600">
         {helpText}
       </p>
     </div>

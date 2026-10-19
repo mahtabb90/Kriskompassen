@@ -319,12 +319,16 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
   so the state is also conveyed by position, not colour alone. Transitions are 150ms and
   disabled under `motion-reduce`. The thumb's transparent border keeps it visible in forced
   colours.
-- **Help text:** A `text-sm text-slate-600` paragraph below the switch, referenced by
-  `aria-describedby`, describes the current state. It is limited to `max-w-xs` so it wraps
-  instead of widening the header column. Copy: off **"Visar aktuell information från
-  internet."**, on **"Visar information som är sparad på enheten."**, on without a connection
-  **"Visar information som är sparad på enheten. Du kan stänga av det när internetanslutningen
-  är tillbaka."**
+- **Help text:** A `px-2 text-sm text-slate-600` paragraph below the switch, referenced by
+  `aria-describedby`, describes the current state. Its `px-2` matches the button's horizontal
+  padding, so the label and help text start at the same x-position in every state; the button
+  keeps its padding and 48×48px target. The switch block has a fixed width (`w-full max-w-xs`,
+  `md:w-xs` where the header column is auto-sized), so the help text wraps within it and the
+  label, track and help text stay in place in every state; only the thumb moves. The label
+  **"Sparad information"** is the same in every state. Copy: off **"Visar aktuell information
+  från internet."**, on **"Visar endast information som är sparad på enheten."**, on without a
+  connection **"Visar endast information som är sparad på enheten. Du kan stänga av det när
+  internetanslutningen är tillbaka."**
 - **Restricted state:** Uses `aria-disabled="true"` rather than `disabled`, so the switch stays
   focusable and its explanation is read. Only the track is dimmed (`opacity-60`) and the button
   shows `cursor-not-allowed`; the label and help text keep full contrast.
@@ -332,8 +336,9 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
   label rather than being clipped.
 - **Contrast:** The off and on tracks against white are expected to exceed 3:1 (`slate-600`
   approximately 7.5:1, `blue-900` approximately 10:1), and the white thumb is the same pair in
-  reverse. These values, and the dimmed restricted track, must still be verified with a contrast
-  checker as required by section 2.5.
+  reverse. The restricted state only occurs while the switch is on, so the dimmed track to
+  measure is `blue-900` at `opacity-60` against white. These values must still be verified with
+  a contrast checker as required by section 2.5.
 
 ---
 

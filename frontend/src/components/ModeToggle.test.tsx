@@ -5,9 +5,9 @@ import { ModeProvider } from "../context/ModeProvider"
 import ModeToggle from "./ModeToggle"
 
 const onlineHelp = "Visar aktuell information från internet."
-const savedHelp = "Visar information som är sparad på enheten."
+const savedHelp = "Visar endast information som är sparad på enheten."
 const blockedHelp =
-  "Visar information som är sparad på enheten. Du kan stänga av det när internetanslutningen är tillbaka."
+  "Visar endast information som är sparad på enheten. Du kan stänga av det när internetanslutningen är tillbaka."
 
 function mountToggle(onLine: boolean) {
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(onLine)
@@ -46,6 +46,18 @@ describe("ModeToggle semantics", () => {
     expect(toggle.getAttribute("aria-checked")).toBe("false")
     expect(toggle.hasAttribute("aria-disabled")).toBe(false)
     expect(toggle.tabIndex).toBe(0)
+  })
+
+  it("keeps the same label when off, on and restricted", () => {
+    const toggle = mountToggle(true)
+    const name = () => screen.getByRole("switch", { name: "Sparad information" })
+
+    expect(name()).toBe(toggle)
+    fireEvent.click(toggle)
+    expect(name()).toBe(toggle)
+    setConnection(false)
+    expect(toggle.getAttribute("aria-disabled")).toBe("true")
+    expect(name()).toBe(toggle)
   })
 
   it("describes what the current mode shows", () => {
