@@ -59,7 +59,9 @@ describe("useAddress", () => {
 
   it("fetches the device position and reverse-geocodes it as an approximate address", async () => {
     getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
-      onSuccess({ coords: { latitude: 59.3, longitude: 18.0 } } as GeolocationPosition)
+      onSuccess({
+        coords: { latitude: 59.3, longitude: 18.0, accuracy: 30 },
+      } as GeolocationPosition)
     })
     fetchMock.mockResolvedValue(
       Response.json({
@@ -89,6 +91,7 @@ describe("useAddress", () => {
       lat: 59.3,
       lon: 18.0,
       municipality: "Stockholm kommun",
+      accuracy: 30,
     })
   })
 

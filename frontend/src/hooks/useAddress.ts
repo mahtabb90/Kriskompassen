@@ -84,8 +84,13 @@ export function useAddress() {
     pending.current = true
     setState((previous) => ({ ...previous, status: "resolving", errorMessage: "" }))
 
+    let accuracy: number | undefined
+
     void requestCurrentPosition()
-      .then((coordinates) => fetchGeocode(coordinates.lat, coordinates.lon))
+      .then((coordinates) => {
+        accuracy = coordinates.accuracy
+        return fetchGeocode(coordinates.lat, coordinates.lon)
+      })
       .then((result) => {
         if (!mounted.current) return
         if (!result.found) {
@@ -100,6 +105,7 @@ export function useAddress() {
             lat: result.lat,
             lon: result.lon,
             municipality: result.municipality ?? undefined,
+            accuracy,
           },
           status: "success",
           errorMessage: "",
