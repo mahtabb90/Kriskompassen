@@ -15,6 +15,7 @@ export const apiConfig = {
   baseUrl,
   vmaUrl: `${baseUrl}/api/v1/vmas`,
   geocodeUrl: `${baseUrl}/api/v1/geocode`,
+  crisisUrl: `${baseUrl}/api/v1/crisis`,
   timeoutMs: 10_000,
   vmaPollIntervalMs: 30_000,
 } as const
