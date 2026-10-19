@@ -16,7 +16,16 @@ export interface Address {
   lon?: number
   /** The municipality, when known from reverse geocoding. Not set for a manual address. */
   municipality?: string
+  /** The browser's radius of uncertainty for the device fix behind this address, in meters. Not set for a manual address. */
+  accuracy?: number
 }
+
+/**
+ * Above this radius (in meters), a geolocated address is flagged as particularly imprecise
+ * rather than just "approximate" — e.g. an IP/cell-based fallback fix with a multi-kilometer
+ * error, as opposed to a typical Wi-Fi based fix.
+ */
+export const LOW_ACCURACY_THRESHOLD_METERS = 5_000
 
 /** Identifies why fetching a readable address from the backend failed. */
 export type GeocodeRequestErrorCode = "network" | "http" | "timeout" | "invalid_json"
