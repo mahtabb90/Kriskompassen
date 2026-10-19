@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
 
@@ -238,19 +239,28 @@ function CrisisKitPage() {
                         Rekommenderade saker
                       </h3>
 
-                      <div className="space-y-6">
+                      <div className="space-y-3">
                         {subcategories.map((subcategory) => {
                           const subcategoryItems = recommendedItems.filter(
                             (item) => item.subcategory === subcategory
                           )
 
                           return (
-                            <section key={subcategory}>
-                              <h4 className="mb-3 text-base font-semibold text-blue-900">
-                                {subcategory}
-                              </h4>
+                            <details
+                              key={subcategory}
+                              className="group rounded-xl border border-blue-100 bg-slate-50"
+                            >
+                              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-xl p-4 font-semibold text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
+                                <h4 className="text-base font-semibold">{subcategory}</h4>
+                                <span
+                                  aria-hidden="true"
+                                  className="shrink-0 text-lg transition-transform group-open:rotate-180"
+                                >
+                                  ▾
+                                </span>
+                              </summary>
 
-                              <div className="grid gap-4 sm:grid-cols-2">
+                              <div className="grid gap-4 border-t border-blue-100 p-4 sm:grid-cols-2">
                                 {subcategoryItems.map((item) => (
                                   <CrisisKitItem
                                     key={item.id}
@@ -263,7 +273,7 @@ function CrisisKitPage() {
                                   />
                                 ))}
                               </div>
-                            </section>
+                            </details>
                           )
                         })}
 

@@ -58,15 +58,19 @@ describe("CrisisKitItem expiration dates", () => {
   it("shows a warning when the expiration date has passed", () => {
     renderItem({ ...baseItem, expirationDate: "2020-01-01" })
 
-    expect(screen.getByText("Det är dags att kontrollera saken igen.")).toBeTruthy()
-    expect(screen.getByText(/Sparat datum:.*2020-01-01/s)).toBeTruthy()
+    // The saved date and status remain visible while the editor is collapsed.
+    expect(screen.getByRole("button", { name: /2020-01-01/ })).toBeTruthy()
+    expect(screen.getByText("Utgånget")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: /2020-01-01/ }))
+    expect(screen.getByLabelText("Utgångsdatum / kontrolldatum")).toBeTruthy()
   })
 
   it("does not show a warning for a future expiration date", () => {
     renderItem({ ...baseItem, expirationDate: "2099-12-31" })
 
-    expect(screen.queryByText("Det är dags att kontrollera saken igen.")).toBeNull()
-    expect(screen.getByText(/Sparat datum:.*2099-12-31/s)).toBeTruthy()
+    expect(screen.queryByText("Utgånget")).toBeNull()
+    expect(screen.getByRole("button", { name: /2099-12-31/ })).toBeTruthy()
   })
 
   it("does not show a saved date or warning when the expiration date is missing", () => {
@@ -91,6 +95,7 @@ describe("CrisisKitItem interactions", () => {
   it("saves a changed expiration date", async () => {
     renderItem(baseItem)
 
+    fireEvent.click(screen.getByRole("button", { name: "Lägg till kontrolldatum" }))
     fireEvent.change(screen.getByLabelText("Utgångsdatum / kontrolldatum"), {
       target: { value: "2030-06-15" },
     })
@@ -106,6 +111,7 @@ describe("CrisisKitItem interactions", () => {
   it("clears the expiration date when the cleared value is saved", async () => {
     renderItem({ ...baseItem, expirationDate: "2030-06-15" })
 
+    fireEvent.click(screen.getByRole("button", { name: /2030-06-15/ }))
     fireEvent.click(screen.getByRole("button", { name: "Rensa datum" }))
     fireEvent.click(screen.getByRole("button", { name: "Spara datum" }))
 
@@ -121,6 +127,7 @@ describe("CrisisKitItem interactions", () => {
     onExpirationDateSave.mockRejectedValueOnce(new Error("Storage error"))
     renderItem(baseItem)
 
+    fireEvent.click(screen.getByRole("button", { name: "Lägg till kontrolldatum" }))
     fireEvent.change(screen.getByLabelText("Utgångsdatum / kontrolldatum"), {
       target: { value: "2030-06-15" },
     })
