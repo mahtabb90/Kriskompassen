@@ -39,9 +39,9 @@ Our initial focus is to establish the project structure and a working developmen
 
 The current version includes a home page, crisis preparedness summaries and detailed articles
 based on example information. Users can save and remove articles locally for offline access,
-and switch between online and offline mode with a visible, keyboard-accessible control. Losing
-the internet connection switches the app to offline mode automatically, with an explanation;
-switching back to online mode is always a manual choice.
+and turn on a visible, keyboard-accessible "Sparad information" (saved information) switch to
+read only what is stored on the device. Losing the internet connection turns the switch on
+automatically, with an explanation; turning it off again is always a manual choice.
 
 A banner can display an active public warning from Sveriges Radio across the app's pages.
 If several warnings are active, it shows the most recent message and indicates that others exist.

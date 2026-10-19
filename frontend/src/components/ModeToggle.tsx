@@ -1,90 +1,75 @@
-import { useId, useRef, type KeyboardEvent } from "react"
-import { useMode, type Mode } from "../context/modeContext"
-
-const OPTIONS: ReadonlyArray<{ value: Mode; label: string }> = [
-  { value: "online", label: "Online" },
-  { value: "offline", label: "Offline" },
-]
+import { useId } from "react"
+import { useMode } from "../context/modeContext"
 
 /**
- * Lets the user choose between online and offline mode as a two-option radio group.
+ * Lets the user turn the "Sparad information" switch on (offline mode) or off (online mode).
  *
- * Supports arrow-key navigation between options, skipping online mode while there is no
- * network connection, and moves keyboard focus together with the selection as the ARIA
- * radio group pattern requires. Online mode is shown as disabled, with an explanation, in
- * that case rather than being removed from the control.
+ * The label and the visual track sit inside one native button, so clicking either toggles the
+ * mode and Space/Enter work without extra key handling. A help text below the switch, referenced
+ * by `aria-describedby`, explains what the current mode shows. While there is no network
+ * connection the switch cannot be turned off: it stays focusable with `aria-disabled` and the
+ * help text explains the restriction, instead of using `disabled`, which would remove it from
+ * the Tab order.
  */
 function ModeToggle() {
   const { mode, isOnline, setMode } = useMode()
-  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([])
   const helpTextId = useId()
+  const saved = mode === "offline"
+  const blocked = saved && !isOnline
 
-  function isDisabled(value: Mode) {
-    return value === "online" && !isOnline
-  }
+  const helpText = blocked
+    ? "Visar information som är sparad på enheten. Du kan stänga av det när internetanslutningen är tillbaka."
+    : saved
+      ? "Visar information som är sparad på enheten."
+      : "Visar aktuell information från internet."
 
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return
-    event.preventDefault()
-
-    const direction = event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1
-    const currentIndex = OPTIONS.findIndex((option) => option.value === mode)
-    let nextIndex = (currentIndex + direction + OPTIONS.length) % OPTIONS.length
-
-    if (isDisabled(OPTIONS[nextIndex].value)) {
-      nextIndex = (nextIndex + direction + OPTIONS.length) % OPTIONS.length
-    }
-
-    setMode(OPTIONS[nextIndex].value)
-    buttonRefs.current[nextIndex]?.focus()
+  function handleClick() {
+    if (blocked) return
+    setMode(saved ? "online" : "offline")
   }
 
   return (
-    <div className="flex max-w-full flex-col items-start gap-1">
-      <div
-        role="radiogroup"
-        aria-label="Läge"
-        aria-describedby={!isOnline ? helpTextId : undefined}
-        onKeyDown={handleKeyDown}
-        className="inline-flex max-w-full flex-wrap rounded-xl border border-blue-900 p-1"
+    <div className="flex max-w-xs flex-col items-start gap-1">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={saved}
+        aria-disabled={blocked || undefined}
+        aria-describedby={helpTextId}
+        onClick={handleClick}
+        className={
+          "inline-flex min-h-12 min-w-12 max-w-full flex-wrap items-center gap-x-3 gap-y-1 " +
+          "rounded-xl px-2 py-2 text-left " +
+          (blocked ? "cursor-not-allowed" : "hover:bg-blue-50")
+        }
       >
-        {OPTIONS.map((option, index) => {
-          const disabled = isDisabled(option.value)
-          const checked = mode === option.value
+        <span className="text-base font-semibold wrap-anywhere text-blue-900">
+          Sparad information
+        </span>
+        {/* The transparent thumb border becomes visible in forced-colors mode, where the
+            white fill is replaced by the system background. */}
+        <span
+          aria-hidden="true"
+          className={
+            "inline-flex h-7 w-12 shrink-0 items-center rounded-full border-2 px-0.5 " +
+            "transition-colors duration-150 motion-reduce:transition-none " +
+            (saved ? "border-blue-900 bg-blue-900 " : "border-slate-600 bg-slate-600 ") +
+            (blocked ? "opacity-60" : "")
+          }
+        >
+          <span
+            className={
+              "h-5 w-5 rounded-full border border-transparent bg-white " +
+              "transition-transform duration-150 motion-reduce:transition-none " +
+              (saved ? "translate-x-5" : "translate-x-0")
+            }
+          />
+        </span>
+      </button>
 
-          return (
-            <button
-              key={option.value}
-              ref={(element) => {
-                buttonRefs.current[index] = element
-              }}
-              type="button"
-              role="radio"
-              aria-checked={checked}
-              aria-disabled={disabled || undefined}
-              disabled={disabled}
-              tabIndex={checked ? 0 : -1}
-              onClick={() => setMode(option.value)}
-              className={
-                "min-h-12 min-w-12 rounded-lg px-4 py-2 text-sm font-semibold transition-colors " +
-                (disabled
-                  ? "cursor-not-allowed text-slate-400"
-                  : checked
-                    ? "bg-blue-900 text-white underline decoration-2 underline-offset-4"
-                    : "text-blue-900 hover:bg-blue-50")
-              }
-            >
-              {option.label}
-            </button>
-          )
-        })}
-      </div>
-
-      {!isOnline && (
-        <p id={helpTextId} className="text-sm text-slate-600">
-          Online-läge kräver internetanslutning.
-        </p>
-      )}
+      <p id={helpTextId} className="text-sm text-slate-600">
+        {helpText}
+      </p>
     </div>
   )
 }

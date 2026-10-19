@@ -19,6 +19,10 @@ vi.mock("../services/offlineService", () => ({
 
 const offlineNotice = "Den informationen är inte sparad för offline-åtkomst."
 
+function savedSwitch() {
+  return screen.getByRole("switch", { name: "Sparad information" })
+}
+
 function mountPage(
   pathname = "/crisis/food-in-crisis",
   state?: { notice: string; noticeMode: "online" | "offline" }
@@ -55,17 +59,17 @@ describe("CrisisInfoPage redirect notices", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Mat i kris" })).toBeTruthy()
     await screen.findByText("Inte sparad")
 
-    fireEvent.click(screen.getByRole("radio", { name: "Offline" }))
+    fireEvent.click(savedSwitch())
 
     expect(await screen.findByText(offlineNotice)).toBeTruthy()
     expect(screen.getByRole("heading", { level: 1, name: "Krisinformation" })).toBeTruthy()
-    await screen.findByText("Ingen krisinformation är sparad offline.")
+    await screen.findByText("Ingen krisinformation är sparad.")
     expect(screen.queryByRole("heading", { level: 2, name: "Mat i kris" })).toBe(null)
 
-    fireEvent.click(screen.getByRole("radio", { name: "Online" }))
+    fireEvent.click(savedSwitch())
 
     expect(screen.queryByText(offlineNotice)).toBe(null)
-    expect(screen.queryByText("Ingen krisinformation är sparad offline.")).toBe(null)
+    expect(screen.queryByText("Ingen krisinformation är sparad.")).toBe(null)
     for (const item of mockCrisisData) {
       expect(screen.getByRole("heading", { level: 2, name: item.title })).toBeTruthy()
     }
@@ -96,7 +100,7 @@ describe("CrisisInfoPage focus after removing an offline item", () => {
     vi.mocked(getOfflineItems).mockResolvedValue(saved)
     vi.mocked(isSavedOffline).mockResolvedValue(true)
     mountPage("/crisis")
-    fireEvent.click(screen.getByRole("radio", { name: "Offline" }))
+    fireEvent.click(savedSwitch())
     await screen.findAllByText("Sparad offline")
     return saved
   }
@@ -141,19 +145,33 @@ describe("CrisisInfoPage focus after removing an offline item", () => {
         screen.getByRole("heading", { level: 1, name: "Krisinformation" })
       )
     )
-    expect(await screen.findByText("Ingen krisinformation är sparad offline.")).toBeTruthy()
+    expect(await screen.findByText("Ingen krisinformation är sparad.")).toBeTruthy()
   })
 
   it("keeps focus where the user put it when another control has focus", async () => {
     const saved = await openOfflineList(2)
-    const radio = screen.getByRole("radio", { name: "Offline" })
-    radio.focus()
+    const toggle = savedSwitch()
+    toggle.focus()
 
     fireEvent.click(removeButton(saved[0].title))
 
     await screen.findByText(`"${saved[0].title}" har tagits bort från offlinelagringen.`, {
       selector: "[role=status]",
     })
-    expect(document.activeElement).toBe(radio)
+    expect(document.activeElement).toBe(toggle)
+  })
+})
+
+describe("CrisisInfoPage saved-information empty state", () => {
+  it("explains how to save articles when the switch is on and nothing is saved", async () => {
+    mountPage("/crisis")
+
+    fireEvent.click(savedSwitch())
+
+    expect(await screen.findByText("Ingen krisinformation är sparad.")).toBeTruthy()
+    expect(
+      screen.getByText(/Stäng av Sparad information och välj "Spara offline"/).textContent
+    ).toContain("De visas sedan här.")
+    expect(screen.queryAllByRole("heading", { level: 2 })).toHaveLength(0)
   })
 })

@@ -29,7 +29,7 @@ export function ModeProvider({ children }: { children: ReactNode }) {
       setIsOnline(false)
       if (modeRef.current === "online") {
         setModeState("offline")
-        setAutoSwitchNotice("Internetanslutningen försvann, så du har växlats till offline-läge.")
+        setAutoSwitchNotice("Internetanslutningen försvann, så Sparad information har slagits på.")
       }
     }
 
