@@ -39,3 +39,6 @@ __pycache__/
 # AI agent instructions and settings
 CLAUDE.md
 .claude/
+
+# Playwright CLI session artifacts (snapshots, console/network logs)
+.playwright-cli/
