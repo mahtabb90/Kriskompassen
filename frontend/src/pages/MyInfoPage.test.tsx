@@ -177,4 +177,17 @@ describe("MyInfoPage", () => {
       { kind: "annan", text: "Sommarstuga" }
     )
   })
+
+  it("keeps the label picker inside the address preview card instead of a separate one", async () => {
+    mount()
+    await waitFor(() => expect(getSavedAddresses).toHaveBeenCalled())
+
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Jobbgatan 2" } })
+    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+
+    const previewCard = screen.getByRole("status")
+    expect(within(previewCard).getByRole("button", { name: "Ändra adress" })).toBeTruthy()
+    expect(within(previewCard).getByText("Vad är det här för plats?")).toBeTruthy()
+    expect(within(previewCard).getByRole("button", { name: "Spara adress" })).toBeTruthy()
+  })
 })
