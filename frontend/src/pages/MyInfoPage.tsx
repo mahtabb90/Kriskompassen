@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from "react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
 import AddressSection from "../components/AddressSection"
+import RemoveAddressDialog from "../components/RemoveAddressDialog"
 import { useAddresses } from "../context/addressContext"
-import type { Address, AddressLabel } from "../types/address"
+import type { Address, AddressLabel, SavedAddress } from "../types/address"
 import { describeAddressLabel } from "../utils/addressLabel"
 
 type LabelKind = AddressLabel["kind"]
@@ -21,6 +22,12 @@ function MyInfoPage() {
   const [resetToken, setResetToken] = useState(0)
   const [saveError, setSaveError] = useState("")
   const [listError, setListError] = useState("")
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    address: SavedAddress
+    trigger: HTMLButtonElement
+  } | null>(null)
+  const focusRestoreIndexRef = useRef<number | null>(null)
+  const removeButtonRefs = useRef(new Map<string, HTMLButtonElement>())
 
   function handleResolved(address: Address) {
     setPendingAddress(address)
@@ -54,14 +61,26 @@ function MyInfoPage() {
     }
   }
 
-  async function handleRemove(id: string) {
+  async function handleRemove(id: string, trigger: HTMLButtonElement) {
     setListError("")
+    const index = addresses.findIndex((candidate) => candidate.id === id)
     try {
       await remove(id)
+      focusRestoreIndexRef.current = index
     } catch {
       setListError("Det gick inte att ta bort adressen. Försök igen.")
+      if (trigger.isConnected) trigger.focus({ preventScroll: true })
     }
   }
+
+  useEffect(() => {
+    const index = focusRestoreIndexRef.current
+    if (index === null) return
+    focusRestoreIndexRef.current = null
+    const next = addresses[Math.min(index, addresses.length - 1)]
+    const target = next ? removeButtonRefs.current.get(next.id) : null
+    ;(target ?? document.getElementById("page-heading"))?.focus({ preventScroll: true })
+  }, [addresses])
 
   return (
     <section>
@@ -108,7 +127,11 @@ function MyInfoPage() {
                 )}
                 <button
                   type="button"
-                  onClick={() => handleRemove(address.id)}
+                  ref={(element) => {
+                    if (element) removeButtonRefs.current.set(address.id, element)
+                    else removeButtonRefs.current.delete(address.id)
+                  }}
+                  onClick={(event) => setPendingRemoval({ address, trigger: event.currentTarget })}
                   className="min-h-12 min-w-12 rounded-xl border-2 border-red-800 bg-white px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50"
                 >
                   Ta bort
@@ -174,6 +197,23 @@ function MyInfoPage() {
             {saveError}
           </div>
         </form>
+      )}
+
+      {pendingRemoval && (
+        <RemoveAddressDialog
+          key={pendingRemoval.address.id}
+          address={pendingRemoval.address}
+          onCancel={() => {
+            const { trigger } = pendingRemoval
+            setPendingRemoval(null)
+            if (trigger.isConnected) trigger.focus({ preventScroll: true })
+          }}
+          onConfirm={() => {
+            const { address, trigger } = pendingRemoval
+            setPendingRemoval(null)
+            void handleRemove(address.id, trigger)
+          }}
+        />
       )}
     </section>
   )
