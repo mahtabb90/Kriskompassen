@@ -26,8 +26,8 @@ The team updates the repo continuously, so this file can fall behind. **The repo
   on an existing iPhone installation is pending. This change uses one production publication
   and a manual check on the existing device.
 - Target users: the general public in Sweden. No login or user accounts are planned.
-- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level "Sparad information" switch (`ModeToggle`, backed by `ModeContext`; on = offline mode, off = online mode) controls whether `/crisis` and `/crisis/:id` show the bundled mock dataset or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
-- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, a count and expandable list of any other active warnings, and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; the crisis articles still use mock data. While the app is open, the banner polls our backend (see §7); offline VMA storage is not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
+- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level "Sparad information" switch (`ModeToggle`, backed by `ModeContext`; on = offline mode, off = online mode) controls whether `/crisis` and `/crisis/:id` show articles fetched from the backend API or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
+- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, a count and expandable list of any other active warnings, and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; curated preparedness articles are served from a backend JSON file through a separate article API. While the app is open, the banner polls our backend (see §7); offline VMA storage is not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
 - Users save one or more addresses on the `/min-info` page, each composed by typing it or by fetching the device's position through the browser's Geolocation API (permission requested only on that button click). The backend reverse-geocodes fetched coordinates through OpenStreetMap Nominatim and returns a normalized `{found, address, municipality, county, lat, lon, source}` shape; `found: false` is a resolvable-but-unknown result, not an upstream error. Each saved address carries a label (`hem`, `arbete`, or `annan` with free text) and is persisted in IndexedDB (`savedAddresses` table; see §9's documented exception for storing this personal data locally). Exactly one saved address is active at a time — the one other features (e.g. future shelter search) use as the starting point; saving the first address activates it automatically, and `AddressIndicator` shows the active one as a discreet link in the header once one exists. **A manually typed address is never forward-geocoded or validated** — composing it only resolves the typed/fetched text, with coordinates present solely for a geolocated result; forward-geocoding/validating manual text is separate future work.
 - The banner title opens the full selected warning in an accessible native dialog with complete
   Swedish text, instructions, source, CAP issue/update time and available affected areas. Closing
@@ -83,7 +83,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   └── workflows/
 │       ├── backend-ci.yml   # backend Ruff and pytest when backend/ changes; PRs into dev/main and pushes to dev
 │       └── frontend-ci.yml  # frontend lint, format check, tests and build when frontend/ changes; same triggers
-├── backend/             # FastAPI VMA and geocoding API
+├── backend/             # FastAPI articles, VMA and geocoding API
 │   ├── DEVELOPMENT.md  # backend and VMA integration development guide
 │   ├── .python-version # Python 3.13
 │   ├── .env.example    # backend variable names only
@@ -92,9 +92,10 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   ├── src/
 │   │   ├── app.py      # application factory, lifespan and exported app
 │   │   ├── api/        # routers and dependencies
-│   │   ├── core/       # settings and upstream errors
+│   │   ├── core/       # settings, upstream and article errors
+│   │   ├── data/       # curated articles (crisis.json), published with the backend
 │   │   ├── models/     # Pydantic response models
-│   │   └── services/   # upstream fetching, JSON decoding and the shared VMA cache
+│   │   └── services/   # article file reading, upstream fetching and the shared VMA cache
 │   └── tests/          # pytest API, CORS and upstream response tests
 └── frontend/            # Vite + React + TypeScript PWA
     ├── .env.example    # frontend variable names only
@@ -107,13 +108,13 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
         ├── components/  # shared layout/header/navigation, VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice and crisis/offline controls
-        ├── config/      # central backend address, VMA request timeout and the geocode endpoint URL
+        ├── config/      # backend address, article/VMA/geocode endpoints and request timeout
         ├── context/     # ModeProvider.tsx + modeContext.ts and AddressProvider.tsx + addressContext.ts (context object, hook — split to satisfy react-refresh/only-export-components)
-        ├── data/        # mock data (mockCrisisData.ts)
+        ├── data/        # predefined emergency-kit recommendations (recommendedCrisisKit.ts)
         ├── db/          # Dexie database (db.ts)
-        ├── hooks/       # VMA request state/validity, address composition (useAddress), saved-addresses list/active state (useSavedAddresses) and shared PWA update subscription; adjacent tests
+        ├── hooks/       # keyed article requests (useCrisisResource), VMA state/validity, address composition (useAddress), saved-addresses list/active state (useSavedAddresses) and shared PWA update subscription; adjacent tests
         ├── pages/       # HomePage, CrisisInfoPage, CrisisKitPage, MyInfoPage (/min-info), NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
-        ├── services/    # offline storage, PWA update lifecycle, VMA, geocoding, geolocation and saved-address storage services; adjacent unit tests (addressStorageService has none yet — see §8)
+        ├── services/    # article transport/validation, offline storage, PWA updates, VMA, geocoding, geolocation and address storage; adjacent unit tests (addressStorageService has none yet — see §8)
         ├── types/       # shared crisis/VMA/address types
         └── utils/       # small pure presentational helpers (e.g. describeAddressLabel)
 ```
@@ -122,7 +123,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 - Frontend unit and component tests live next to the file they test: `Foo.test.tsx` beside `Foo.tsx`.
 - New backend code goes under `backend/src/`: routers and dependency providers in `api/`, settings and application errors in `core/`, Pydantic models in `models/`, and upstream I/O in `services/`. Tests belong in `backend/tests/`.
 - Several files in `components/` and `pages/` are empty placeholders (`SettingsPage.tsx`). Fill them in; do not delete them without asking.
-- `App.tsx` wraps the router in `ModeProvider` and registers routes inside the shared `AppLayout`. There are no separate offline routes: `CrisisInfoPage` (`/crisis`) and `DetailedCrisisCard` (`/crisis/:id`) both read `useMode()` and switch data source — the bundled mock dataset in online mode, `getOfflineItems()`/`getOfflineItem(id)` in offline mode — without the URL changing. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`. If the item shown on `/crisis/:id` is not available in the current mode (mode just switched, or the URL was opened directly), `DetailedCrisisCard` redirects to `/crisis` with an explanation passed via router location state, rather than showing an inline message. `ModeProvider` forces offline mode (with an explanation shown by `ConnectionStatus`) when the browser's `offline` event fires, and never switches back to online automatically — the user does that via `ModeToggle`. `ModeToggle` is one native `<button role="switch" aria-checked>` containing the visible label (its accessible name) and the decorative track, so clicking either toggles the mode and Space/Enter work natively. A help text below it, linked with `aria-describedby`, explains the current mode. While `navigator.onLine` is false the switch cannot be turned off: it keeps focus with `aria-disabled="true"` (not `disabled`), only the track is dimmed, and the help text explains the restriction.
+- `App.tsx` wraps the router in `ModeProvider` and registers routes inside the shared `AppLayout`. There are no separate offline routes: `CrisisInfoPage` (`/crisis`) and `DetailedCrisisCard` (`/crisis/:id`) both read `useMode()` and switch data source — articles fetched from the backend API in online mode, `getOfflineItems()`/`getOfflineItem(id)` in offline mode — without the URL changing. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`. If a successful lookup finds that the item shown on `/crisis/:id` is not available in the current mode (mode just switched, or the URL was opened directly), `DetailedCrisisCard` redirects to `/crisis` with an explanation passed via router location state, rather than showing an inline message. `ModeProvider` forces offline mode (with an explanation shown by `ConnectionStatus`) when the browser's `offline` event fires, and never switches back to online automatically — the user does that via `ModeToggle`. `ModeToggle` is one native `<button role="switch" aria-checked>` containing the visible label (its accessible name) and the decorative track, so clicking either toggles the mode and Space/Enter work natively. A help text below it, linked with `aria-describedby`, explains the current mode. While `navigator.onLine` is false the switch cannot be turned off: it keeps focus with `aria-disabled="true"` (not `disabled`), only the track is dimmed, and the help text explains the restriction.
 
 - Crisis detail redirects carry `notice` and `noticeMode` in router location state. The crisis
   list derives the visible notice from the current mode, so an offline-access explanation
@@ -240,6 +241,27 @@ Ticked by the human before the PR is posted, never by an agent.
 
 Frontend conventions visible in the existing code:
 
+- Crisis preparedness articles use `GET /api/v1/crisis` (full array) and
+  `GET /api/v1/crisis/{id}` (single article). The backend reads and validates the complete
+  `backend/src/data/crisis.json` file on demand in FastAPI's worker thread pool. Article IDs,
+  order, text, source links and original `fetchedAt` compilation times are preserved. These
+  routes use `Cache-Control: no-store`; missing articles return `404 crisis_not_found`,
+  while file/JSON/schema/duplicate-ID failures return `500 crisis_data_unavailable` in the
+  `{error: {code, message}}` envelope. A broken source never becomes an empty list or 404.
+- `CrisisArticle` contains public content only; `CrisisItem` retains the existing IndexedDB
+  shape with local `savedOffline` and optional `savedAt`. Frontend article services validate
+  complete responses, reject duplicate/mismatched IDs and unsafe source links, discard remote
+  saving metadata and apply a 10-second total deadline including the body. Only the documented
+  detail 404 is a missing article; generic deployment/router 404s remain fetch failures.
+- `useCrisisResource` keys article state by mode/resource and attempt, cancels obsolete requests
+  and ignores late results even if cancellation is not supported. Each online entry loads
+  afresh; offline reads only IndexedDB. Retries are explicit. No article response updates an
+  offline copy automatically. `CrisisLoadFeedback` presents Swedish loading/errors and a retry
+  control that stays mounted and uses `aria-disabled` while retrying. If that control still
+  owns focus when feedback disappears, focus returns to the stable page heading.
+  `DetailedCrisisCard` keeps one heading node across asynchronous states and also checks links
+  from older saved copies. Missing/invalid saved timestamps use the existing Swedish fallback.
+
 - TypeScript with strict unused checks (`noUnusedLocals`, `noUnusedParameters`, `erasableSyntaxOnly`, `verbatimModuleSyntax`).
 - Use `import type` / `type` modifiers for type-only imports (for example `import Dexie, { type Table } from "dexie"`).
 - Write function components declared with `function Name() {}`, followed by `export default Name`.
@@ -330,8 +352,8 @@ Navigation and accessibility:
 
 Documentation audience and placement:
 
-- `README.md` is outward-facing: write for users, external visitors and stakeholders. Describe the project's purpose, current capabilities, user-relevant limitations and high-level project context.
-- Keep development guides, implementation details, component contracts, internal routes, developer commands and test/verification procedures out of README. A code change does not automatically require a README update.
+- `README.md` is outward-facing: write for users, external visitors and stakeholders. Describe the project's purpose, current capabilities, user-relevant limitations and high-level project context. It also includes a newcomer quick start for running the app locally: runtime requirements, dependency installation and starting both servers on macOS/Linux and Windows PowerShell.
+- Keep detailed development guides, implementation details, component contracts, internal routes, advanced configuration and test/verification procedures out of README. Local installation/start commands belong in its quick start; link to existing developer documentation for further details. A code change does not automatically require a README update.
 - Put development instructions and conventions in `AGENTS.md` or an existing developer-facing document. Keep code contracts and implementation rationale in JSDoc and comments according to `documentation-baseline.md`. Record task-specific verification steps and results in the task report or PR description.
 - Update README when the public description of the project or its user-facing behaviour changes. Update the relevant developer documentation when internal behaviour, commands or structure change.
 
@@ -384,10 +406,7 @@ Decided tooling:
   using controlled measurements. Layout tests also verify reserved bottom-bar space and
   restoration after viewport resize while retaining the tall-content fallback. Real
   responsive rendering, touch gestures and spoken screen-reader output require browser/device checks.
-- Crisis list regression tests mount the real mode provider, toggle and crisis list/detail
-  routes with mocked offline storage. They cover the unsaved-item redirect, immediate notice
-  removal on returning online, retained offline notices on an online mount and the existing
-  online not-found explanation.
+- Article tests cover strict response validation, safe links, transport/total deadlines, cancellation, fresh loads across mode/ID changes, retries, late results and StrictMode replay. Synthetic article fixtures live in `frontend/src/services/__fixtures__/crisis.ts` and are never an app data source. Component tests retain real fetching/validation with mocked HTTP and offline storage, covering save payloads, legacy copies without `savedAt`, missing-item redirects, mode-bound notices, removal focus, stable detail headings and asynchronous document titles. Backend article tests cover the bundled file, malformed/missing/unreadable data, duplicate IDs, complete-source validation, per-request reads and CORS on success, 404 and 500. Real IndexedDB and browser checks complement these tests.
 - VMA detail tests cover complete content/metadata, escaped markup, safe links, validity/request
   notices, selection retention, repeat opening and explicit focus/scroll cleanup. The adjacent
   `components/__fixtures__/dialog.ts` supplies missing jsdom open/close methods only; actual modal
@@ -492,6 +511,6 @@ Anything done that was not in the plan is listed separately under "Not in plan".
 - No secrets, no stray debug code, no unused files.
 - Code comments and docs are in English. UI text is in Swedish.
 - Frontend code follows `documentation-baseline.md`.
-- README reflects changes to the outward-facing project description, capabilities and user-relevant limitations. Internal behaviour, command and structure changes are documented in `AGENTS.md` or the relevant developer documentation, not automatically in README.
+- README reflects changes to the outward-facing project description, capabilities, user-relevant limitations and local quick start. Internal behaviour, advanced commands and structure changes are documented in `AGENTS.md` or the relevant developer documentation, not automatically in README.
 - AGENTS.md matches the current state of the repo (see section 0).
 - The PR targets `dev` and is approved by another developer.

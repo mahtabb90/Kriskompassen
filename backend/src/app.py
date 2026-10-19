@@ -9,9 +9,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.api import geocode, health, vma
+from src.api import crisis, geocode, health, vma
 from src.core.config import Settings
-from src.core.errors import UpstreamError
+from src.core.errors import CrisisError, UpstreamError
+from src.models.crisis import CrisisErrorDetail, CrisisErrorResponse
 from src.models.errors import ErrorDetail, ErrorResponse
 from src.services.vma_cache import VmaCache
 
@@ -38,8 +39,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="KrisKompassen API",
         version="0.1.0",
         description=(
-            "Retrieves VMA information from Sveriges Radio and reverse-geocodes positions "
-            "through OpenStreetMap Nominatim, both with source attribution."
+            "Serves curated crisis preparedness articles, retrieves VMA information from "
+            "Sveriges Radio and reverse-geocodes positions through OpenStreetMap Nominatim."
         ),
         lifespan=lifespan,
     )
@@ -64,7 +65,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             headers={"Cache-Control": "no-store"},
         )
 
+    @application.exception_handler(CrisisError)
+    async def handle_crisis_error(_request: Request, error: CrisisError) -> JSONResponse:
+        """Returns readable article failures without exposing local files or their contents."""
+        logger.warning("Crisis request failed: %s", error.code)
+        body = CrisisErrorResponse(error=CrisisErrorDetail(code=error.code, message=error.message))
+        return JSONResponse(
+            status_code=error.status_code,
+            content=body.model_dump(),
+            headers={"Cache-Control": "no-store"},
+        )
+
     application.include_router(health.router)
+    application.include_router(crisis.router, prefix="/api/v1")
     application.include_router(vma.router, prefix="/api/v1")
     application.include_router(geocode.router, prefix="/api/v1")
     return application

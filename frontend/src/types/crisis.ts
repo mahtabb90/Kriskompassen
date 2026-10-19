@@ -1,15 +1,12 @@
 /**
- * Represents crisis information displayed in the app and optionally cached for offline access.
+ * Represents an article supplied by the backend, without device-local saving state.
  *
- * @property id Provides a stable identifier used as the IndexedDB primary key.
+ * @property id Provides a stable URL-safe identifier, also used as the IndexedDB primary key.
  * @property sourceUrl Links to the original source; omitted when no public source page exists.
- * @property fetchedAt Records retrieval or generation time in ISO 8601 UTC format
- * (`YYYY-MM-DDTHH:mm:ss.sssZ`), as returned by `Date.prototype.toISOString()`.
- * @property savedOffline Indicates whether the user has chosen to keep the item available offline.
- * @property savedAt Records when the item was saved for offline access in ISO 8601 UTC format
- * (YYYY-MM-DDTHH:mm:ss.sssZ), or is omitted when no save timestamp is available.
+ * @property fetchedAt Records the original compilation time in ISO 8601 UTC format
+ * (`YYYY-MM-DDTHH:mm:ss.sssZ`). Fetching the article does not change this timestamp.
  */
-export interface CrisisItem {
+export interface CrisisArticle {
   id: string
   title: string
   description: string
@@ -17,6 +14,15 @@ export interface CrisisItem {
   source: string
   sourceUrl?: string
   fetchedAt: string
+}
+
+/**
+ * Extends article content with device-local offline metadata, retaining the existing DB shape.
+ *
+ * @property savedOffline Indicates the user's local saving choice; never read from the API.
+ * @property savedAt Records the local save time in ISO 8601 UTC, or is absent on older copies.
+ */
+export interface CrisisItem extends CrisisArticle {
   savedOffline: boolean
   savedAt?: string
 }
