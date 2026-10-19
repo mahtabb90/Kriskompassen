@@ -125,56 +125,16 @@ function MyInfoPage() {
         {listError}
       </div>
 
-      <AddressSection key={resetToken} onResolved={handleResolved} />
-
-      {pendingAddress && (
-        <form
-          onSubmit={handleSave}
-          className="mt-4 flex flex-col gap-3 rounded-2xl border border-blue-200/80 bg-white p-6 shadow-sm sm:p-8"
-        >
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-semibold text-slate-700">
-              Vad är det här för plats?
-            </legend>
-            {(["hem", "arbete", "annan"] as const).map((kind) => (
-              <label
-                key={kind}
-                className="flex min-h-12 items-center gap-2 text-base text-slate-900"
-              >
-                <input
-                  type="radio"
-                  name="label-kind"
-                  value={kind}
-                  checked={labelKind === kind}
-                  onChange={() => setLabelKind(kind)}
-                  className="h-5 w-5"
-                />
-                {kind === "hem" ? "Hem" : kind === "arbete" ? "Arbete" : "Annan"}
-              </label>
-            ))}
-            {labelKind === "annan" && (
-              <input
-                type="text"
-                required
-                placeholder="T.ex. Sommarstuga"
-                aria-label="Egen etikett"
-                value={customLabelText}
-                onChange={(event) => setCustomLabelText(event.target.value)}
-                className="min-h-12 max-w-sm rounded-xl border-2 border-blue-900 px-4 py-2 text-base text-slate-900"
-              />
-            )}
-          </fieldset>
-          <button
-            type="submit"
-            className="inline-flex min-h-12 min-w-12 items-center justify-center self-start rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-950"
-          >
-            Spara adress
-          </button>
-          <div role="alert" className="text-sm font-medium text-red-800">
-            {saveError}
-          </div>
-        </form>
-      )}
+      <AddressSection
+        key={resetToken}
+        onResolved={handleResolved}
+        labelKind={labelKind}
+        customLabelText={customLabelText}
+        onLabelKindChange={setLabelKind}
+        onCustomLabelTextChange={setCustomLabelText}
+        onSave={handleSave}
+        saveError={saveError}
+      />
     </section>
   )
 }
