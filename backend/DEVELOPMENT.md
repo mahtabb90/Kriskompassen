@@ -58,7 +58,10 @@ remain readable and are never automatically overwritten by online responses.
 
 ### Updating and publishing article content
 
-1. Edit `src/data/crisis.json`, preserving stable IDs, source attribution and complete text.
+1. Edit `src/data/crisis.json` using independently worded Swedish summaries. Retain stable IDs,
+   source attribution and the meaning of the source's advice, quantities and safety qualifications.
+   Check each article against its current source and the linked responsible authority where
+   clarification is needed. Record the URLs, review date and checked facts in the review table below.
    Update `fetchedAt` only when compiling/verifying the content again; do not set it per request.
 2. Run the backend checks from this guide and inspect list/detail responses in `/docs`.
 3. Publish the backend through the team's existing manual process. The JSON file is part of the
@@ -68,6 +71,30 @@ remain readable and are never automatically overwritten by online responses.
    and CORS. This repository change does not establish production verification.
 5. After a content-only publication, a fresh online visit/mode entry retrieves the new articles.
    Saved offline copies retain their saved content until explicitly removed and saved again.
+
+### Preparedness article source review
+
+The six Swedish summaries were rewritten and checked on 2026-10-20. Their shared compilation/
+review timestamp is `2026-10-20T12:37:11.000Z`; IDs, titles, display order and Krisinformation.se
+attribution are retained. This is a dated editorial check, not automatic ongoing source validation.
+The language review distinguishes preparations made in advance from conditional advice for an
+actual disruption. It also replaces ambiguous food/radio instructions, uses consistent reader
+address and explains the prescription exclusions in shorter sentences.
+
+The former `/forbered-dig/hemberedskap/...` URLs now redirect to Krisinformation.se's new structure.
+The public source links use the current Hemberedskap page for five articles and the specific
+internet/telephony article for communication. The relevant Hemberedskap sections and supporting
+authority pages checked for each article are listed below. The authority pages clarify safety
+qualifications that must also survive summarisation.
+
+| Article ID | Reviewed on | Krisinformation.se source | Supporting authority sources | Checked facts and qualifications |
+| --- | --- | --- | --- | --- |
+| `food-in-crisis` | 2026-10-20 | [Hemberedskap, introduction and Mat](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Myndigheten för civilt försvar: Tillgång till mat i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/mat/tillgang-till-mat-i-kris/) | At least one week's household food; energy, room-temperature storage, quick or no cooking, little preparation water and gradual stocking. |
+| `drinking-water-in-crisis` | 2026-10-20 | [Hemberedskap, Dricksvatten](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Myndigheten för civilt försvar: Tillgång till vatten i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/vatten/tillgang-till-vatten-i-kris/), [Livsmedelsverket: Kokning av dricksvatten](https://www.livsmedelsverket.se/livsmedel-och-innehall/dricksvatten/nar-du-maste-koka-dricksvattnet/kokning-av-dricksvatten---faktablad-teckensprak/), [Livsmedelsverket: Information vid kvalitetsproblem, När ska man rekommendera kokning?](https://kontrollwiki.livsmedelsverket.se/artikel/391/information-vid-kvalitetsproblem) | Three to five litres per adult/day including basic hygiene, following the more specific MCF wording (Krisinformation.se says per person). Additional pet needs; clean, sealed drinking-water containers, cool/dark storage and municipal collection. Follow local water notices; boiling addresses microorganisms and does not make chemically contaminated water safe. |
+| `medication-in-crisis` | 2026-10-20 | [Hemberedskap, Läkemedel](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Socialstyrelsen: Om rekommendationen](https://www.socialstyrelsen.se/medicin-for-en-manad/om-rekommendationen/), [Socialstyrelsen: Frågor och svar](https://www.socialstyrelsen.se/medicin-for-en-manad/fragor-och-svar/) | One month's reserve for long-term prescriptions and prescribed consumables; oldest medicines first. Retain all listed exclusions, including non-prescribed consumables and medical restrictions on advance dispensing. A reserve is not a cap on stock immediately after a regular prescription collection. Contact the prescriber when individual planning is needed. |
+| `heating-in-crisis` | 2026-10-20 | [Hemberedskap, Värme](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Myndigheten för civilt försvar: Tillgång till värme i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/tillgang-till-varme-i-kris/) | Share a room, limit draughts, use layers and insulating bedding. Keep escape routes and ventilation usable; follow heater instructions, ventilate regularly, prevent fires and avoid stove/candle use during sleep. |
+| `communication-in-crisis` | 2026-10-20 | [Om internet och telefoni går ner](https://www.krisinformation.se/din-beredskap/kommunikation/om-internet-och-telefoni-gar-ner/) | [Myndigheten för civilt försvar: Tillgång till kommunikation i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/tillgang-till-kommunikation-i-kris/) | Local P4 information, radios independent of mains power, car radio, spare batteries, written telephone numbers, charged powerbank and car charging. |
+| `hygiene-in-crisis` | 2026-10-20 | [Hemberedskap, Toalett och hygien](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Myndigheten för civilt försvar: Tvätt och toalett i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/vatten/hygien-tvatt-och-toalett/) | Prioritise drinking/cooking water; prepare hygiene supplies and a covered bucket. Preserve hand hygiene and municipality-specific toilet-waste handling rather than assuming one disposal method applies everywhere. |
 
 The Python runtime includes project files in its function bundle; see
 [Vercel's Python bundling documentation](https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled).
@@ -142,14 +169,17 @@ The backend reverse-geocodes a latitude/longitude pair into a readable Swedish a
 ```text
 GET https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=..&lon=..&zoom=18&addressdetails=1&accept-language=sv
 Accept: application/json
-User-Agent: KrisKompassen/0.1
+User-Agent: KrisKompassen/0.1 (+https://github.com/mahtabb90/Kriskompassen)
 ```
 
 Nominatim's [usage policy](https://operations.osmfoundation.org/policies/nominatim/) requires an
-identifying `User-Agent` (a stock HTTP-library default is not accepted) and asks for roughly one
-request per second; this integration does on-demand lookups only, no polling or bulk geocoding.
-Data is licensed under [ODbL](https://www.openstreetmap.org/copyright); the frontend must show the
-OpenStreetMap attribution wherever a reverse-geocoded address is displayed.
+identifying `User-Agent` (a stock HTTP-library default is not accepted) and caps traffic at
+roughly one request per second; this integration does on-demand lookups only, no polling or bulk
+geocoding. The policy itself does not require a contact address in the `User-Agent` — only that
+it identify the application — but we include the project's GitHub URL anyway, per Nominatim's
+politeness recommendation, so OSMF can reach us instead of only banning us if something misbehaves
+under real traffic. Data is licensed under [ODbL](https://www.openstreetmap.org/copyright); the
+frontend must show the OpenStreetMap attribution wherever a reverse-geocoded address is displayed.
 
 A coordinate Nominatim cannot resolve, or a response that cannot be read as a complete address,
 is reported as a normal `200 {"found": false, "message": "...", "source": {...}}` — **not** an
@@ -157,6 +187,48 @@ is reported as a normal `200 {"found": false, "message": "...", "source": {...}}
 Missing or out-of-range `lat`/`lon` query parameters are rejected by FastAPI itself with its own
 `422 {"detail": [...]}` shape, which does not match the `{"error": {...}}` envelope used for every
 other failure documented below — this is a deliberate FastAPI validation-layer behavior, not a bug.
+This response contract is unchanged by the cache and throttle described next.
+
+### Shared geocode cache and throttle
+
+`src/services/geocode_cache.py` holds one `GeocodeCache` per application instance
+(`app.state.geocode_cache`, injected through `get_geocode_cache`), backed by one shared
+`NominatimThrottle`. Unlike `VMA_CACHE_TTL_SECONDS` below, both periods are plain settings
+(`KRISKOMPASSEN_GEOCODE_CACHE_TTL_SECONDS`, default 300 seconds, and
+`KRISKOMPASSEN_GEOCODE_MIN_INTERVAL_SECONDS`, default 1 second) so they can be tuned under real
+Nominatim load without a code change.
+
+- **Keyed by exact coordinate.** The cache key is the `(lat, lon)` pair as received, not a
+  rounded or snapped position. Only a genuine repeat of the same coordinate — e.g. a retry, or a
+  re-render with an unchanged position — is served without contacting Nominatim.
+- **On demand only.** Nominatim is contacted when a lookup misses the cache; there is no
+  background job or scheduler.
+- **Single flight per coordinate.** One `asyncio.Lock` serializes every cache miss. Concurrent
+  identical lookups collapse into one Nominatim call; concurrent lookups for different
+  coordinates queue behind the same lock and each pay the shared throttle's wait, so they cannot
+  reach Nominatim faster than the configured interval between them, no matter how many clients
+  are asking at once.
+- **Throttle, not a queue limit.** `NominatimThrottle` delays a caller until its turn rather than
+  rejecting it; it never returns an error of its own.
+- **Errors are never cached.** A failed fetch (`UpstreamError`) is raised exactly as documented
+  above and is not stored, so the next request for the same coordinate tries again immediately
+  rather than waiting out the TTL. Only a successful response — `found: true` or `found: false`
+  — is cached.
+- **No stale fallback.** Unlike the VMA cache below, an expired entry is simply treated as a miss
+  and re-fetched; a cached entry is never served as fresh past its TTL. Expired entries are
+  purged lazily on the next miss so memory does not grow from one-off coordinates.
+- **Per instance, in memory.** State resets on cold start, same as the VMA cache.
+- **Bounded queue.** `KRISKOMPASSEN_GEOCODE_MAX_QUEUE_DEPTH` (default 10) caps how many misses
+  may be waiting on or fetching through the lock at once. A real crisis mostly produces
+  *distinct* positions (every user has their own GPS fix), so the cache above barely reduces
+  load in that scenario — most requests queue behind the throttle regardless. Without this cap,
+  that queue (and each caller's wait) could grow without bound. A lookup arriving once the queue
+  is full fails immediately with `503 {"error": {"code": "geocode_queue_full", ...}}` instead of
+  joining it, bounding the worst-case wait to roughly `max_queue_depth *
+  KRISKOMPASSEN_GEOCODE_MIN_INTERVAL_SECONDS`. The frontend's own request already gives up after
+  its own deadline and falls back to manual address entry, which never calls this endpoint; this
+  cap mainly keeps the backend's own queue (and memory) bounded and gives a fast, honest failure
+  instead of a slow one.
 
 ### Verification against the live endpoint
 
@@ -217,7 +289,10 @@ Settings read process environment variables, not `.env` files. `.env.example` li
 | `KRISKOMPASSEN_VMA_TIMEOUT_SECONDS` | `8` | Total upstream deadline, including the response body |
 | `KRISKOMPASSEN_GEOCODE_API_URL` | `https://nominatim.openstreetmap.org/reverse` | Nominatim-compatible reverse-geocoding endpoint |
 | `KRISKOMPASSEN_GEOCODE_TIMEOUT_SECONDS` | `8` | Total upstream deadline for one reverse-geocode lookup |
-| `KRISKOMPASSEN_GEOCODE_USER_AGENT` | `KrisKompassen/0.1` | Identifying User-Agent sent to Nominatim; set a real contact before production use |
+| `KRISKOMPASSEN_GEOCODE_USER_AGENT` | `KrisKompassen/0.1 (+https://github.com/mahtabb90/Kriskompassen)` | Identifying User-Agent sent to Nominatim, including a reachable contact per its politeness recommendation |
+| `KRISKOMPASSEN_GEOCODE_CACHE_TTL_SECONDS` | `300` | How long a cached reverse-geocode result for one exact coordinate is served without a new Nominatim call |
+| `KRISKOMPASSEN_GEOCODE_MIN_INTERVAL_SECONDS` | `1` | Minimum spacing enforced between Nominatim calls, shared across all coordinates |
+| `KRISKOMPASSEN_GEOCODE_MAX_QUEUE_DEPTH` | `10` | Max misses waiting on or fetching through the geocode cache's lock at once; a lookup beyond this fails fast with `503 geocode_queue_full` |
 | `KRISKOMPASSEN_CORS_ORIGINS` | `["http://localhost:5173","http://127.0.0.1:5173"]` | Exact allowed browser origins |
 | `VITE_API_BASE_URL` | `http://localhost:8000` | Public backend base URL |
 

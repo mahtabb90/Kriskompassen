@@ -4,6 +4,7 @@ import httpx
 from fastapi import Request
 
 from src.core.config import Settings
+from src.services.geocode_cache import GeocodeCache
 from src.services.vma_cache import VmaCache
 
 
@@ -20,3 +21,8 @@ async def get_http_client(request: Request) -> httpx.AsyncClient:
 async def get_vma_cache(request: Request) -> VmaCache:
     """Returns the VMA cache shared by all requests to this application instance."""
     return request.app.state.vma_cache
+
+
+async def get_geocode_cache(request: Request) -> GeocodeCache:
+    """Returns the geocode cache shared by all requests to this application instance."""
+    return request.app.state.geocode_cache

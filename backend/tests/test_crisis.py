@@ -52,8 +52,8 @@ def _assert_failure(response: httpx.Response, status: int, code: str) -> None:
     assert response.json()["error"]["message"]
 
 
-def test_bundled_articles_preserve_the_original_dataset() -> None:
-    """Keeps existing offline keys, order, provenance and compilation time stable."""
+def test_bundled_articles_keep_offline_keys_and_reviewed_provenance() -> None:
+    """Keeps offline keys and order stable while tracking the reviewed content edition."""
     articles = crisis.load_crisis_articles()
     assert [article.id for article in articles] == [
         "food-in-crisis",
@@ -72,7 +72,15 @@ def test_bundled_articles_preserve_the_original_dataset() -> None:
         "Toalett och hygien i kris",
     ]
     assert all(article.source == "Krisinformation.se" for article in articles)
-    assert all(article.fetchedAt == "2026-09-28T15:04:37.079Z" for article in articles)
+    assert [article.sourceUrl for article in articles] == [
+        "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+        "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+        "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+        "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+        "https://www.krisinformation.se/din-beredskap/kommunikation/om-internet-och-telefoni-gar-ner/",
+        "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+    ]
+    assert all(article.fetchedAt == "2026-10-20T12:37:11.000Z" for article in articles)
 
 
 def test_serves_full_articles_and_preserves_text(article_file: Path) -> None:

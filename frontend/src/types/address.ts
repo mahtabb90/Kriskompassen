@@ -1,11 +1,15 @@
-/** Distinguishes an address the user typed from one derived from a device position. */
-export type AddressSource = "manual" | "geolocated"
+/**
+ * Distinguishes an address the user typed as free text ("manual") from one derived from
+ * reverse-geocoding a position — either a device position ("geolocated") or a coordinate
+ * pair the user typed or pasted into the same field ("coordinates").
+ */
+export type AddressSource = "manual" | "geolocated" | "coordinates"
 
 /**
  * Represents the address currently shown to the user.
  *
- * A geolocated address is always approximate: it comes from reverse-geocoding a device
- * position, not from the user confirming the exact text. A manual address is never
+ * A geolocated or coordinates address is always approximate: it comes from reverse-geocoding
+ * a position, not from the user confirming the exact text. A manual address is never
  * approximate; the user typed and confirmed it.
  */
 export interface Address {
@@ -16,7 +20,10 @@ export interface Address {
   lon?: number
   /** The municipality, when known from reverse geocoding. Not set for a manual address. */
   municipality?: string
-  /** The browser's radius of uncertainty for the device fix behind this address, in meters. Not set for a manual address. */
+  /**
+   * The browser's radius of uncertainty for the device fix behind this address, in meters.
+   * Only set for a geolocated address — a manual or coordinates address has no device fix.
+   */
   accuracy?: number
 }
 

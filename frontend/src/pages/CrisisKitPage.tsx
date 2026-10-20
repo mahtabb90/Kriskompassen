@@ -121,16 +121,21 @@ function CrisisKitPage() {
         Min krislåda
       </h1>
 
-      <p>
-        Här kan du hålla koll på vad du har hemma inför en kris. Markera vad du har. Du kan också
-        lägga till egna saker.
+      <p className="mt-4 max-w-prose text-lg leading-relaxed text-slate-700">
+        Håll koll på vad du har hemma inför en kris. Markera vad du har och lägg till egna saker.
       </p>
-      <p>Ange ett utgångsdatum som påminner dig om när det är dags att kontrollera en sak igen.</p>
+      <p className="mt-2 max-w-prose text-lg leading-relaxed text-slate-700">
+        Ange utgångsdatum för att hålla koll på när saker behöver kontrolleras eller bytas ut.
+      </p>
 
       <form
         onSubmit={handleAddItem}
-        className="mt-6 rounded-2xl border border-blue-200/80 bg-white p-6 shadow-sm"
+        className="relative mt-6 overflow-hidden rounded-2xl border border-blue-200/80 bg-white p-6 pt-7 shadow-sm"
       >
+        <span aria-hidden="true" className="absolute inset-x-0 top-0 flex h-1.5">
+          <span className="h-full flex-1 bg-blue-900" />
+          <span className="h-full w-8 bg-amber-400" />
+        </span>
         <h2 className="text-xl font-semibold text-blue-900">Lägg till en egen sak</h2>
 
         <div className="mt-4">
@@ -179,7 +184,7 @@ function CrisisKitPage() {
         <button
           type="submit"
           disabled={isAddingItem || !newItemName.trim()}
-          className="mt-4 min-h-11 rounded-lg bg-blue-800 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-4 min-h-11 rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isAddingItem ? "Lägger till..." : "Lägg till sak"}
         </button>
@@ -215,9 +220,16 @@ function CrisisKitPage() {
             return (
               <details
                 key={category}
-                className="group rounded-2xl border border-blue-200/80 bg-white shadow-sm"
+                className="group overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm"
               >
-                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl p-4 font-semibold text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:p-5">
+                <summary
+                  // The card clips overflow, so the focus outline is drawn inside the summary instead.
+                  className="relative flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl p-4 pt-5 font-semibold text-blue-900 focus-visible:-outline-offset-4 sm:p-5 sm:pt-6"
+                >
+                  <span aria-hidden="true" className="absolute inset-x-0 top-0 flex h-1.5">
+                    <span className="h-full flex-1 bg-blue-900" />
+                    <span className="h-full w-8 bg-amber-400" />
+                  </span>
                   <h2 className="text-lg font-semibold">{category}</h2>
                   <span
                     aria-hidden="true"
@@ -321,6 +333,42 @@ function CrisisKitPage() {
           })}
         </div>
       )}
+
+      <section
+        aria-labelledby="crisis-kit-sources-heading"
+        className="mt-10 rounded-2xl border border-blue-200/80 bg-white p-6 shadow-sm sm:p-8"
+      >
+        <h2 id="crisis-kit-sources-heading" className="text-lg font-semibold text-blue-900">
+          Källor
+        </h2>
+        <p className="mt-3 text-slate-700">
+          De rekommenderade sakerna i krislådan bygger på information från följande källor:
+        </p>
+        <ul className="mt-4 space-y-3">
+          <li>
+            <a
+              href="https://www.krisinformation.se/din-beredskap/hemberedskap/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-blue-900 underline underline-offset-2 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            >
+              Krisinformation.se – Hemberedskap (öppnas i ny flik)
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://www.mcf.se/sv/publikationer/om-krisen-eller-kriget-kommer/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-blue-900 underline underline-offset-2 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            >
+              Myndigheten för civilt försvar – Om krisen eller kriget kommer (öppnas i ny flik)
+            </a>
+          </li>
+        </ul>
+
+        <p className="mt-3 text-sm text-slate-600">Länkarna kräver internetanslutning.</p>
+      </section>
     </section>
   )
 }
