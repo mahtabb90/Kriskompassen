@@ -106,10 +106,10 @@ function CrisisInfoPage() {
 
       {mode === "offline" && state.status === "ready" && state.data.length === 0 && (
         <div className={panelClassName}>
-          <p className="font-semibold text-blue-900">Ingen krisinformation är sparad offline.</p>
+          <p className="font-semibold text-blue-900">Ingen krisinformation är sparad.</p>
           <p className="mt-2">
-            Växla till online-läge och välj "Spara offline" på de artiklar du vill kunna läsa utan
-            internetanslutning. De visas sedan här.
+            Stäng av Sparad information och välj "Spara offline" på de artiklar du vill kunna läsa
+            utan internetanslutning. De visas sedan här.
           </p>
         </div>
       )}

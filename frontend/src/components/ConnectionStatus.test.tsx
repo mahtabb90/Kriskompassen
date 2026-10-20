@@ -46,7 +46,7 @@ describe("ConnectionStatus status semantics", () => {
       window.dispatchEvent(new Event("offline"))
     })
 
-    expect(screen.getByRole("alert").textContent).toContain("växlats till offline-läge")
+    expect(screen.getByRole("alert").textContent).toContain("Sparad information har slagits på")
     expect(screen.getByRole("status").contains(screen.getByRole("alert"))).toBe(false)
   })
 })

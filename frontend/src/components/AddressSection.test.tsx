@@ -59,7 +59,9 @@ describe("AddressSection", () => {
 
   it("fetches and labels an automatically retrieved address as approximate", async () => {
     getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
-      onSuccess({ coords: { latitude: 59.3, longitude: 18.0 } } as GeolocationPosition)
+      onSuccess({
+        coords: { latitude: 59.3, longitude: 18.0, accuracy: 30 },
+      } as GeolocationPosition)
     })
     fetchMock.mockResolvedValue(
       Response.json({ found: true, address: "Drottninggatan 1", lat: 59.3, lon: 18.0 })
@@ -74,6 +76,26 @@ describe("AddressSection", () => {
     expect(screen.getByText(/ungefärlig position/)).toBeTruthy()
     expect(screen.getByText(/OpenStreetMap/)).toBeTruthy()
     expect(screen.getByRole("button", { name: "Hämta ny position" })).toBeTruthy()
+  })
+
+  it("flags a particularly imprecise fix instead of the generic approximate message", async () => {
+    getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
+      onSuccess({
+        coords: { latitude: 59.3, longitude: 18.0, accuracy: 18_000 },
+      } as GeolocationPosition)
+    })
+    fetchMock.mockResolvedValue(
+      Response.json({ found: true, address: "Drottninggatan 1", lat: 59.3, lon: 18.0 })
+    )
+
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Hämta min position" }))
+    })
+
+    expect(screen.getByText(/mycket osäker/)).toBeTruthy()
+    expect(screen.getByText(/±18\.0 km/)).toBeTruthy()
+    expect(screen.queryByText(/ungefärlig position/)).toBeNull()
   })
 
   it("shows an accessible error for a denied permission while manual entry stays usable", async () => {
