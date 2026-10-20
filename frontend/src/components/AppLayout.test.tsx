@@ -291,27 +291,28 @@ describe("AppLayout VMA integration", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it("keeps the warning while keyboard mode changes update content and title on the same route", async () => {
+  it("keeps the warning while focused mode changes update content and title on the same route", async () => {
     fetchMock.mockResolvedValue(Response.json(feed()))
     mountLayout()
     const warningHeading = await screen.findByRole("heading", { name: info.event })
     const announcement = screen.getByRole("alert").firstChild
-    const online = screen.getByRole("radio", { name: "Online" })
-    const offline = screen.getByRole("radio", { name: "Offline" })
+    const toggle = screen.getByRole("switch", { name: "Sparad information" })
 
-    online.focus()
-    fireEvent.keyDown(online, { key: "ArrowRight" })
-    expect(offline.getAttribute("aria-checked")).toBe("true")
-    expect(document.activeElement).toBe(offline)
+    // jsdom does not turn Space/Enter into a native button click, so the activation is a click
+    // on the focused switch; the real key behaviour is verified manually.
+    toggle.focus()
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute("aria-checked")).toBe("true")
+    expect(document.activeElement).toBe(toggle)
     expect(screen.getByRole("heading", { name: "Hem – offline" }).dataset.pathname).toBe("/")
     await waitFor(() => expect(document.title).toBe("Hem – offline | KrisKompassen"))
     expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
     expect(screen.getByRole("alert").firstChild).toBe(announcement)
     expect(screen.getByText("Ansluten")).toBeTruthy()
 
-    fireEvent.keyDown(offline, { key: "ArrowLeft" })
-    expect(online.getAttribute("aria-checked")).toBe("true")
-    expect(document.activeElement).toBe(online)
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute("aria-checked")).toBe("false")
+    expect(document.activeElement).toBe(toggle)
     expect(screen.getByRole("heading", { name: "Hem" }).dataset.pathname).toBe("/")
     await waitFor(() => expect(document.title).toBe("Hem | KrisKompassen"))
     expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
@@ -325,25 +326,24 @@ describe("AppLayout VMA integration", () => {
     const warningHeading = await screen.findByRole("heading", { name: info.event })
     const live = screen.getByRole("alert")
     const announcement = live.firstChild
-    const online = screen.getByRole<HTMLButtonElement>("radio", { name: "Online" })
-    const offline = screen.getByRole("radio", { name: "Offline" })
+    const toggle = screen.getByRole("switch", { name: "Sparad information" })
 
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
     fireEvent(window, new Event("offline"))
     expect(screen.getByText("Ingen internetanslutning")).toBeTruthy()
     expect(
-      screen.getByText("Internetanslutningen försvann, så du har växlats till offline-läge.")
+      screen.getByText("Internetanslutningen försvann, så Sparad information har slagits på.")
     ).toBeTruthy()
-    expect(offline.getAttribute("aria-checked")).toBe("true")
-    expect(online.disabled).toBe(true)
+    expect(toggle.getAttribute("aria-checked")).toBe("true")
+    expect(toggle.getAttribute("aria-disabled")).toBe("true")
     expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
     expect(live.firstChild).toBe(announcement)
 
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true)
     fireEvent(window, new Event("online"))
     expect(screen.getByText("Ansluten")).toBeTruthy()
-    expect(offline.getAttribute("aria-checked")).toBe("true")
-    expect(online.disabled).toBe(false)
+    expect(toggle.getAttribute("aria-checked")).toBe("true")
+    expect(toggle.hasAttribute("aria-disabled")).toBe(false)
     fireEvent.click(screen.getByRole("button", { name: "Stäng" }))
     expect(screen.getByRole("alert")).toBe(live)
     expect(live.firstChild).toBe(announcement)

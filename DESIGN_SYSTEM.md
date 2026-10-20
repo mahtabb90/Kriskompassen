@@ -302,6 +302,44 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 - **Swedish Copy:** *"Hoppa till huvudinnehållet"*
 - **Target:** Direct focus shift to `<main id="main-content">` without forced scrolling when already in view.
 
+### 6.5 Switch: "Sparad information" (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in `ModeToggle` in the
+> header. It reuses existing tokens only; adopting it as a recurring pattern requires the team's
+> agreement.
+
+- **Structure:** One native `<button type="button" role="switch" aria-checked>` contains the
+  visible label on the left and a decorative track (`aria-hidden="true"`) on the right. The label
+  is the accessible name; clicking the label or the track toggles the switch, and Space/Enter
+  work natively. The whole button is the target: `min-h-12 min-w-12`, `rounded-xl px-2 py-2`,
+  `hover:bg-blue-50` and the universal focus outline (section 8.1).
+- **Label:** `text-base font-semibold text-blue-900 wrap-anywhere` (Button / Link Label scale).
+- **Track:** `h-7 w-12 rounded-full border-2`, off `bg-slate-600 border-slate-600`, on
+  `bg-blue-900 border-blue-900`. The `h-5 w-5` white thumb moves from left (off) to right (on),
+  so the state is also conveyed by position, not colour alone. Transitions are 150ms and
+  disabled under `motion-reduce`. The thumb's transparent border keeps it visible in forced
+  colours.
+- **Help text:** A `px-2 text-sm text-slate-600` paragraph below the switch, referenced by
+  `aria-describedby`, describes the current state. Its `px-2` matches the button's horizontal
+  padding, so the label and help text start at the same x-position in every state; the button
+  keeps its padding and 48×48px target. The switch block has a fixed width (`w-full max-w-xs`,
+  `md:w-xs` where the header column is auto-sized), so the help text wraps within it and the
+  label, track and help text stay in place in every state; only the thumb moves. The label
+  **"Sparad information"** is the same in every state. Copy: off **"Visar aktuell information
+  från internet."**, on **"Visar endast information som är sparad på enheten."**, on without a
+  connection **"Visar endast information som är sparad på enheten. Du kan stänga av det när
+  internetanslutningen är tillbaka."**
+- **Restricted state:** Uses `aria-disabled="true"` rather than `disabled`, so the switch stays
+  focusable and its explanation is read. Only the track is dimmed (`opacity-60`) and the button
+  shows `cursor-not-allowed`; the label and help text keep full contrast.
+- **Reflow:** The button wraps (`flex-wrap`), so at enlarged text sizes the track moves below the
+  label rather than being clipped.
+- **Contrast:** The off and on tracks against white are expected to exceed 3:1 (`slate-600`
+  approximately 7.5:1, `blue-900` approximately 10:1), and the white thumb is the same pair in
+  reverse. The restricted state only occurs while the switch is on, so the dimmed track to
+  measure is `blue-900` at `opacity-60` against white. These values must still be verified with
+  a contrast checker as required by section 2.5.
+
 ---
 
 ## 7. Navigation Patterns
@@ -447,7 +485,7 @@ KrisKompassen performs offline storage operations and network calls that must be
   - Used for action failures (e.g. storage quota exceeded, device storage blocked).
   - Screen readers announce assertively.
 - **Connection status:**
-  - The always-present "Ansluten" / "Ingen internetanslutning" line is a `role="status"` region, so connectivity changes are announced politely. The auto-switch explanation remains a separate `role="alert"`.
+  - The always-present "Ansluten" / "Ingen internetanslutning" line is a `role="status"` region, so connectivity changes are announced politely. The explanation that "Sparad information" was turned on automatically remains a separate `role="alert"`.
 - **VMA warnings and request status:**
   - A persistent, visually hidden `role="alert"` announces the newest active VMA title only when a new message becomes the newest. The visible icon is excluded from this announcement.
   - A persistent, visually hidden polite live region announces changes in the number of active messages (for example *"2 aktiva VMA."*, and *"1 aktivt VMA."* after a drop to one). It stays silent for a single first warning, which the alert already announces.
