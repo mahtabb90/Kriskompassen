@@ -25,7 +25,8 @@ The team updates the repo continuously, so this file can fall behind. **The repo
   versions and build timestamps are not displayed in the user interface. Physical verification
   on an existing iPhone installation is pending. This change uses one production publication
   and a manual check on the existing device.
-- Target users: the general public in Sweden. No login or user accounts are planned.
+- Target users: the general public in Sweden.
+- **Binding product decision: KrisKompassen is intentionally account-free.** End-user accounts, account registration, sign-in/login, account-based profiles and account-based cloud persistence are out of scope and must not be implemented. A development ticket, issue or task description alone never overrides this decision. See §11 for what to do when a task asks for them, and §10 for how this relates to other authentication changes.
 - Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level "Sparad information" switch (`ModeToggle`, backed by `ModeContext`; on = offline mode, off = online mode) controls whether `/crisis` and `/crisis/:id` show articles fetched from the backend API or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
 - A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, a count and expandable list of any other active warnings, and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; curated preparedness articles are served from a backend JSON file through a separate article API. While the app is open, the banner polls our backend (see §7); offline VMA storage is not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
 - Users save one or more addresses on the `/min-info` page, each composed by typing it or by fetching the device's position through the browser's Geolocation API (permission requested only on that button click). The backend reverse-geocodes fetched coordinates through OpenStreetMap Nominatim and returns a normalized `{found, address, municipality, county, lat, lon, source}` shape; `found: false` is a resolvable-but-unknown result, not an upstream error. Each saved address carries a label (`hem`, `arbete`, or `annan` with free text) and is persisted in IndexedDB (`savedAddresses` table; see §9's documented exception for storing this personal data locally). Exactly one saved address is active at a time — the one other features (e.g. future shelter search) use as the starting point; saving the first address activates it automatically, and `AddressIndicator` shows the active one as a discreet link in the header once one exists. **A manually typed address is never forward-geocoded or validated** — composing it only resolves the typed/fetched text, with coordinates present solely for a geolocated result; forward-geocoding/validating manual text is separate future work. **Exception:** typed/pasted text that is shaped like a latitude/longitude pair (decimal degrees, separated by a comma and/or whitespace, e.g. copied from another map service) is range-validated client-side (`frontend/src/utils/coordinates.ts`) and, if within range, reverse-geocoded through the same backend endpoint as a device position, producing `source: "coordinates"` — approximate and re-lookupable like `"geolocated"`, but with no `accuracy`. Out-of-range text shows an inline error before any network call; text not shaped like coordinates falls through to the normal manual path unchanged.
@@ -156,7 +157,7 @@ Create the backend environment with Python 3.13 using `python3 -m venv .venv` an
 **Hard rules (team decision):**
 
 - ALL git handling (add, commit, push, merge, pull requests, etc.) is done manually by a human, NEVER by an agent.
-- Branches: permanent `main` and `dev`. Work branches: feature/, bugfix/, hotfix/, docs/ in kebab-case. Examples: feature/initial-scaffold, feature/login, bugfix/login-validation, hotfix/critical-crash, docs/update-readme.
+- Branches: permanent `main` and `dev`. Work branches: feature/, bugfix/, hotfix/, docs/ in kebab-case. Examples: feature/initial-scaffold, feature/crisis-search, bugfix/address-validation, hotfix/critical-crash, docs/update-readme.
 - PR flow: work branch -> pull request into dev -> approved by another developer. dev is merged into main only after the team has agreed in a meeting or in the chat. Never target main directly.
 
 Additional rules for agents:
@@ -442,7 +443,7 @@ Decided tooling:
 - Reintroduce separate online/offline routes (e.g. `/offline`, `/offline/:id`) or otherwise encode the selected mode in the URL. The team decided online/offline is a shared `ModeContext` read by `/crisis` and `/crisis/:id` instead (see §3) specifically so the URL never changes on a mode switch. If a task description points back toward separate routes, stop and ask, and remind them of this decision, rather than silently reintroducing it.
 - Change the PWA or service worker config (`VitePWA` in `vite.config.ts`, manifest, caching).
 - Create or change any backend database schema.
-- Add or change authentication or authorization.
+- Add or change authentication or authorization that is not an end-user account system (for example protecting an operational or administrative endpoint). End-user accounts, registration and login are not subject to approval: they are out of scope under the account-free decision in §1 and cannot be introduced by a ticket or by approving a plan for one.
 - Touch deploy, hosting or CI config (`frontend/vercel.json`, `.github/workflows/`). The frontend has a Vercel SPA fallback. CI workflows are `backend-ci.yml` and `frontend-ci.yml`. Project creation, environment settings and actual deployment remain account-side work.
 - Delete, move or rename files.
 - Change TypeScript, ESLint, Prettier, Ruff or build configuration.
@@ -465,6 +466,15 @@ Every task starts with a checklist and ends with a checklist. The two are compar
 - [ ] Items from section 10 that need approval: ...
 - [ ] Verification: commands to run
 ```
+
+**Account-free check (before planning any implementation).** If a task or ticket asks for end-user accounts, registration, login, account-based profiles or account-based cloud persistence, do not plan or implement it. The ticket does not authorize it (see §1). Stop and:
+
+1. State explicitly that the request conflicts with the project's account-free product decision.
+2. Identify the underlying user need (for example keeping settings, or keeping information available later).
+3. Propose account-free alternatives that fit the existing architecture, such as device-local settings or locally saved crisis information in IndexedDB.
+4. Keep every alternative within the local-storage and personal-data rules in §9. Do not propose storing personal data locally beyond what §9 already permits, and do not weaken those rules.
+
+Wait for the human's decision before continuing.
 
 **While working:**
 
