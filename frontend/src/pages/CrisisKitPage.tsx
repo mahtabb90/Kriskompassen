@@ -215,9 +215,16 @@ function CrisisKitPage() {
             return (
               <details
                 key={category}
-                className="group rounded-2xl border border-blue-200/80 bg-white shadow-sm"
+                className="group overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm"
               >
-                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl p-4 font-semibold text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:p-5">
+                <summary
+                  // The card clips overflow, so the focus outline is drawn inside the summary instead.
+                  className="relative flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl p-4 pt-5 font-semibold text-blue-900 focus-visible:-outline-offset-4 sm:p-5 sm:pt-6"
+                >
+                  <span aria-hidden="true" className="absolute inset-x-0 top-0 flex h-1.5">
+                    <span className="h-full flex-1 bg-blue-900" />
+                    <span className="h-full w-8 bg-amber-400" />
+                  </span>
                   <h2 className="text-lg font-semibold">{category}</h2>
                   <span
                     aria-hidden="true"
