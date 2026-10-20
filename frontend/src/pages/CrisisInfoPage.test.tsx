@@ -174,6 +174,47 @@ describe("CrisisInfoPage focus after removing an offline item", () => {
   })
 })
 
+describe("CrisisInfoPage Läs mer links", () => {
+  it("gives every online card a separate link to its article", async () => {
+    mountPage("/crisis")
+    await screen.findAllByRole("heading", { level: 2 })
+
+    for (const item of crisisItems) {
+      const link = screen.getByRole("link", { name: `Läs mer om ${item.title}` })
+      expect(link.getAttribute("href")).toBe(`/crisis/${item.id}`)
+      expect(link.textContent).toBe("Läs mer")
+      expect(link.closest("a")).toBe(link)
+      expect(link.parentElement?.closest("a")).toBe(null)
+    }
+  })
+
+  it("opens an online article from its Läs mer link", async () => {
+    mountPage("/crisis")
+    const item = crisisItems[1]
+
+    fireEvent.click(await screen.findByRole("link", { name: `Läs mer om ${item.title}` }))
+
+    expect(await screen.findByRole("heading", { level: 1, name: item.title })).toBeTruthy()
+    expect(screen.queryByRole("link", { name: /^Läs mer om / })).toBe(null)
+  })
+
+  it("opens a locally saved article from its Läs mer link in offline mode", async () => {
+    const saved = { ...crisisItems[0], savedOffline: true }
+    vi.mocked(getOfflineItems).mockResolvedValue([saved])
+    vi.mocked(getOfflineItem).mockResolvedValue(saved)
+    vi.mocked(isSavedOffline).mockResolvedValue(true)
+    mountPage("/crisis")
+    fireEvent.click(savedSwitch())
+
+    const link = await screen.findByRole("link", { name: `Läs mer om ${saved.title}` })
+    expect(link.getAttribute("href")).toBe(`/crisis/${saved.id}`)
+    fireEvent.click(link)
+
+    expect(await screen.findByRole("heading", { level: 1, name: saved.title })).toBeTruthy()
+    expect(getOfflineItem).toHaveBeenCalledWith(saved.id)
+  })
+})
+
 describe("CrisisInfoPage saved-information empty state", () => {
   it("explains how to save articles when the switch is on and nothing is saved", async () => {
     mountPage("/crisis")

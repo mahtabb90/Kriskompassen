@@ -10,8 +10,9 @@ interface CrisisCardProps {
 /**
  * Renders a crisis information item with its title, short description and offline controls.
  *
- * Links to the item's detail view using its unique ID. The offline toggle sits outside the
- * link so that no interactive element is nested inside another.
+ * Links to the item's detail view using its unique ID, both from the title/description and from
+ * a separate "Läs mer" link in the action row. The offline toggle and the "Läs mer" link sit
+ * outside the title link so that no interactive element is nested inside another.
  *
  * @param item The crisis information to display.
  * @param onToggle Called after the item is saved or removed offline, with the new saved state.
@@ -31,8 +32,20 @@ function CrisisCard({ item, onToggle }: CrisisCardProps) {
         <h2 className="text-xl font-bold text-blue-900">{item.title}</h2>
         <p className="mt-3 text-base leading-relaxed text-slate-600">{item.description}</p>
       </Link>
-      <div className="px-6 pb-6 sm:px-7 sm:pb-7">
-        <OfflineToggle item={item} onToggle={onToggle} />
+      <div className="px-6 pb-3 sm:px-7 sm:pb-4">
+        <OfflineToggle
+          item={item}
+          onToggle={onToggle}
+          actions={
+            <Link
+              to={`/crisis/${item.id}`}
+              aria-label={`Läs mer om ${item.title}`}
+              className="ml-auto inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 font-semibold text-blue-900 hover:bg-blue-50"
+            >
+              Läs mer
+            </Link>
+          }
+        />
       </div>
     </div>
   )
