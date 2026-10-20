@@ -130,8 +130,12 @@ function AddressSection({
             aria-describedby="address-format-hint"
             value={inputValue}
             onChange={(event) => {
+              event.target.setCustomValidity("")
               setInputValue(event.target.value)
               setCoordinateRangeError("")
+            }}
+            onInvalid={(event) => {
+              event.currentTarget.setCustomValidity("Ange en adress eller koordinater.")
             }}
             className="min-h-12 rounded-xl border-2 border-blue-900 px-4 py-2 text-base text-slate-900 sm:flex-1"
           />
