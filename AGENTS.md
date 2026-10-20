@@ -243,8 +243,12 @@ Frontend conventions visible in the existing code:
 
 - Crisis preparedness articles use `GET /api/v1/crisis` (full array) and
   `GET /api/v1/crisis/{id}` (single article). The backend reads and validates the complete
-  `backend/src/data/crisis.json` file on demand in FastAPI's worker thread pool. Article IDs,
-  order, text, source links and original `fetchedAt` compilation times are preserved. These
+  `backend/src/data/crisis.json` file on demand in FastAPI's worker thread pool. Article IDs
+  and order stay stable. Text uses KrisKompassen's own Swedish wording with source attribution;
+  each article's source checks and review date are recorded in `backend/DEVELOPMENT.md`.
+  The summaries distinguish advance preparations from conditional actions during a disruption.
+  `fetchedAt` identifies the content edition's compilation/review time and changes only when
+  that content is compiled or verified again, never when an API request is served. These
   routes use `Cache-Control: no-store`; missing articles return `404 crisis_not_found`,
   while file/JSON/schema/duplicate-ID failures return `500 crisis_data_unavailable` in the
   `{error: {code, message}}` envelope. A broken source never becomes an empty list or 404.
