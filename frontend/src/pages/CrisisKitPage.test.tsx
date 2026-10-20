@@ -465,3 +465,48 @@ describe("CrisisKitPage heading structure", () => {
     expect(container.querySelector("summary h2")?.textContent).toBe("Mat")
   })
 })
+
+describe("CrisisKitPage sources", () => {
+  it("displays the source links and offline note", async () => {
+    mountPage()
+
+    const sourcesSection = screen.getByRole("region", { name: "Källor" })
+
+    expect(
+      within(sourcesSection).getByText(
+        "De rekommenderade sakerna i krislådan bygger på information från följande källor:"
+      )
+    ).toBeTruthy()
+
+    const crisisInformationLink = within(sourcesSection).getByRole("link", {
+      name: "Krisinformation.se – Hemberedskap (öppnas i ny flik)",
+    })
+    expect(crisisInformationLink.getAttribute("href")).toBe(
+      "https://www.krisinformation.se/din-beredskap/hemberedskap/"
+    )
+    expect(crisisInformationLink.getAttribute("target")).toBe("_blank")
+    expect(crisisInformationLink.getAttribute("rel")).toBe("noopener noreferrer")
+
+    const mcfLink = within(sourcesSection).getByRole("link", {
+      name: "Myndigheten för civilt försvar – Om krisen eller kriget kommer (öppnas i ny flik)",
+    })
+    expect(mcfLink.getAttribute("href")).toBe(
+      "https://www.mcf.se/sv/publikationer/om-krisen-eller-kriget-kommer/"
+    )
+    expect(mcfLink.getAttribute("target")).toBe("_blank")
+    expect(mcfLink.getAttribute("rel")).toBe("noopener noreferrer")
+
+    expect(within(sourcesSection).getByText("Länkarna kräver internetanslutning.")).toBeTruthy()
+  })
+
+  it("keeps the sources visible when loading the crisis kit fails", async () => {
+    vi.mocked(getCrisisKitItems).mockRejectedValueOnce(new Error("Storage failed"))
+
+    mountPage()
+
+    expect(
+      await screen.findByText("Det gick inte att läsa in din krislåda. Försök igen.")
+    ).toBeTruthy()
+    expect(screen.getByRole("region", { name: "Källor" })).toBeTruthy()
+  })
+})
