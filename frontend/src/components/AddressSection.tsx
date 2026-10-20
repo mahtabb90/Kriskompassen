@@ -46,7 +46,9 @@ interface AddressSectionProps {
  * `submitManualAddress` and instead range-checks and reverse-geocodes it exactly like a fetched
  * device position — producing an approximate, re-lookupable `source: "coordinates"` address.
  * Text that is out of range shows an inline error before any network call; text that does not
- * look like coordinates at all falls through to the normal manual-address path unchanged.
+ * look like coordinates at all falls through to the normal manual-address path unchanged. The
+ * field keeps the typed coordinates until the lookup actually succeeds, so a failed lookup
+ * (network error, timeout or no resolvable address) never forces the user to retype them.
  */
 function AddressSection({
   onResolved,
@@ -68,9 +70,20 @@ function AddressSection({
   } = useAddress()
   const [inputValue, setInputValue] = useState("")
   const [coordinateRangeError, setCoordinateRangeError] = useState("")
+  const [lastSeenAddress, setLastSeenAddress] = useState<Address | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const helpTextId = useId()
   const geolocationSupported = "geolocation" in navigator
+
+  // Clears the field during render, the moment a coordinate lookup actually resolves to a new
+  // address — not in handleSubmit, where the lookup hasn't settled yet. A failed lookup never
+  // reaches this branch, so the typed coordinates stay put and the user can retry without
+  // retyping them. Comparing against `lastSeenAddress` (React's documented pattern for reacting
+  // to a value change during render) keeps this from re-clearing on every unrelated re-render.
+  if (address !== lastSeenAddress) {
+    setLastSeenAddress(address)
+    if (address?.source === "coordinates") setInputValue("")
+  }
 
   useEffect(() => {
     if (address) onResolved(address)
@@ -89,7 +102,6 @@ function AddressSection({
       }
       setCoordinateRangeError("")
       submitCoordinates(coordinates.lat, coordinates.lon)
-      setInputValue("")
       return
     }
 

@@ -194,6 +194,36 @@ describe("AddressSection", () => {
     expect(screen.getByRole("alert").textContent).toContain("Ingen adress kunde hittas.")
   })
 
+  it("keeps the typed coordinates in the field after a failed lookup, so retrying needs no retyping", async () => {
+    fetchMock.mockRejectedValue(new TypeError("network down"))
+
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "59.3293, 18.0686" } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    })
+
+    expect(screen.getByRole("alert").textContent).toContain("kunde inte slås upp")
+    expect((screen.getByLabelText("Adress") as HTMLInputElement).value).toBe("59.3293, 18.0686")
+  })
+
+  it("clears the field only once a coordinate lookup actually succeeds", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ found: true, address: "Drottninggatan 1", lat: 59.3293, lon: 18.0686 })
+    )
+
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "59.3293, 18.0686" } })
+    const input = screen.getByLabelText("Adress") as HTMLInputElement
+    expect(input.value).toBe("59.3293, 18.0686")
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    })
+
+    expect(input.value).toBe("")
+  })
+
   it("treats ordinary address text as manual, unaffected by the coordinate check", () => {
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
 
