@@ -25,9 +25,14 @@ export default defineConfig({
       workbox: {
         skipWaiting: false,
         clientsClaim: true,
-        // The app shell; public/ images are listed explicitly in includeAssets instead of globbed,
-        // so unreferenced files there are not downloaded by every installation.
-        globPatterns: ["**/*.{js,css,html}"],
+        // The app shell plus any images or fonts imported from src/, which Vite emits to assets/.
+        // public/ images are listed explicitly in includeAssets instead of globbed, so
+        // unreferenced files there are not downloaded by every installation. One combined
+        // pattern avoids Workbox's "pattern doesn't match any files" warning while no such
+        // imports exist.
+        globPatterns: [
+          "{**/*.{js,css,html},assets/**/*.{png,jpg,jpeg,gif,webp,avif,svg,ico,woff,woff2,ttf,otf}}",
+        ],
         // Every route is rendered client-side, so offline navigations open the precached shell.
         navigateFallback: "index.html",
       },

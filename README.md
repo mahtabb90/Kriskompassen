@@ -172,7 +172,20 @@ technology has not yet been fully verified.
 
 KrisKompassen is being developed as a **Progressive Web App (PWA)**, with installation and offline access as core goals.
 
-On supported browsers and devices, users can install the app on their phone or computer.
+On supported browsers and devices, users can install the app on their phone or computer with the
+browser's own install feature; the app has no install button of its own:
+
+- **Chrome and Edge (desktop and Android):** the install option in the address bar or browser menu.
+- **Safari on iPhone and iPad:** Share → **Add to Home Screen**.
+- **Safari on macOS:** File → **Add to Dock**.
+
+The installed app opens as KrisKompassen in its own window, without browser controls. It currently
+uses the KrisKompassen logo as its icon; a maskable icon variant, which lets Android adapt the icon
+to different shapes, is still pending.
+
+Once the app has been opened online, it also starts without an internet connection. If the browser
+blocks app storage, for example under strict privacy settings, the app still works online but
+cannot open offline.
 
 When connected, the app checks for new app versions when opened or brought back to the foreground.
 Once an update is ready, it offers **Uppdatera appen**. Users can continue reading until they choose
