@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react"
 import { useAddress } from "../hooks/useAddress"
 import { LOW_ACCURACY_THRESHOLD_METERS, type Address, type AddressLabel } from "../types/address"
+import { isValidLatLon, parseCoordinates } from "../utils/coordinates"
 
 type LabelKind = AddressLabel["kind"]
 
@@ -39,6 +40,13 @@ interface AddressSectionProps {
  * resolved, the label picker and "Spara adress" appear in the same preview card; the caller
  * still owns the label/save state (and calls `onResolved` to track the pending address) via
  * `onSave`.
+ *
+ * The same text field also accepts a latitude/longitude pair (decimal degrees, separated by
+ * a comma and/or whitespace), e.g. pasted from another map service. Submitting such text skips
+ * `submitManualAddress` and instead range-checks and reverse-geocodes it exactly like a fetched
+ * device position — producing an approximate, re-lookupable `source: "coordinates"` address.
+ * Text that is out of range shows an inline error before any network call; text that does not
+ * look like coordinates at all falls through to the normal manual-address path unchanged.
  */
 function AddressSection({
   onResolved,
@@ -49,9 +57,17 @@ function AddressSection({
   onSave,
   saveError,
 }: AddressSectionProps) {
-  const { address, loading, failed, errorMessage, submitManualAddress, requestLocation } =
-    useAddress()
+  const {
+    address,
+    loading,
+    failed,
+    errorMessage,
+    submitManualAddress,
+    requestLocation,
+    submitCoordinates,
+  } = useAddress()
   const [inputValue, setInputValue] = useState("")
+  const [coordinateRangeError, setCoordinateRangeError] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
   const helpTextId = useId()
   const geolocationSupported = "geolocation" in navigator
@@ -62,6 +78,22 @@ function AddressSection({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const coordinates = parseCoordinates(inputValue.trim())
+
+    if (coordinates) {
+      if (!isValidLatLon(coordinates.lat, coordinates.lon)) {
+        setCoordinateRangeError(
+          "Koordinaterna är utanför giltigt intervall (latitud -90 till 90, longitud -180 till 180)."
+        )
+        return
+      }
+      setCoordinateRangeError("")
+      submitCoordinates(coordinates.lat, coordinates.lon)
+      setInputValue("")
+      return
+    }
+
+    setCoordinateRangeError("")
     submitManualAddress(inputValue)
     setInputValue("")
   }
@@ -94,10 +126,13 @@ function AddressSection({
             type="text"
             autoComplete="street-address"
             required
-            placeholder="T.ex. Storgatan 1, Stockholm"
+            placeholder="T.ex. Storgatan 1, Stockholm eller 59.3293, 18.0686"
             aria-describedby="address-format-hint"
             value={inputValue}
-            onChange={(event) => setInputValue(event.target.value)}
+            onChange={(event) => {
+              setInputValue(event.target.value)
+              setCoordinateRangeError("")
+            }}
             className="min-h-12 rounded-xl border-2 border-blue-900 px-4 py-2 text-base text-slate-900 sm:flex-1"
           />
           <button
@@ -109,7 +144,8 @@ function AddressSection({
         </div>
         <p id="address-format-hint" className="text-xs text-slate-500">
           Skriv gatuadress, nummer och ort, t.ex. &quot;Storgatan 1, Stockholm&quot;, så blir
-          adressen tydlig och går inte att förväxla med en gata med samma namn på en annan ort.
+          adressen tydlig och går inte att förväxla med en gata med samma namn på en annan ort. Du
+          kan även klistra in koordinater (latitud, longitud), t.ex. &quot;59.3293, 18.0686&quot;.
         </p>
       </form>
 
@@ -163,6 +199,20 @@ function AddressSection({
                     Hämta ny position
                   </button>
                 )}
+                {address.source === "coordinates" &&
+                  address.lat !== undefined &&
+                  address.lon !== undefined && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        submitCoordinates(address.lat as number, address.lon as number)
+                      }
+                      disabled={loading}
+                      className="min-h-12 min-w-12 rounded-xl border-2 border-blue-900 bg-white px-4 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-50 disabled:opacity-60"
+                    >
+                      Slå upp igen
+                    </button>
+                  )}
               </div>
 
               <form onSubmit={onSave} className="flex flex-col gap-3 sm:w-64 sm:flex-shrink-0">
@@ -212,7 +262,7 @@ function AddressSection({
               </form>
             </div>
 
-            {address.source === "geolocated" && (
+            {(address.source === "geolocated" || address.source === "coordinates") && (
               <p className="text-xs text-slate-500">Positionsdata: © OpenStreetMap-bidragsgivare</p>
             )}
           </div>
@@ -220,7 +270,7 @@ function AddressSection({
       </div>
 
       <div role="alert" className="mt-3 text-sm font-medium text-red-800">
-        {failed ? errorMessage : ""}
+        {coordinateRangeError || (failed ? errorMessage : "")}
       </div>
     </section>
   )

@@ -152,6 +152,58 @@ describe("AddressSection", () => {
     expect(within(previewCard).getByRole("button", { name: "Spara adress" })).toBeTruthy()
   })
 
+  it("treats a typed coordinate pair as approximate and re-lookupable, not manual", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ found: true, address: "Drottninggatan 1", lat: 59.3293, lon: 18.0686 })
+    )
+
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "59.3293, 18.0686" } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    })
+
+    expect(screen.getByText("Drottninggatan 1")).toBeTruthy()
+    expect(screen.getByText(/ungefärlig position/)).toBeTruthy()
+    expect(screen.getByText(/OpenStreetMap/)).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Slå upp igen" })).toBeTruthy()
+    expect(screen.queryByText("Angiven manuellt")).toBeNull()
+  })
+
+  it("shows an inline error for out-of-range coordinates without calling the backend", () => {
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "120, 200" } })
+    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+
+    expect(screen.getByRole("alert").textContent).toContain("intervall")
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("shows the same no-address message for valid but unresolvable coordinates", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ found: false, message: "Ingen adress kunde hittas." })
+    )
+
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "0 0" } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    })
+
+    expect(screen.getByRole("alert").textContent).toContain("Ingen adress kunde hittas.")
+  })
+
+  it("treats ordinary address text as manual, unaffected by the coordinate check", () => {
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Storgatan 1" } })
+    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+
+    expect(screen.getByText("Angiven manuellt")).toBeTruthy()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it("reports a label change and submits via onSave when saving", () => {
     const onLabelKindChange = vi.fn()
     const onSave = vi.fn((event: { preventDefault: () => void }) => event.preventDefault())

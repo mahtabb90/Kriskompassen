@@ -178,6 +178,97 @@ describe("useAddress", () => {
     })
   })
 
+  it("reverse-geocodes a typed coordinate pair as an approximate address with no accuracy", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        found: true,
+        address: "Drottninggatan 1, Stockholm",
+        municipality: "Stockholm kommun",
+        county: "Stockholms län",
+        lat: 59.3293,
+        lon: 18.0686,
+      })
+    )
+
+    const { result } = renderHook(() => useAddress())
+    act(() => {
+      result.current.submitCoordinates(59.3293, 18.0686)
+    })
+    expect(result.current.loading).toBe(true)
+    expect(getCurrentPosition).not.toHaveBeenCalled()
+
+    await act(async () => {})
+
+    expect(result.current.loading).toBe(false)
+    expect(result.current.failed).toBe(false)
+    expect(result.current.address).toEqual({
+      text: "Drottninggatan 1, Stockholm",
+      source: "coordinates",
+      approximate: true,
+      lat: 59.3293,
+      lon: 18.0686,
+      municipality: "Stockholm kommun",
+    })
+  })
+
+  it("reports a resolvable-but-unknown coordinate pair with the backend's message", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ found: false, message: "Ingen adress kunde hittas." })
+    )
+
+    const { result } = renderHook(() => useAddress())
+    act(() => {
+      result.current.submitCoordinates(0, 0)
+    })
+    await act(async () => {})
+
+    expect(result.current.failed).toBe(true)
+    expect(result.current.errorMessage).toBe("Ingen adress kunde hittas.")
+  })
+
+  it("reports a coordinate geocode timeout with a coordinate-specific message", async () => {
+    vi.useFakeTimers()
+    fetchMock.mockImplementation(
+      (_url, options) =>
+        new Promise((_resolve, reject) => {
+          const signal = (options as RequestInit).signal
+          signal?.addEventListener("abort", () => reject(new DOMException("", "AbortError")))
+        })
+    )
+
+    const { result } = renderHook(() => useAddress())
+    act(() => {
+      result.current.submitCoordinates(59.3293, 18.0686)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(apiConfig.timeoutMs)
+    })
+
+    expect(result.current.failed).toBe(true)
+    expect(result.current.errorMessage).toContain("koordinaterna")
+  })
+
+  it("reports a coordinate network failure without discarding a previous manual address", async () => {
+    const { result } = renderHook(() => useAddress())
+    act(() => {
+      result.current.submitManualAddress("Testgatan 1")
+    })
+
+    fetchMock.mockRejectedValue(new TypeError("network down"))
+
+    act(() => {
+      result.current.submitCoordinates(59.3293, 18.0686)
+    })
+    await act(async () => {})
+
+    expect(result.current.failed).toBe(true)
+    expect(result.current.address).toEqual({
+      text: "Testgatan 1",
+      source: "manual",
+      approximate: false,
+    })
+  })
+
   it("discards a second concurrent location request", async () => {
     let releaseFirst: (() => void) | undefined
     getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
