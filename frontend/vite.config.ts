@@ -3,6 +3,15 @@ import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
 import { VitePWA } from "vite-plugin-pwa"
 
+// Single place for icon paths in public/; index.html links the same favicon and apple-touch-icon.
+const icons = {
+  favicon: "favicon.png",
+  appleTouch: "apple-touch-icon.png",
+  manifest192: "icon-192.png",
+  manifest512: "icon-512.png",
+  headerLogo: "kriskompassen-logo.png",
+} as const
+
 export default defineConfig({
   plugins: [
     react(),
@@ -13,34 +22,49 @@ export default defineConfig({
       // The document-scoped updater owns registration and the user's activation choice.
       registerType: "prompt",
       injectRegister: false,
-      workbox: { skipWaiting: false, clientsClaim: true },
+      workbox: {
+        skipWaiting: false,
+        clientsClaim: true,
+        // The app shell; public/ images are listed explicitly in includeAssets instead of globbed,
+        // so unreferenced files there are not downloaded by every installation.
+        globPatterns: ["**/*.{js,css,html}"],
+        // Every route is rendered client-side, so offline navigations open the precached shell.
+        navigateFallback: "index.html",
+      },
 
-      // The header logo is separate from the manifest icons cached automatically.
-      includeAssets: ["kriskompassen-logo.png"],
+      // Manifest icons are precached automatically; these are the other icons the shell links.
+      includeAssets: [icons.favicon, icons.appleTouch, icons.headerLogo],
 
       manifest: {
+        // Matches the default identity (start_url) so existing installations keep theirs.
+        id: "/",
         name: "KrisKompassen",
         short_name: "KrisKompassen",
+        lang: "sv",
 
         description: "Krisinformation tillgänglig online och offline",
 
-        theme_color: "#ffffff",
-        background_color: "#ffffff",
+        // White matches the header surface; the splash screen uses the page canvas colour.
+        theme_color: "#FFFFFF",
+        background_color: "#D7E2EF",
 
         display: "standalone",
 
         start_url: "/",
+        scope: "/",
 
         icons: [
           {
-            src: "/icon-192.png",
+            src: `/${icons.manifest192}`,
             sizes: "192x192",
             type: "image/png",
+            purpose: "any",
           },
           {
-            src: "/icon-512.png",
+            src: `/${icons.manifest512}`,
             sizes: "512x512",
             type: "image/png",
+            purpose: "any",
           },
         ],
       },
