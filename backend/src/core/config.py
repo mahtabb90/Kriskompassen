@@ -23,7 +23,16 @@ class Settings(BaseSettings):
     vma_timeout_seconds: float = Field(default=8.0, gt=0, allow_inf_nan=False)
     geocode_api_url: AnyHttpUrl = AnyHttpUrl("https://nominatim.openstreetmap.org/reverse")
     geocode_timeout_seconds: float = Field(default=8.0, gt=0, allow_inf_nan=False)
-    geocode_user_agent: str = "KrisKompassen/0.1"
+    # Identifies the app and, per Nominatim's politeness recommendation (not a hard policy
+    # requirement), gives a reachable contact so OSMF can reach us instead of only banning us.
+    geocode_user_agent: str = "KrisKompassen/0.1 (+https://github.com/mahtabb90/Kriskompassen)"
+    # Configurable, unlike VMA_CACHE_TTL_SECONDS below, so cache/throttle tuning under real
+    # Nominatim load does not need a code change.
+    geocode_cache_ttl_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
+    geocode_min_interval_seconds: float = Field(default=1.0, gt=0, allow_inf_nan=False)
+    # Bounds the worst-case queued wait to roughly max_queue_depth * min_interval_seconds; a
+    # request arriving once the queue is already full fails fast instead of piling up.
+    geocode_max_queue_depth: int = Field(default=10, gt=0)
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
     )
