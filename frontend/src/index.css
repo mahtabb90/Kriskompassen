@@ -39,6 +39,21 @@ html {
   );
 }
 
+/* Override the browser's modal sizing, which otherwise leaves a margin and size limits around it. */
+.mobile-menu-dialog {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  margin: 0;
+  border: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: none;
+  overflow: hidden;
+}
+
 .pwa-update-region {
   margin-bottom: 1rem;
 }
@@ -62,59 +77,6 @@ html {
 .vma-banner:focus-visible,
 .vma-banner :focus-visible {
   outline-color: var(--color-vma-focus);
-}
-
-/* Normal-flow navigation has no scroll controls, even before measurement catches up. */
-.navigation-scroll-control {
-  display: none;
-}
-
-/* Short viewports need the full content area, especially in landscape or at high zoom. */
-@media (width < 48rem) and (height >= 30rem) {
-  .primary-navigation {
-    position: fixed;
-    inset-inline: 0;
-    bottom: 0;
-    padding-bottom: env(safe-area-inset-bottom);
-    box-shadow: 0 -4px 16px rgb(15 23 42 / 0.06);
-  }
-
-  .primary-navigation:not([data-overflows-viewport]) .navigation-scroll-shell {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    align-items: center;
-    padding-inline: 0.5rem;
-  }
-
-  .primary-navigation[data-scrollable]:not([data-overflows-viewport]) .navigation-scroll-shell {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 0.25rem;
-  }
-
-  .primary-navigation[data-scrollable]:not([data-overflows-viewport]) .navigation-scroll-control {
-    display: flex;
-  }
-
-  .primary-navigation:not([data-overflows-viewport]) .navigation-links {
-    flex-wrap: nowrap;
-    padding: 0.5rem;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-padding-inline: 0.5rem;
-    scrollbar-width: thin;
-  }
-
-  .primary-navigation:not([data-overflows-viewport]) .navigation-links > li {
-    flex: 0 0 auto;
-    max-width: 100%;
-  }
-}
-
-.primary-navigation[data-overflows-viewport] {
-  position: static;
-  inset: auto;
-  padding-bottom: 0;
-  box-shadow: none;
 }
 
 @media (forced-colors: active) {

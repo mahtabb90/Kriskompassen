@@ -55,10 +55,12 @@ pauses while offline and checks again when the connection returns. Warnings are 
 offline use.
 
 On the "Min info" page, users can save one or more addresses — for example home and work — by
-typing each one or by requesting their device's position; a fetched position is reverse-geocoded
-into a readable address and clearly marked as approximate, and can be corrected or refetched at
-any time. Location permission is only requested when the user chooses to use it, and a denied
-permission, timeout or unsupported browser leaves manual entry available with a clear explanation.
+typing each one, pasting coordinates (for example copied from another map service), or
+requesting their device's position. A fetched position or a pasted coordinate pair is
+reverse-geocoded into a readable address and clearly marked as approximate, and can be corrected
+or looked up again at any time. Location permission is only requested when the user chooses to
+use it, and a denied permission, timeout or unsupported browser leaves manual entry available
+with a clear explanation.
 Each saved address can be labelled (home, work, or a custom label) and one is marked as the active
 address, shown as a discreet link in the header; saved addresses remain available between visits
 and are the starting point for a planned future feature to find nearby shelters.
