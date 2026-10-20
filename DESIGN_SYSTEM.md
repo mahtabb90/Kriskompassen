@@ -261,7 +261,7 @@ The signature top accent bar applies specifically to **crisis-information cards 
 - **Rationale vs WCAG Baseline:**
   This intentionally exceeds the WCAG 2.2 AA minimum requirement (Level AA SC 2.5.8 requires 24×24 CSS pixels). Exceeding this baseline ensures comfortable target acquisition on touchscreens, accommodates reduced motor precision among older users or cold/trembling hands during emergencies, and minimizes missed taps under high-stress conditions.
 - **Isolated Actions:**
-  Interactive controls must never be nested inside other interactive controls. In `CrisisCard`, the entire card title/body links to the detail page, but the offline toggle button resides in an isolated action row outside the link.
+  Interactive controls must never be nested inside other interactive controls. In `CrisisCard`, the entire card title/body links to the detail page, but the offline toggle button and a separate secondary-styled "Läs mer" link (same destination, accessible name `Läs mer om <title>`) reside in an isolated, wrapping action row outside the link, with the toggle on the left and "Läs mer" on the right.
 
 ### 6.2 Button Variants
 

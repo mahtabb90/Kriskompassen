@@ -254,7 +254,9 @@ def test_sends_identifying_user_agent_and_no_credentials() -> None:
 
     def upstream(request: httpx.Request) -> httpx.Response:
         assert request.headers["Accept"] == "application/json"
-        assert request.headers["User-Agent"] == "KrisKompassen/0.1"
+        assert request.headers["User-Agent"] == (
+            "KrisKompassen/0.1 (+https://github.com/mahtabb90/Kriskompassen)"
+        )
         assert "Authorization" not in request.headers
         assert "Cookie" not in request.headers
         return httpx.Response(200, json=NOMINATIM_RESULT)
