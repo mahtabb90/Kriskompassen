@@ -129,8 +129,12 @@ function CrisisKitPage() {
 
       <form
         onSubmit={handleAddItem}
-        className="mt-6 rounded-2xl border border-blue-200/80 bg-white p-6 shadow-sm"
+        className="relative mt-6 overflow-hidden rounded-2xl border border-blue-200/80 bg-white p-6 pt-7 shadow-sm"
       >
+        <span aria-hidden="true" className="absolute inset-x-0 top-0 flex h-1.5">
+          <span className="h-full flex-1 bg-blue-900" />
+          <span className="h-full w-8 bg-amber-400" />
+        </span>
         <h2 className="text-xl font-semibold text-blue-900">Lägg till en egen sak</h2>
 
         <div className="mt-4">
@@ -179,7 +183,7 @@ function CrisisKitPage() {
         <button
           type="submit"
           disabled={isAddingItem || !newItemName.trim()}
-          className="mt-4 min-h-11 rounded-lg bg-blue-800 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-4 min-h-11 rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isAddingItem ? "Lägger till..." : "Lägg till sak"}
         </button>
