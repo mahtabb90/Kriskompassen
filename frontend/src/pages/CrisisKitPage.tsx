@@ -198,6 +198,9 @@ function CrisisKitPage() {
 
         {addItemMessage && (
           <p className="mt-3 text-sm font-medium text-green-800" role="status">
+            <span aria-hidden="true" className="mr-2">
+              ✓
+            </span>
             {addItemMessage}
           </p>
         )}
