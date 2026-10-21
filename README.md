@@ -61,7 +61,29 @@ any time. Location permission is only requested when the user chooses to use it,
 permission, timeout or unsupported browser leaves manual entry available with a clear explanation.
 Each saved address can be labelled (home, work, or a custom label) and one is marked as the active
 address, shown as a discreet link in the header; saved addresses remain available between visits
-and are the starting point for a planned future feature to find nearby shelters.
+and are the starting point for finding nearby shelters, below.
+
+On the "Skyddsrum" page, users see the 5 civil-defense shelters nearest to their active address,
+sorted closest first. Shelter data comes from Myndigheten för civilt försvar (MCF), the Swedish
+authority responsible for the national shelter register, through its open WFS / OGC API Features
+service (GeoJSON, delivered directly in WGS84 coordinates); the dataset's
+[Geodataportalen metadata record](https://www.geodata.se/geodataportalen/srv/swe/catalog.search#/metadata/6341813c-bfa3-45df-8234-13cf583bf533)
+states no access or reuse restrictions apply. The backend widens its search radius around the
+active address until enough shelters are found, and shelters fetched this way are cached on the
+device so a previously searched area remains available offline. Since MCF's source data has no
+postal address, each shelter is shown by its free-text location description together with the
+active address's municipality, worded as a location description rather than a verified address.
+MCF genuinely registers several separate shelters under one shared property - sometimes with the
+same coordinates and capacity too - so each shelter also shows its own official number (matching
+the number physically posted at its entrance) to stay distinguishable, plus a link to its exact
+position on a map, since the location description alone is not enough to actually find it.
+If no address is active yet, or the active address has no coordinates (a manually typed address
+is never geocoded), the page prompts the user to set one on "Min info" instead.
+
+Saving a geolocated address also fetches and caches its nearest shelters in the background right
+away, without the user needing to visit "Skyddsrum" first. This runs silently and never blocks or
+fails the address save itself; it exists so that addresses saved ahead of a crisis already have
+their nearby shelters available offline even if MCF's service later becomes unreachable.
 
 ## 🛠️ Tech stack
 

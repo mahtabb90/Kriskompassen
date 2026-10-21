@@ -3,6 +3,7 @@ import { apiConfig } from "../config/apiConfig"
 import {
   GeocodeRequestError,
   GeocodeResponseValidationError,
+  fetchAddressCandidates,
   fetchGeocode,
 } from "./geocodingService"
 
@@ -164,5 +165,125 @@ describe("fetchGeocode", () => {
     const error = await fetchGeocode(1, 2).catch((caught: unknown) => caught)
 
     expect(error).toBeInstanceOf(GeocodeRequestError)
+  })
+})
+
+describe("fetchAddressCandidates", () => {
+  it("requests the configured backend without credentials and maps every candidate", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        candidates: [
+          {
+            address: "Storgatan 1, Stockholm",
+            municipality: "Stockholm kommun",
+            county: "Stockholms län",
+            lat: 59.0,
+            lon: 18.0,
+          },
+          {
+            address: "Storgatan 1, Uppsala",
+            municipality: "Uppsala kommun",
+            county: "Uppsala län",
+            lat: 59.9,
+            lon: 17.6,
+          },
+        ],
+        source: { apiName: "Nominatim" },
+      })
+    )
+
+    const result = await fetchAddressCandidates("Storgatan 1")
+
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+      `${apiConfig.geocodeSearchUrl}?q=Storgatan+1`,
+      {
+        headers: { Accept: "application/json" },
+        credentials: "omit",
+        signal: expect.any(AbortSignal),
+      }
+    )
+    expect(result).toEqual([
+      {
+        address: "Storgatan 1, Stockholm",
+        municipality: "Stockholm kommun",
+        county: "Stockholms län",
+        lat: 59.0,
+        lon: 18.0,
+      },
+      {
+        address: "Storgatan 1, Uppsala",
+        municipality: "Uppsala kommun",
+        county: "Uppsala län",
+        lat: 59.9,
+        lon: 17.6,
+      },
+    ])
+  })
+
+  it("accepts an empty candidate list without treating it as an error", async () => {
+    fetchMock.mockResolvedValue(Response.json({ candidates: [], source: { apiName: "Nominatim" } }))
+
+    await expect(fetchAddressCandidates("ingen sådan plats")).resolves.toEqual([])
+  })
+
+  it("defaults a missing municipality or county to null", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        candidates: [{ address: "Somewhere", lat: 1, lon: 2 }],
+        source: { apiName: "Nominatim" },
+      })
+    )
+
+    await expect(fetchAddressCandidates("Somewhere")).resolves.toEqual([
+      { address: "Somewhere", municipality: null, county: null, lat: 1, lon: 2 },
+    ])
+  })
+
+  it.each([
+    ["a non-object body", Response.json("not an object")],
+    ["a response missing the candidate list", Response.json({ source: {} })],
+    [
+      "a candidate missing its address field",
+      Response.json({ candidates: [{ lat: 1, lon: 2 }], source: {} }),
+    ],
+    [
+      "a candidate with a non-numeric coordinate",
+      Response.json({ candidates: [{ address: "X", lat: "1", lon: 2 }], source: {} }),
+    ],
+  ])("rejects %s as a contract violation", async (_description, response) => {
+    fetchMock.mockResolvedValue(response)
+
+    await expect(fetchAddressCandidates("X")).rejects.toBeInstanceOf(GeocodeResponseValidationError)
+  })
+
+  it("preserves a network failure", async () => {
+    const cause = new TypeError("Connection failed")
+    fetchMock.mockRejectedValue(cause)
+
+    await expect(fetchAddressCandidates("X")).rejects.toMatchObject({
+      name: "GeocodeRequestError",
+      code: "network",
+      cause,
+    })
+  })
+
+  it.each([502, 504])("preserves HTTP %s as an HTTP failure", async (status) => {
+    fetchMock.mockResolvedValue(new Response("Upstream failure", { status }))
+
+    await expect(fetchAddressCandidates("X")).rejects.toMatchObject({
+      name: "GeocodeRequestError",
+      code: "http",
+      status,
+    })
+  })
+
+  it("reports malformed JSON separately from an invalid envelope", async () => {
+    fetchMock.mockResolvedValue(new Response("{"))
+
+    await expect(fetchAddressCandidates("X")).rejects.toMatchObject({
+      name: "GeocodeRequestError",
+      code: "invalid_json",
+      cause: expect.any(SyntaxError),
+    })
   })
 })

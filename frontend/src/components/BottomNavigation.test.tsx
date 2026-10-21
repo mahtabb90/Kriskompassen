@@ -71,7 +71,8 @@ function mountNavigation(initialPath = "/") {
     new DOMRect(68, 508, 52, 48),
     new DOMRect(128, 508, 136, 48),
     new DOMRect(272, 508, 110, 48),
-    new DOMRect(390, 508, 78, 48),
+    new DOMRect(390, 508, 100, 48),
+    new DOMRect(498, 508, 78, 48),
   ].entries()) {
     vi.spyOn(links[index], "getBoundingClientRect").mockReturnValue(bounds)
   }
@@ -88,6 +89,7 @@ describe("BottomNavigation horizontal scrolling", () => {
       "/",
       "/crisis",
       "/crisis-kit",
+      "/skyddsrum",
       "/min-info",
     ])
     expect(screen.getByRole("link", { name: "Krisinformation" })).toBeTruthy()
@@ -146,7 +148,7 @@ describe("BottomNavigation horizontal scrolling", () => {
   it("reveals a focused link with space for its outline", () => {
     mountNavigation()
     act(() => screen.getByRole("link", { name: "Min info" }).focus())
-    expect(scrollBy).toHaveBeenCalledWith({ left: 216, behavior: "instant" })
+    expect(scrollBy).toHaveBeenCalledWith({ left: 324, behavior: "instant" })
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Min info" }))
   })
 
@@ -158,7 +160,7 @@ describe("BottomNavigation horizontal scrolling", () => {
     expect(scrollBy).not.toHaveBeenCalled()
     fireEvent.click(link)
     expect(link.getAttribute("aria-current")).toBe("page")
-    expect(scrollBy).toHaveBeenCalledWith({ left: 216, behavior: "instant" })
+    expect(scrollBy).toHaveBeenCalledWith({ left: 324, behavior: "instant" })
   })
 
   it("reveals focus after a canceled pointer gesture", () => {
@@ -167,19 +169,19 @@ describe("BottomNavigation horizontal scrolling", () => {
     fireEvent.pointerDown(link)
     fireEvent.pointerCancel(link)
     act(() => link.focus())
-    expect(scrollBy).toHaveBeenCalledWith({ left: 216, behavior: "instant" })
+    expect(scrollBy).toHaveBeenCalledWith({ left: 324, behavior: "instant" })
   })
 
   it("reveals the current link on direct entry and route changes", () => {
     mountNavigation("/min-info")
-    expect(scrollBy).toHaveBeenCalledWith({ left: 216, behavior: "instant" })
+    expect(scrollBy).toHaveBeenCalledWith({ left: 324, behavior: "instant" })
     cleanup()
     resizeObservers.length = 0
     scrollBy.mockClear()
     mountNavigation()
     fireEvent.click(screen.getByRole("link", { name: "Min info" }))
     expect(screen.getByRole("link", { name: "Min info" }).getAttribute("aria-current")).toBe("page")
-    expect(scrollBy).toHaveBeenCalledWith({ left: 216, behavior: "instant" })
+    expect(scrollBy).toHaveBeenCalledWith({ left: 324, behavior: "instant" })
   })
 
   it("hides controls when everything fits and detects a longer menu on resize", () => {

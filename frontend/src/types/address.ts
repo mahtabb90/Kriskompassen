@@ -14,7 +14,11 @@ export interface Address {
   approximate: boolean
   lat?: number
   lon?: number
-  /** The municipality, when known from reverse geocoding. Not set for a manual address. */
+  /**
+   * The municipality, when known from reverse geocoding a device position or from resolving a
+   * manually typed address to one specific match. Unset for a manual address that has not (yet,
+   * or could not) be resolved to coordinates.
+   */
   municipality?: string
   /** The browser's radius of uncertainty for the device fix behind this address, in meters. Not set for a manual address. */
   accuracy?: number
@@ -51,6 +55,21 @@ export interface GeocodeNotFoundResult {
 }
 
 export type GeocodeResult = GeocodeFoundResult | GeocodeNotFoundResult
+
+/** Identifies why searching for a typed address failed. */
+export type GeocodeSearchRequestErrorCode = "network" | "http" | "timeout" | "invalid_json"
+
+/**
+ * One address match for a free-text search, e.g. for a manually typed address that is not
+ * unique ("Storgatan 1" exists in several municipalities) - the user picks the intended one.
+ */
+export interface GeocodeCandidate {
+  address: string
+  municipality: string | null
+  county: string | null
+  lat: number
+  lon: number
+}
 
 /**
  * Categorizes a saved address. "annan" carries a user-supplied label, e.g. "Sommarstuga";

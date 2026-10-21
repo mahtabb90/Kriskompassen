@@ -13,6 +13,12 @@ function makePositionError(code: 1 | 2 | 3): GeolocationPositionError {
   } as GeolocationPositionError
 }
 
+function searchResponse(
+  candidates: { address: string; municipality?: string; lat: number; lon: number }[]
+): Response {
+  return Response.json({ candidates, source: { apiName: "Nominatim" } })
+}
+
 const getCurrentPosition = vi.fn()
 let fetchMock = vi.fn<typeof fetch>()
 
@@ -25,6 +31,14 @@ function baseProps() {
     onSave: vi.fn(),
     saveError: "",
   }
+}
+
+/** Types an address, confirms it and awaits the (now network-backed) resolution. */
+async function confirmManualAddress(text: string) {
+  fireEvent.change(screen.getByLabelText("Adress"), { target: { value: text } })
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: /Bekräfta adress|Söker adress/ }))
+  })
 }
 
 beforeEach(() => {
@@ -41,20 +55,97 @@ afterEach(() => {
 })
 
 describe("AddressSection", () => {
-  it("confirms a manually typed address, labels it as manual and reports it resolved", () => {
+  it("resolves a manually typed address, labels it as manual and reports it resolved", async () => {
+    fetchMock.mockResolvedValue(
+      searchResponse([
+        {
+          address: "Testgatan 1, Exempelstad",
+          municipality: "Exempelstad kommun",
+          lat: 59.0,
+          lon: 18.0,
+        },
+      ])
+    )
     const onResolved = vi.fn()
     render(<AddressSection onResolved={onResolved} {...baseProps()} />)
+
+    await confirmManualAddress("Testgatan 1")
+
+    expect(screen.getByText("Testgatan 1, Exempelstad")).toBeTruthy()
+    expect(screen.getByText("Angiven manuellt")).toBeTruthy()
+    expect(onResolved).toHaveBeenCalledExactlyOnceWith({
+      text: "Testgatan 1, Exempelstad",
+      source: "manual",
+      approximate: false,
+      lat: 59.0,
+      lon: 18.0,
+      municipality: "Exempelstad kommun",
+    })
+  })
+
+  it("shows a loading label on the confirm button while the address search is in flight", async () => {
+    let resolveFetch: (() => void) | undefined
+    fetchMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveFetch = () => resolve(searchResponse([{ address: "X", lat: 1, lon: 2 }]))
+        })
+    )
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
 
     fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Testgatan 1" } })
     fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
 
-    expect(screen.getByText("Testgatan 1")).toBeTruthy()
-    expect(screen.getByText("Angiven manuellt")).toBeTruthy()
+    const button = screen.getByRole("button", { name: "Söker adress…" }) as HTMLButtonElement
+    expect(button.disabled).toBe(true)
+
+    await act(async () => resolveFetch?.())
+  })
+
+  it("lists several search matches and resolves the one the user picks", async () => {
+    fetchMock.mockResolvedValue(
+      searchResponse([
+        {
+          address: "Storgatan 1, Stockholm",
+          municipality: "Stockholm kommun",
+          lat: 59.3,
+          lon: 18.0,
+        },
+        { address: "Storgatan 1, Uppsala", municipality: "Uppsala kommun", lat: 59.9, lon: 17.6 },
+      ])
+    )
+    const onResolved = vi.fn()
+    render(<AddressSection onResolved={onResolved} {...baseProps()} />)
+
+    await confirmManualAddress("Storgatan 1")
+
+    expect(screen.getByRole("heading", { name: /Flera adresser hittades/ })).toBeTruthy()
+    expect(document.activeElement).toBe(
+      screen.getByRole("heading", { name: /Flera adresser hittades/ })
+    )
+    const candidateButton = screen.getByRole("button", { name: "Storgatan 1, Uppsala" })
+
+    fireEvent.click(candidateButton)
+
+    expect(screen.queryByRole("heading", { name: /Flera adresser hittades/ })).toBeNull()
+    expect(screen.getByText("Storgatan 1, Uppsala")).toBeTruthy()
     expect(onResolved).toHaveBeenCalledExactlyOnceWith({
-      text: "Testgatan 1",
+      text: "Storgatan 1, Uppsala",
       source: "manual",
       approximate: false,
+      lat: 59.9,
+      lon: 17.6,
+      municipality: "Uppsala kommun",
     })
+  })
+
+  it("shows an accessible error when the address search finds no match", async () => {
+    fetchMock.mockResolvedValue(searchResponse([]))
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+
+    await confirmManualAddress("Obefintliggatan 999")
+
+    expect(screen.getByRole("alert").textContent).toContain("Ingen adress hittades")
   })
 
   it("fetches and labels an automatically retrieved address as approximate", async () => {
@@ -113,8 +204,9 @@ describe("AddressSection", () => {
     expect(screen.getByRole("alert").textContent).toContain("nekades")
     const input = screen.getByLabelText("Adress") as HTMLInputElement
     expect(input.disabled).toBe(false)
-    fireEvent.change(input, { target: { value: "Testgatan 1" } })
-    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+
+    fetchMock.mockResolvedValue(searchResponse([{ address: "Testgatan 1", lat: 1, lon: 2 }]))
+    await confirmManualAddress("Testgatan 1")
     expect(screen.getByText("Testgatan 1")).toBeTruthy()
   })
 
@@ -127,11 +219,11 @@ describe("AddressSection", () => {
     expect(screen.getByText(/stöder inte platshämtning/)).toBeTruthy()
   })
 
-  it("refills and focuses the input with the current address when editing", () => {
+  it("refills and focuses the input with the current address when editing", async () => {
+    fetchMock.mockResolvedValue(searchResponse([{ address: "Testgatan 1", lat: 1, lon: 2 }]))
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
 
-    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Testgatan 1" } })
-    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    await confirmManualAddress("Testgatan 1")
     fireEvent.click(screen.getByRole("button", { name: "Ändra adress" }))
 
     const input = screen.getByLabelText("Adress") as HTMLInputElement
@@ -139,11 +231,11 @@ describe("AddressSection", () => {
     expect(document.activeElement).toBe(input)
   })
 
-  it("keeps the label picker and save button in the same preview card as the address actions", () => {
+  it("keeps the label picker and save button in the same preview card as the address actions", async () => {
+    fetchMock.mockResolvedValue(searchResponse([{ address: "Testgatan 1", lat: 1, lon: 2 }]))
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
 
-    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Testgatan 1" } })
-    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    await confirmManualAddress("Testgatan 1")
 
     const previewCard = screen.getByRole("status")
     expect(within(previewCard).getByRole("button", { name: "Ändra adress" })).toBeTruthy()
@@ -152,7 +244,8 @@ describe("AddressSection", () => {
     expect(within(previewCard).getByRole("button", { name: "Spara adress" })).toBeTruthy()
   })
 
-  it("reports a label change and submits via onSave when saving", () => {
+  it("reports a label change and submits via onSave when saving", async () => {
+    fetchMock.mockResolvedValue(searchResponse([{ address: "Testgatan 1", lat: 1, lon: 2 }]))
     const onLabelKindChange = vi.fn()
     const onSave = vi.fn((event: { preventDefault: () => void }) => event.preventDefault())
     render(
@@ -164,8 +257,7 @@ describe("AddressSection", () => {
       />
     )
 
-    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Testgatan 1" } })
-    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    await confirmManualAddress("Testgatan 1")
 
     fireEvent.click(screen.getByRole("radio", { name: "Arbete" }))
     expect(onLabelKindChange).toHaveBeenCalledExactlyOnceWith("arbete")

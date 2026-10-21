@@ -1,6 +1,11 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react"
 import { useAddress } from "../hooks/useAddress"
-import { LOW_ACCURACY_THRESHOLD_METERS, type Address, type AddressLabel } from "../types/address"
+import {
+  LOW_ACCURACY_THRESHOLD_METERS,
+  type Address,
+  type AddressLabel,
+  type GeocodeCandidate,
+} from "../types/address"
 
 type LabelKind = AddressLabel["kind"]
 
@@ -49,26 +54,55 @@ function AddressSection({
   onSave,
   saveError,
 }: AddressSectionProps) {
-  const { address, loading, failed, errorMessage, submitManualAddress, requestLocation } =
-    useAddress()
+  const {
+    address,
+    loading,
+    resolvingSource,
+    choosing,
+    candidates,
+    failed,
+    errorMessage,
+    submitManualAddress,
+    selectCandidate,
+    requestLocation,
+  } = useAddress()
   const [inputValue, setInputValue] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
+  const candidatesHeadingRef = useRef<HTMLHeadingElement>(null)
   const helpTextId = useId()
   const geolocationSupported = "geolocation" in navigator
+
+  // Adjusted during render (React's documented pattern for resetting state when a value
+  // changes, using state rather than a ref so it survives Strict Mode's extra render) instead
+  // of in an effect, since this is local UI state, not a call to an external system. Only a
+  // final resolution clears the input - while "choosing" is in progress, the user can still see
+  // and refine what they typed alongside the candidate list.
+  const [previousAddress, setPreviousAddress] = useState<Address | null>(null)
+  if (address !== previousAddress) {
+    setPreviousAddress(address)
+    if (address) setInputValue("")
+  }
 
   useEffect(() => {
     if (address) onResolved(address)
   }, [address, onResolved])
 
+  useEffect(() => {
+    if (choosing) candidatesHeadingRef.current?.focus()
+  }, [choosing])
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     submitManualAddress(inputValue)
-    setInputValue("")
   }
 
   function handleEditAddress() {
     setInputValue(address?.text ?? "")
     inputRef.current?.focus()
+  }
+
+  function candidateKey(candidate: GeocodeCandidate, index: number): string {
+    return `${candidate.lat}-${candidate.lon}-${index}`
   }
 
   return (
@@ -102,9 +136,10 @@ function AddressSection({
           />
           <button
             type="submit"
-            className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-950"
+            disabled={loading}
+            className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-950 disabled:opacity-60"
           >
-            Bekräfta adress
+            {resolvingSource === "manual" ? "Söker adress…" : "Bekräfta adress"}
           </button>
         </div>
         <p id="address-format-hint" className="text-xs text-slate-500">
@@ -126,12 +161,37 @@ function AddressSection({
           "hover:bg-blue-50 disabled:opacity-60"
         }
       >
-        {loading ? "Hämtar position…" : "Hämta min position"}
+        {resolvingSource === "geolocated" ? "Hämtar position…" : "Hämta min position"}
       </button>
       {!geolocationSupported && (
         <p id={helpTextId} className="mt-1 text-sm text-slate-600">
           Den här webbläsaren stöder inte platshämtning. Ange adressen manuellt istället.
         </p>
+      )}
+
+      {choosing && (
+        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+          <h3
+            ref={candidatesHeadingRef}
+            tabIndex={-1}
+            className="text-base font-semibold text-slate-900"
+          >
+            Flera adresser hittades — välj rätt:
+          </h3>
+          <ul className="flex flex-col gap-2">
+            {candidates.map((candidate, index) => (
+              <li key={candidateKey(candidate, index)}>
+                <button
+                  type="button"
+                  onClick={() => selectCandidate(candidate)}
+                  className="min-h-12 w-full rounded-xl border-2 border-blue-900 bg-white px-4 py-2 text-left text-sm font-semibold text-blue-900 hover:bg-blue-50"
+                >
+                  {candidate.address}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div role="status">

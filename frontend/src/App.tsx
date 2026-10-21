@@ -9,6 +9,7 @@ import HomePage from "./pages/HomePage"
 import IndexedDbTest from "./pages/IndexedDbTest"
 import MyInfoPage from "./pages/MyInfoPage"
 import NotFoundPage from "./pages/NotFoundPage"
+import ShelterPage from "./pages/ShelterPage"
 
 /**
  * Registers public pages and the development-only storage test within the shared layout.
@@ -27,6 +28,7 @@ function App() {
               <Route path="/crisis" element={<CrisisInfoPage />} />
               <Route path="/crisis-kit" element={<CrisisKitPage />} />
               <Route path="/crisis/:id" element={<DetailedCrisisCard />} />
+              <Route path="/skyddsrum" element={<ShelterPage />} />
               <Route path="/min-info" element={<MyInfoPage />} />
               {import.meta.env.DEV && <Route path="/dev/indexeddb" element={<IndexedDbTest />} />}
               <Route path="*" element={<NotFoundPage />} />
