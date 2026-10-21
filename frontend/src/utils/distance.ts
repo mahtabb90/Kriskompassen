@@ -33,3 +33,9 @@ export function nearestN<T extends GeoPoint>(
     .sort((a, b) => a.distanceMeters - b.distanceMeters)
     .slice(0, Math.max(0, n))
 }
+
+/** Formats a distance in Swedish for display, e.g. "350 m" or "1,2 km". */
+export function formatDistanceMeters(distanceMeters: number): string {
+  if (distanceMeters < 1000) return `${Math.round(distanceMeters)} m`
+  return `${(distanceMeters / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 1 })} km`
+}
