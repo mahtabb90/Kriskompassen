@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 from src.core.errors import UpstreamError
-from src.models.geocode import GeocodeResponse
+from src.models.geocode import GeocodeResponse, GeocodeSearchResponse
 
 _QUEUE_FULL_MESSAGE = (
     "Just nu är det för många samtidiga adressuppslag. Försök igen om en liten stund, "
@@ -20,13 +20,24 @@ class _Entry:
     cached_at: float
 
 
+@dataclass(frozen=True)
+class _SearchEntry:
+    response: GeocodeSearchResponse
+    cached_at: float
+
+
 class NominatimThrottle:
     """Spaces out upstream calls so no more than one starts per configured interval.
 
-    Shared across every distinct coordinate; a cache hit never reaches this throttle, only an
-    actual upstream fetch does. Not safe for concurrent callers on its own — it relies on
-    GeocodeCache holding a lock around every call to wait_turn, which serializes callers and
-    makes the internal state update race-free without a lock of its own.
+    Shared across every distinct coordinate and query, and across both reverse (GeocodeCache)
+    and forward (GeocodeSearchCache) lookups, since Nominatim's usage policy applies to this
+    app's total traffic, not per endpoint - a cache hit never reaches this throttle, only an
+    actual upstream fetch does. Not safe for concurrent callers on its own — it relies on every
+    caller holding the *same* lock around each call to wait_turn, which serializes them and
+    makes the internal state update race-free without a lock of its own. When GeocodeCache and
+    GeocodeSearchCache are constructed with the same lock instance (see app.py), this holds
+    across both; each still defaults to its own private lock when constructed standalone (e.g.
+    in isolated tests), where cross-cache serialization is moot.
     """
 
     def __init__(
@@ -89,13 +100,18 @@ class GeocodeCache:
         throttle: NominatimThrottle,
         max_queue_depth: int,
         monotonic: Callable[[], float] = time.monotonic,
+        lock: asyncio.Lock | None = None,
     ) -> None:
-        """Creates an empty cache bound to the given throttle."""
+        """Creates an empty cache bound to the given throttle.
+
+        lock defaults to a private lock when omitted; pass the same lock instance given to a
+        GeocodeSearchCache to serialize both through one throttle correctly (see its class doc).
+        """
         self._ttl_seconds = ttl_seconds
         self._throttle = throttle
         self._max_queue_depth = max_queue_depth
         self._monotonic = monotonic
-        self._lock = asyncio.Lock()
+        self._lock = lock if lock is not None else asyncio.Lock()
         self._entries: dict[tuple[float, float], _Entry] = {}
         self._pending = 0
 
@@ -140,6 +156,85 @@ class GeocodeCache:
             return None
         age = self._monotonic() - entry.cached_at
         # A negative age (clock running backwards) is treated as expired, not extended.
+        if not 0 <= age < self._ttl_seconds:
+            return None
+        return entry.response
+
+    def _purge_expired(self) -> None:
+        now = self._monotonic()
+        expired = [
+            key
+            for key, entry in self._entries.items()
+            if not 0 <= now - entry.cached_at < self._ttl_seconds
+        ]
+        for key in expired:
+            del self._entries[key]
+
+
+class GeocodeSearchCache:
+    """Serves repeated forward-geocode searches from memory and throttles the rest to Nominatim.
+
+    Mirrors GeocodeCache's shape exactly (TTL, lock-serialized misses, in-flight dedup, queue
+    depth cap, no stale fallback, lazy expiry) but is keyed by the trimmed, case-folded query
+    string instead of a coordinate pair, and stores a GeocodeSearchResponse instead of a
+    GeocodeResponse. See app.py: constructed with the *same* NominatimThrottle and lock instance
+    as GeocodeCache, since Nominatim's usage policy applies to this app's combined reverse and
+    forward traffic, not to each endpoint independently.
+    """
+
+    def __init__(
+        self,
+        ttl_seconds: float,
+        throttle: NominatimThrottle,
+        max_queue_depth: int,
+        monotonic: Callable[[], float] = time.monotonic,
+        lock: asyncio.Lock | None = None,
+    ) -> None:
+        """Creates an empty cache bound to the given throttle; see GeocodeCache's lock note."""
+        self._ttl_seconds = ttl_seconds
+        self._throttle = throttle
+        self._max_queue_depth = max_queue_depth
+        self._monotonic = monotonic
+        self._lock = lock if lock is not None else asyncio.Lock()
+        self._entries: dict[str, _SearchEntry] = {}
+        self._pending = 0
+
+    async def get_or_fetch(
+        self,
+        query: str,
+        fetch: Callable[[], Awaitable[GeocodeSearchResponse]],
+    ) -> GeocodeSearchResponse:
+        """Returns a cached result for this query, else throttles and fetches a fresh one.
+
+        Raises whatever fetch raises; a raised fetch is not cached. Raises
+        UpstreamError("geocode_queue_full", ...) without calling fetch at all if the queue
+        is already at max_queue_depth.
+        """
+        key = query.strip().casefold()
+        cached = self._fresh(key)
+        if cached is not None:
+            return cached
+        if self._pending >= self._max_queue_depth:
+            raise UpstreamError("geocode_queue_full", _QUEUE_FULL_MESSAGE, status_code=503)
+        self._pending += 1
+        try:
+            async with self._lock:
+                cached = self._fresh(key)
+                if cached is not None:
+                    return cached
+                await self._throttle.wait_turn()
+                response = await fetch()
+                self._entries[key] = _SearchEntry(response, self._monotonic())
+                self._purge_expired()
+                return response
+        finally:
+            self._pending -= 1
+
+    def _fresh(self, key: str) -> GeocodeSearchResponse | None:
+        entry = self._entries.get(key)
+        if entry is None:
+            return None
+        age = self._monotonic() - entry.cached_at
         if not 0 <= age < self._ttl_seconds:
             return None
         return entry.response

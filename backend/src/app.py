@@ -1,5 +1,6 @@
 """Creates the FastAPI application used by Uvicorn and the Vercel Python runtime."""
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -9,12 +10,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.api import crisis, geocode, health, vma
+from src.api import crisis, geocode, health, shelters, vma
 from src.core.config import Settings
 from src.core.errors import CrisisError, UpstreamError
 from src.models.crisis import CrisisErrorDetail, CrisisErrorResponse
 from src.models.errors import ErrorDetail, ErrorResponse
-from src.services.geocode_cache import GeocodeCache, NominatimThrottle
+from src.services.geocode_cache import GeocodeCache, GeocodeSearchCache, NominatimThrottle
+from src.services.shelters_cache import ShelterAreaCache
 from src.services.vma_cache import VmaCache
 
 logger = logging.getLogger(__name__)
@@ -41,16 +43,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version="0.1.0",
         description=(
             "Serves curated crisis preparedness articles, retrieves VMA information from "
-            "Sveriges Radio and reverse-geocodes positions through OpenStreetMap Nominatim."
+            "Sveriges Radio, reverse-geocodes positions through OpenStreetMap Nominatim and "
+            "finds the nearest civil-defense shelters through MCF's open shelter data."
         ),
         lifespan=lifespan,
     )
     application.state.settings = app_settings
     application.state.vma_cache = VmaCache()
+    # Shared across reverse and forward geocoding so Nominatim's ~1 request/second usage policy
+    # applies to this app's combined traffic, not to each endpoint independently - see
+    # GeocodeSearchCache's class doc.
+    nominatim_throttle = NominatimThrottle(app_settings.geocode_min_interval_seconds)
+    nominatim_lock = asyncio.Lock()
     application.state.geocode_cache = GeocodeCache(
         ttl_seconds=app_settings.geocode_cache_ttl_seconds,
-        throttle=NominatimThrottle(app_settings.geocode_min_interval_seconds),
+        throttle=nominatim_throttle,
         max_queue_depth=app_settings.geocode_max_queue_depth,
+        lock=nominatim_lock,
+    )
+    application.state.geocode_search_cache = GeocodeSearchCache(
+        ttl_seconds=app_settings.geocode_cache_ttl_seconds,
+        throttle=nominatim_throttle,
+        max_queue_depth=app_settings.geocode_max_queue_depth,
+        lock=nominatim_lock,
+    )
+    application.state.shelter_cache = ShelterAreaCache(
+        ttl_seconds=app_settings.shelters_cache_ttl_seconds,
     )
     application.add_middleware(
         CORSMiddleware,
@@ -86,6 +104,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(crisis.router, prefix="/api/v1")
     application.include_router(vma.router, prefix="/api/v1")
     application.include_router(geocode.router, prefix="/api/v1")
+    application.include_router(shelters.router, prefix="/api/v1")
     return application
 
 
