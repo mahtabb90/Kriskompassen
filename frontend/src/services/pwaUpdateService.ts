@@ -279,13 +279,32 @@ export function createPwaUpdateService(environment: PwaUpdateEnvironment | null)
   }
 }
 
+/**
+ * Returns the browser's service worker container without letting privacy settings break startup.
+ *
+ * Some browsers throw a SecurityError from the `serviceWorker` getter itself when site data is
+ * blocked, so an `in` check alone is not enough. The app then runs without offline app files.
+ *
+ * @param browserNavigator The navigator to read from.
+ * @returns The container, or undefined if it is unsupported or access is blocked.
+ */
+export function getServiceWorkerContainer(
+  browserNavigator: Navigator
+): ServiceWorkerContainer | undefined {
+  try {
+    return "serviceWorker" in browserNavigator ? browserNavigator.serviceWorker : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** Shared document-scoped owner; bootstrap starts it only in secure production builds. */
 export const pwaUpdateService = createPwaUpdateService(
   typeof window === "undefined"
     ? null
     : {
         enabled: import.meta.env.PROD && window.isSecureContext,
-        serviceWorker: "serviceWorker" in navigator ? navigator.serviceWorker : undefined,
+        serviceWorker: getServiceWorkerContainer(navigator),
         document,
         window,
         isOnline: () => navigator.onLine,

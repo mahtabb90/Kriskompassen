@@ -25,6 +25,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
   versions and build timestamps are not displayed in the user interface. Physical verification
   on an existing iPhone installation is pending. This change uses one production publication
   and a manual check on the existing device.
+- The app is installable through browsers' built-in install features (Chromium, Safari iOS "Add to Home Screen", Safari macOS "Add to Dock") and its precached shell starts offline after one online visit. There is no custom install UI.
 - Target users: the general public in Sweden.
 - **Binding product decision: KrisKompassen is intentionally account-free.** End-user accounts, account registration, sign-in/login, account-based profiles and account-based cloud persistence are out of scope and must not be implemented. A development ticket, issue or task description alone never overrides this decision. See §11 for what to do when a task asks for them, and §10 for how this relates to other authentication changes.
 - Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level "Sparad information" switch (`ModeToggle`, backed by `ModeContext`; on = offline mode, off = online mode) controls whether `/crisis` and `/crisis/:id` show articles fetched from the backend API or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
@@ -105,7 +106,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── e2e/             # Playwright tests (planned, not created)
     ├── index.html       # HTML entry (lang="sv")
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
-    ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs
+    ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs and Cache-Control headers
     ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
         ├── components/  # shared layout/header/navigation (desktop `BottomNavigation`, mobile `MobileMenu`, shared `navigationItems`), VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice and crisis/offline controls
@@ -148,7 +149,7 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 
 CI: both workflows trigger on pull requests into `dev` or `main` and on pushes to `dev`. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npm run format:check`, `npm run test` and `npm run build` on Node from `frontend/.nvmrc`. `.github/workflows/backend-ci.yml` runs the backend install, `ruff check .`, `ruff format --check .` and `pytest` on Python from `backend/.python-version`. Each workflow always starts (no `on: paths:`) and has three jobs: a change-detection job that diffs against the PR base branch or the previous push with `git diff` and logs the changed files, the check job that runs only when its folder or its own workflow file changed, and a gate job. The check job runs as a matrix on `ubuntu-latest`, `windows-latest` and `macos-latest` (`fail-fast: false`, `defaults.run.shell: bash`, 15-minute timeout, OS in the job name, e.g. `Frontend lint, tests and build (windows-latest)`). Change detection and the gate jobs stay on Ubuntu only. The gate aggregates all matrix variants, so one failing OS fails it, and a skipped matrix still counts as skipped. Do not mark the per-OS jobs as required checks. If the diff cannot be computed, the checks run anyway. The gate jobs `Frontend CI result` and `Backend CI result` are the status checks to mark as required in branch protection; they fail when change detection fails or when needed checks did not succeed. PR runs share one concurrency group per pull request and are cancelled when superseded; each push to `dev` gets its own group (`github.run_id`), so push runs are never queued behind, or cancelled by, a later push and always run to completion. CI uses no third-party actions.
 
-Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint. The user configured Vercel to install backend dependencies from `requirements.txt`; that dashboard setting is not stored in the repo. Connection settings, local testing against the deployed backend and the scope of reported live verification are documented in `backend/DEVELOPMENT.md`.
+Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint. The user configured Vercel to install backend dependencies from `requirements.txt`; that dashboard setting is not stored in the repo. Connection settings, local testing against the deployed backend and the scope of reported live verification are documented in `backend/DEVELOPMENT.md`. `frontend/vercel.json` sets `Cache-Control: no-cache` for `/sw.js`, `/manifest.webmanifest` and `/index.html`, and `public, max-age=31536000, immutable` for `/assets/*`. `vite preview` ignores these headers; verify them on a Vercel deployment.
 
 Create the backend environment with Python 3.13 using `python3 -m venv .venv` and activate it with `source .venv/bin/activate`. On Windows PowerShell, use `py -3.13 -m venv .venv` and `.venv\Scripts\Activate.ps1`. See `backend/DEVELOPMENT.md` for environment configuration and manual verification commands.
 
@@ -301,6 +302,7 @@ Frontend conventions visible in the existing code:
   updater adopt the release through an online opening and a full close/reopen after the new worker
   downloads; the new prompt requires the new
   app code to be loaded. Do not require a separate A/B test publication or clear local storage.
+- Manifest, iOS meta tags and precache (app shell, `assets/` images/fonts, `includeAssets` icons; `navigateFallback` `index.html`) are configured in `vite.config.ts` and `index.html`, with icon paths in one constant. A maskable icon is pending. `getServiceWorkerContainer()` treats a blocked `navigator.serviceWorker` as unsupported so the app still renders. User-facing behaviour: README "PWA and offline access".
 - Style with Tailwind utility classes in `className`. There are no separate CSS files beyond `index.css`.
 - Follow [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) for visual tokens and component patterns. VMA warning colours use the central `vma-surface`, `vma-foreground`, `vma-border` and `vma-focus` aliases in `index.css`; keep their documented contrast and focus treatment in sync with the implementation.
 - Put IndexedDB access in `db/` and `services/`, not in UI components. (`IndexedDbTest.tsx` is a test page and an exception.)
@@ -413,6 +415,7 @@ Decided tooling:
   guide for this change. Existing VMA and layout tests remain. Device migration, saved articles,
   offline reopening and actual VoiceOver output are pending live verification; local build checks
   do not establish those results.
+- `pwaUpdateService.test.ts` covers registration failure only: a throwing or missing container, rejected `register`/`getRegistration`, and disabled bootstrap outside secure production builds. Update/activation flow tests remain out of scope.
 - The backend pytest suite runs in CI whenever `backend/` changes (see §4) and must not need network access or environment variables.
 - Backend CORS tests provide their own JSON origin environment variable and mock upstream transport. They check that approved frontend origins can read successful feeds and 502/504 errors, and that unlisted origins or unsupported methods do not pass preflight.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
