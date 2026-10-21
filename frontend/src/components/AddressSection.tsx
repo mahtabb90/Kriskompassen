@@ -6,6 +6,7 @@ import {
   type AddressLabel,
   type GeocodeCandidate,
 } from "../types/address"
+import { isValidLatLon, parseCoordinates } from "../utils/coordinates"
 
 type LabelKind = AddressLabel["kind"]
 
@@ -35,15 +36,28 @@ interface AddressSectionProps {
 }
 
 /**
- * Lets the user compose one address by typing it or by fetching the device's position.
+ * Lets the user compose one address by typing it, pasting coordinates, or fetching the
+ * device's position.
  *
  * Both paths are always visible rather than gated behind a mode switch, so the "Hämta min
  * position" button stays a clearly visible control per the ticket's acceptance criteria.
- * A geolocated address is always labelled approximate; "Ändra adress" refills the form with
- * the resolved text for correction rather than hiding either control. Once an address is
- * resolved, the label picker and "Spara adress" appear in the same preview card; the caller
- * still owns the label/save state (and calls `onResolved` to track the pending address) via
- * `onSave`.
+ * A geolocated or coordinates address is always labelled approximate; "Ändra adress" refills
+ * the form with the resolved text for correction rather than hiding either control. Once an
+ * address is resolved, the label picker and "Spara adress" appear in the same preview card; the
+ * caller still owns the label/save state (and calls `onResolved` to track the pending address)
+ * via `onSave`.
+ *
+ * The same text field accepts either a street address or a latitude/longitude pair (decimal
+ * degrees, separated by a comma and/or whitespace), e.g. pasted from another map service. Text
+ * shaped like coordinates skips the address search and is instead range-checked and
+ * reverse-geocoded exactly like a fetched device position, producing an approximate,
+ * re-lookupable `source: "coordinates"` address; out-of-range text shows an inline error before
+ * any network call. Ordinary address text is forward-geocoded through the backend: a unique
+ * match resolves immediately, no match reports an error, and more than one match (e.g.
+ * "Storgatan 1" exists in several municipalities) shows a list for the user to pick from. The
+ * field keeps what was typed until a lookup actually succeeds, so a failed lookup never forces
+ * the user to retype it, and while "choosing" is in progress the user can still see and refine
+ * what they typed alongside the candidate list.
  */
 function AddressSection({
   onResolved,
@@ -65,8 +79,10 @@ function AddressSection({
     submitManualAddress,
     selectCandidate,
     requestLocation,
+    submitCoordinates,
   } = useAddress()
   const [inputValue, setInputValue] = useState("")
+  const [coordinateRangeError, setCoordinateRangeError] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
   const candidatesHeadingRef = useRef<HTMLHeadingElement>(null)
   const helpTextId = useId()
@@ -75,8 +91,8 @@ function AddressSection({
   // Adjusted during render (React's documented pattern for resetting state when a value
   // changes, using state rather than a ref so it survives Strict Mode's extra render) instead
   // of in an effect, since this is local UI state, not a call to an external system. Only a
-  // final resolution clears the input - while "choosing" is in progress, the user can still see
-  // and refine what they typed alongside the candidate list.
+  // final resolution clears the input - while "choosing" is in progress, or after a failed
+  // lookup, the user can still see and refine what they typed.
   const [previousAddress, setPreviousAddress] = useState<Address | null>(null)
   if (address !== previousAddress) {
     setPreviousAddress(address)
@@ -93,6 +109,21 @@ function AddressSection({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const coordinates = parseCoordinates(inputValue.trim())
+
+    if (coordinates) {
+      if (!isValidLatLon(coordinates.lat, coordinates.lon)) {
+        setCoordinateRangeError(
+          "Koordinaterna är utanför giltigt intervall (latitud -90 till 90, longitud -180 till 180)."
+        )
+        return
+      }
+      setCoordinateRangeError("")
+      submitCoordinates(coordinates.lat, coordinates.lon)
+      return
+    }
+
+    setCoordinateRangeError("")
     submitManualAddress(inputValue)
   }
 
@@ -128,10 +159,17 @@ function AddressSection({
             type="text"
             autoComplete="street-address"
             required
-            placeholder="T.ex. Storgatan 1, Stockholm"
+            placeholder="T.ex. Storgatan 1, Stockholm eller 59.3293, 18.0686"
             aria-describedby="address-format-hint"
             value={inputValue}
-            onChange={(event) => setInputValue(event.target.value)}
+            onChange={(event) => {
+              event.target.setCustomValidity("")
+              setInputValue(event.target.value)
+              setCoordinateRangeError("")
+            }}
+            onInvalid={(event) => {
+              event.currentTarget.setCustomValidity("Ange en adress eller koordinater.")
+            }}
             className="min-h-12 rounded-xl border-2 border-blue-900 px-4 py-2 text-base text-slate-900 sm:flex-1"
           />
           <button
@@ -139,12 +177,17 @@ function AddressSection({
             disabled={loading}
             className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-950 disabled:opacity-60"
           >
-            {resolvingSource === "manual" ? "Söker adress…" : "Bekräfta adress"}
+            {resolvingSource === "manual"
+              ? "Söker adress…"
+              : resolvingSource === "coordinates"
+                ? "Slår upp koordinater…"
+                : "Bekräfta adress"}
           </button>
         </div>
         <p id="address-format-hint" className="text-xs text-slate-500">
           Skriv gatuadress, nummer och ort, t.ex. &quot;Storgatan 1, Stockholm&quot;, så blir
-          adressen tydlig och går inte att förväxla med en gata med samma namn på en annan ort.
+          adressen tydlig och går inte att förväxla med en gata med samma namn på en annan ort. Du
+          kan även klistra in koordinater (latitud, longitud), t.ex. &quot;59.3293, 18.0686&quot;.
         </p>
       </form>
 
@@ -223,6 +266,20 @@ function AddressSection({
                     Hämta ny position
                   </button>
                 )}
+                {address.source === "coordinates" &&
+                  address.lat !== undefined &&
+                  address.lon !== undefined && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        submitCoordinates(address.lat as number, address.lon as number)
+                      }
+                      disabled={loading}
+                      className="min-h-12 min-w-12 rounded-xl border-2 border-blue-900 bg-white px-4 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-50 disabled:opacity-60"
+                    >
+                      Slå upp igen
+                    </button>
+                  )}
               </div>
 
               <form onSubmit={onSave} className="flex flex-col gap-3 sm:w-64 sm:flex-shrink-0">
@@ -272,7 +329,7 @@ function AddressSection({
               </form>
             </div>
 
-            {address.source === "geolocated" && (
+            {(address.source === "geolocated" || address.source === "coordinates") && (
               <p className="text-xs text-slate-500">Positionsdata: © OpenStreetMap-bidragsgivare</p>
             )}
           </div>
@@ -280,7 +337,7 @@ function AddressSection({
       </div>
 
       <div role="alert" className="mt-3 text-sm font-medium text-red-800">
-        {failed ? errorMessage : ""}
+        {coordinateRangeError || (failed ? errorMessage : "")}
       </div>
     </section>
   )

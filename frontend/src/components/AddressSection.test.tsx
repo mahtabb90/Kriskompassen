@@ -33,7 +33,7 @@ function baseProps() {
   }
 }
 
-/** Types an address, confirms it and awaits the (now network-backed) resolution. */
+/** Types an address, confirms it and awaits the (network-backed) resolution. */
 async function confirmManualAddress(text: string) {
   fireEvent.change(screen.getByLabelText("Adress"), { target: { value: text } })
   await act(async () => {
@@ -242,6 +242,90 @@ describe("AddressSection", () => {
     expect(within(previewCard).getByText("Vad är det här för plats?")).toBeTruthy()
     expect(within(previewCard).getByRole("radio", { name: "Hem" })).toBeTruthy()
     expect(within(previewCard).getByRole("button", { name: "Spara adress" })).toBeTruthy()
+  })
+
+  it("treats a typed coordinate pair as approximate and re-lookupable, not manual", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ found: true, address: "Drottninggatan 1", lat: 59.3293, lon: 18.0686 })
+    )
+
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "59.3293, 18.0686" } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Bekräfta adress|Slår upp koordinater/ }))
+    })
+
+    expect(screen.getByText("Drottninggatan 1")).toBeTruthy()
+    expect(screen.getByText(/ungefärlig position/)).toBeTruthy()
+    expect(screen.getByText(/OpenStreetMap/)).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Slå upp igen" })).toBeTruthy()
+    expect(screen.queryByText("Angiven manuellt")).toBeNull()
+  })
+
+  it("shows an inline error for out-of-range coordinates without calling the backend", () => {
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "120, 200" } })
+    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+
+    expect(screen.getByRole("alert").textContent).toContain("intervall")
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("shows the same no-address message for valid but unresolvable coordinates", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ found: false, message: "Ingen adress kunde hittas." })
+    )
+
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "0 0" } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Bekräfta adress|Slår upp koordinater/ }))
+    })
+
+    expect(screen.getByRole("alert").textContent).toContain("Ingen adress kunde hittas.")
+  })
+
+  it("keeps the typed coordinates in the field after a failed lookup, so retrying needs no retyping", async () => {
+    fetchMock.mockRejectedValue(new TypeError("network down"))
+
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "59.3293, 18.0686" } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Bekräfta adress|Slår upp koordinater/ }))
+    })
+
+    expect(screen.getByRole("alert").textContent).toContain("kunde inte slås upp")
+    expect((screen.getByLabelText("Adress") as HTMLInputElement).value).toBe("59.3293, 18.0686")
+  })
+
+  it("clears the field only once a coordinate lookup actually succeeds", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ found: true, address: "Drottninggatan 1", lat: 59.3293, lon: 18.0686 })
+    )
+
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+    fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "59.3293, 18.0686" } })
+    const input = screen.getByLabelText("Adress") as HTMLInputElement
+    expect(input.value).toBe("59.3293, 18.0686")
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Bekräfta adress|Slår upp koordinater/ }))
+    })
+
+    expect(input.value).toBe("")
+  })
+
+  it("treats ordinary address text as manual (forward-geocoded), unaffected by the coordinate check", async () => {
+    fetchMock.mockResolvedValue(
+      searchResponse([{ address: "Storgatan 1, Exempelstad", lat: 1, lon: 2 }])
+    )
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+
+    await confirmManualAddress("Storgatan 1")
+
+    expect(screen.getByText("Angiven manuellt")).toBeTruthy()
+    expect(screen.queryByText(/intervall/)).toBeNull()
   })
 
   it("reports a label change and submits via onSave when saving", async () => {

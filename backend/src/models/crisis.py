@@ -12,9 +12,9 @@ _SOURCE_URL = TypeAdapter(AnyHttpUrl)
 
 
 class CrisisArticle(BaseModel):
-    """Preserves source text and its compilation time; excludes local saving state.
+    """Carries curated text, source attribution and review time; excludes local saving state.
 
-    IDs are URL-safe segments. fetchedAt is the original compilation timestamp in
+    IDs are URL-safe segments. fetchedAt is the content edition's compilation/review timestamp in
     millisecond-precision UTC, not the time of the current HTTP request.
     """
 

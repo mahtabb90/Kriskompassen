@@ -58,7 +58,10 @@ remain readable and are never automatically overwritten by online responses.
 
 ### Updating and publishing article content
 
-1. Edit `src/data/crisis.json`, preserving stable IDs, source attribution and complete text.
+1. Edit `src/data/crisis.json` using independently worded Swedish summaries. Retain stable IDs,
+   source attribution and the meaning of the source's advice, quantities and safety qualifications.
+   Check each article against its current source and the linked responsible authority where
+   clarification is needed. Record the URLs, review date and checked facts in the review table below.
    Update `fetchedAt` only when compiling/verifying the content again; do not set it per request.
 2. Run the backend checks from this guide and inspect list/detail responses in `/docs`.
 3. Publish the backend through the team's existing manual process. The JSON file is part of the
@@ -68,6 +71,30 @@ remain readable and are never automatically overwritten by online responses.
    and CORS. This repository change does not establish production verification.
 5. After a content-only publication, a fresh online visit/mode entry retrieves the new articles.
    Saved offline copies retain their saved content until explicitly removed and saved again.
+
+### Preparedness article source review
+
+The six Swedish summaries were rewritten and checked on 2026-10-20. Their shared compilation/
+review timestamp is `2026-10-20T12:37:11.000Z`; IDs, titles, display order and Krisinformation.se
+attribution are retained. This is a dated editorial check, not automatic ongoing source validation.
+The language review distinguishes preparations made in advance from conditional advice for an
+actual disruption. It also replaces ambiguous food/radio instructions, uses consistent reader
+address and explains the prescription exclusions in shorter sentences.
+
+The former `/forbered-dig/hemberedskap/...` URLs now redirect to Krisinformation.se's new structure.
+The public source links use the current Hemberedskap page for five articles and the specific
+internet/telephony article for communication. The relevant Hemberedskap sections and supporting
+authority pages checked for each article are listed below. The authority pages clarify safety
+qualifications that must also survive summarisation.
+
+| Article ID | Reviewed on | Krisinformation.se source | Supporting authority sources | Checked facts and qualifications |
+| --- | --- | --- | --- | --- |
+| `food-in-crisis` | 2026-10-20 | [Hemberedskap, introduction and Mat](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Myndigheten för civilt försvar: Tillgång till mat i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/mat/tillgang-till-mat-i-kris/) | At least one week's household food; energy, room-temperature storage, quick or no cooking, little preparation water and gradual stocking. |
+| `drinking-water-in-crisis` | 2026-10-20 | [Hemberedskap, Dricksvatten](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Myndigheten för civilt försvar: Tillgång till vatten i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/vatten/tillgang-till-vatten-i-kris/), [Livsmedelsverket: Kokning av dricksvatten](https://www.livsmedelsverket.se/livsmedel-och-innehall/dricksvatten/nar-du-maste-koka-dricksvattnet/kokning-av-dricksvatten---faktablad-teckensprak/), [Livsmedelsverket: Information vid kvalitetsproblem, När ska man rekommendera kokning?](https://kontrollwiki.livsmedelsverket.se/artikel/391/information-vid-kvalitetsproblem) | Three to five litres per adult/day including basic hygiene, following the more specific MCF wording (Krisinformation.se says per person). Additional pet needs; clean, sealed drinking-water containers, cool/dark storage and municipal collection. Follow local water notices; boiling addresses microorganisms and does not make chemically contaminated water safe. |
+| `medication-in-crisis` | 2026-10-20 | [Hemberedskap, Läkemedel](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Socialstyrelsen: Om rekommendationen](https://www.socialstyrelsen.se/medicin-for-en-manad/om-rekommendationen/), [Socialstyrelsen: Frågor och svar](https://www.socialstyrelsen.se/medicin-for-en-manad/fragor-och-svar/) | One month's reserve for long-term prescriptions and prescribed consumables; oldest medicines first. Retain all listed exclusions, including non-prescribed consumables and medical restrictions on advance dispensing. A reserve is not a cap on stock immediately after a regular prescription collection. Contact the prescriber when individual planning is needed. |
+| `heating-in-crisis` | 2026-10-20 | [Hemberedskap, Värme](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Myndigheten för civilt försvar: Tillgång till värme i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/tillgang-till-varme-i-kris/) | Share a room, limit draughts, use layers and insulating bedding. Keep escape routes and ventilation usable; follow heater instructions, ventilate regularly, prevent fires and avoid stove/candle use during sleep. |
+| `communication-in-crisis` | 2026-10-20 | [Om internet och telefoni går ner](https://www.krisinformation.se/din-beredskap/kommunikation/om-internet-och-telefoni-gar-ner/) | [Myndigheten för civilt försvar: Tillgång till kommunikation i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/tillgang-till-kommunikation-i-kris/) | Local P4 information, radios independent of mains power, car radio, spare batteries, written telephone numbers, charged powerbank and car charging. |
+| `hygiene-in-crisis` | 2026-10-20 | [Hemberedskap, Toalett och hygien](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Myndigheten för civilt försvar: Tvätt och toalett i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/vatten/hygien-tvatt-och-toalett/) | Prioritise drinking/cooking water; prepare hygiene supplies and a covered bucket. Preserve hand hygiene and municipality-specific toilet-waste handling rather than assuming one disposal method applies everywhere. |
 
 The Python runtime includes project files in its function bundle; see
 [Vercel's Python bundling documentation](https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled).

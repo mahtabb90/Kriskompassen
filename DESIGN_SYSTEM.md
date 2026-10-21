@@ -204,11 +204,11 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
   Modern mobile screens with rounded corners, notches, and home indicator bars require safe-area handling:
   - Header: `pt-[env(safe-area-inset-top)]`
   - Root container: `pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]`
-  - Fixed navigation bar: `padding-bottom: env(safe-area-inset-bottom)`
+  - Fixed mobile menu button: `bottom: max(0.75rem, env(safe-area-inset-bottom))`; the full-screen menu pads all four edges with the matching insets
 - **Dynamic Content Offset:**
-  When the navigation bar is fixed at the bottom of the viewport on mobile, the root element tracks `--navigation-height` dynamically via `ResizeObserver`. The main container applies:
+  When the **Meny** button is fixed at the bottom of the viewport on mobile (below `48rem`), the root element tracks `--navigation-height` dynamically via `ResizeObserver`. The main container applies:
   `pb-[calc(var(--navigation-height,0px)+2rem)]`
-  This reserves sufficient scroll space so no content is obscured behind the fixed bottom bar.
+  This reserves sufficient scroll space so no content is obscured behind the fixed button. It is `0px` from `48rem` upwards, where the button is hidden.
 
 ### 4.3 Responsive Content Grids
 
@@ -344,45 +344,20 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 
 ## 7. Navigation Patterns
 
-KrisKompassen uses a single shared navigation component (`BottomNavigation`) that adapts seamlessly across device viewports.
+KrisKompassen shows the same primary links, from the shared `navigationItems` list, through two components: `BottomNavigation` (desktop) and `MobileMenu` (mobile). Never duplicate the labels or paths.
 
 ### 7.1 Responsive Placement
 
-- **Mobile Viewports (`width < 48rem` and `height >= 30rem`):**
-  Fixed at the bottom of the screen (`position: fixed; inset-inline: 0; bottom: 0`).
-  A subtle top shadow (`box-shadow: 0 -4px 16px rgb(15 23 42 / 0.06)`) distinguishes the navigation from the scrolling page content.
-  Only this fixed bar uses a single horizontal row of full labels with 48×48px minimum
-  targets. Links scroll natively; a thin scrollbar and left/right controls make overflow
-  discoverable. The controls appear only when the contents exceed the width available without
-  arrows. They reuse the white/blue outlined-button palette with redundant, hidden-from-AT SVG
-  chevrons and the Swedish names **Rulla menyn åt vänster** / **Rulla menyn åt höger**.
-  Unavailable directions have `aria-disabled="true"`, reduced opacity and no tab stop; a focused
-  control stays focused when it reaches an edge. Arrow actions scroll most of the visible row,
-  using immediate movement for reduced motion. Focus from the keyboard or scripts, and route
-  changes, reveal their link with padding for the standard outward focus outline. Pointer focus
-  preserves the link's position until selection completes, so clipped links remain tappable.
-  Further menu items extend the same row.
+- **Mobile Viewports (`width < 48rem`, any height):**
+  The in-flow navigation is hidden. One fixed **Meny** button sits at the bottom centre (`fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2`): a primary blue button (`bg-blue-900`, white text, `rounded-xl`, `shadow-lg`, minimum 48×48px) with a decorative hamburger SVG (`aria-hidden`) and the visible text "Meny". It stays fixed while scrolling and in landscape.
 - **Desktop & Wide Viewports (`width >= 48rem`):**
-  Renders in standard document flow directly beneath the header, with a 2px top border in the page canvas colour (`border-t-2 border-t-[#D7E2EF]`) and a 1px bottom border (`border-b border-b-slate-200`).
-- **Short Viewports (`height < 30rem` regardless of width):**
-  Remains in standard document flow above page content, preventing the navigation bar from blocking content on landscape phones or at high zoom levels.
-  Short viewports and the existing tall-content fallback retain wrapped links and no scroll
-  arrows. If an arrow loses availability because the controls disappear, focus returns to the
-  current link (or the first link when no route is active).
-  Viewport resizes recheck the compact bottom layout before applying the height safeguard;
-  a larger wrapped layout does not permanently prevent a return to the bottom edge.
+  `BottomNavigation` renders in standard document flow directly beneath the header, with a 2px top border in the page canvas colour (`border-t-2 border-t-[#D7E2EF]`) and a 1px bottom border (`border-b border-b-slate-200`). Links wrap onto further rows; there is no horizontal scrolling. The Meny button and dialog are not shown.
 
-### 7.2 Link States and Non-Colour Indicators
+### 7.2 Mobile Menu Dialog
 
-- **Active Link State:**
-  - Background: `bg-blue-900`
-  - Text: `text-white font-bold`
-  - Indicator: `underline decoration-2 underline-offset-4`
-  - Rationale: Combines colour, text weight, and an underline decoration so active state does not rely on colour alone.
-- **Layout Shift Prevention:**
-  Links use an invisible duplicate label (`aria-hidden="true" invisible font-bold`) positioned in the same CSS grid cell. This reserves the width of the bold font so toggling between active and inactive states causes zero layout shift.
-- **Inactive Link State:**
-  `font-medium text-slate-700 hover:bg-slate-100 hover:text-blue-900`
+- A native modal `<dialog>` named **Meny** covers the whole viewport, including the header and the VMA notice, on a white surface with safe-area padding. The dialog element itself is fullscreen (`.mobile-menu-dialog`: fixed, `inset: 0`, no margin or border, `width: 100%`, `height`/`min-height: 100dvh`, no max-width/max-height), not only its backdrop. A **Stäng menyn** outlined button (48×48px minimum) sits in a fixed top row beside the heading; the link list below scrolls internally (`overscroll-contain`), so short screens and enlarged text remain usable.
+- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Min info). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
+- The modal makes the page inert, locks page scrolling and wraps Tab at its boundaries. Escape and **Stäng menyn** return focus to the Meny button, as does selecting the current route. Selecting another route closes the menu and leaves focus to the layout page-heading focus. Crossing `48rem` while open closes it without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating). There is no animation.
 
 ---
 
@@ -457,14 +432,11 @@ KrisKompassen performs offline storage operations and network calls that must be
   `rounded-2xl`, `shadow-sm`, blue heading and primary button. It is informational; it does not
   use the active VMA warning surface or icon.
 - The notice appears before routed content. At heights of at least `40rem`, its layout slot is
-  sticky below the measured VMA height with z-index 10 (VMA 30, navigation 20). The visible region
+  sticky below the measured VMA height with z-index 10 (VMA 30, Meny button 20). The visible region
   is limited to `25dvh` and scrolls internally. Lower viewports use unrestricted normal flow.
 - The layout includes the measured slot height in `--pwa-update-height` and root scroll padding.
   Focused page controls are revealed below both notices; update controls in normal flow receive
   the same protection. Internal scrolling retains full copy and access to the 48×48px button.
-- If enlarged navigation content exceeds 25% of the viewport height, the shared navigation
-  returns to normal flow above the content, retaining the same links and keyboard order.
-  CSS media-query `rem` units alone cannot detect enlarged root text.
 - A persistent `role="status"`, named **Appuppdatering**, announces availability, activation and
   action failure politely. It does not take focus or reannounce on route changes. The visible,
   keyboard-scrollable region is named **Uppdatering av appen**; its outline is inset to remain
