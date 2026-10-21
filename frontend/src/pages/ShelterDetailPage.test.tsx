@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { useAddresses } from "../context/addressContext"
+import { useAddresses, type AddressContextValue } from "../context/addressContext"
 import { getCachedShelterById } from "../services/shelterStorageService"
 import type { CachedShelter } from "../types/shelter"
 import ShelterDetailPage from "./ShelterDetailPage"
@@ -43,9 +43,9 @@ function mockActiveAddress(
       municipality: "Solna kommun",
       ...overrides,
     },
-    // @ts-expect-error only the fields the page reads are provided by this test double
     loading: false,
-  })
+    // Only the fields the page reads are provided by this test double.
+  } as unknown as AddressContextValue)
 }
 
 function renderDetail(id = fullShelter.id) {

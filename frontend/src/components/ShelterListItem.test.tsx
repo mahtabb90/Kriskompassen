@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { useAddresses } from "../context/addressContext"
+import { useAddresses, type AddressContextValue } from "../context/addressContext"
 import type { NearestShelter } from "../hooks/useNearestShelters"
 import ShelterListItem from "./ShelterListItem"
 
@@ -11,8 +11,10 @@ vi.mock("../context/addressContext", () => ({
 }))
 
 function mockActiveAddress(municipality: string | null = "Solna kommun") {
-  // @ts-expect-error only the field the component reads is provided by this test double
-  vi.mocked(useAddresses).mockReturnValue({ activeAddress: { municipality } })
+  // Only the field the component reads is provided by this test double.
+  vi.mocked(useAddresses).mockReturnValue({
+    activeAddress: { municipality },
+  } as unknown as AddressContextValue)
 }
 
 const fullShelter: NearestShelter = {
