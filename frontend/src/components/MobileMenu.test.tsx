@@ -233,6 +233,8 @@ describe("MobileMenu install button", () => {
     const install = within(dialog).getByRole("button", { name: "Installera app" })
     const first = within(dialog).getByRole("button", { name: "Stäng menyn" })
     expect(within(dialog).getByRole("list").contains(install)).toBe(false)
+    // The menu keeps the full-size secondary variant, which has no icon.
+    expect(install.querySelector("svg")).toBe(null)
     install.focus()
     fireEvent.keyDown(install, { key: "Tab" })
     expect(document.activeElement).toBe(first)

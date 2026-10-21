@@ -85,6 +85,13 @@ describe("Header install button", () => {
     )
   })
 
+  it("uses the discreet text variant with its decorative icon", () => {
+    offerInstall()
+    mountHeader()
+    const install = screen.getByRole("button", { name: "Installera app" })
+    expect(install.querySelector("svg[aria-hidden='true']")).not.toBe(null)
+  })
+
   it("prompts, disappears and moves focus to the page heading", async () => {
     const event = offerInstall()
     mountHeader()

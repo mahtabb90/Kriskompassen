@@ -51,16 +51,18 @@ function Header({ reserveTopInset = true }: { reserveTopInset?: boolean }) {
           <div
             className={
               "flex flex-col items-start gap-2 md:col-start-2 md:row-span-4 md:row-start-1 " +
-              "md:items-end md:self-start md:justify-self-end"
+              "md:self-start md:justify-self-end"
             }
           >
             <ModeToggle />
-            {/* The negative margin halves the gap below the switch, so the button fits beside the
-                left column's brand, tagline and status without growing the header online. */}
-            <div className="empty:hidden max-md:hidden md:-mt-1">
-              <InstallAppButton />
+            {/* The text button's px-2 and this padding match the switch's px-2, so the switch label,
+                help text, button content and address share one left edge. */}
+            <div className="empty:hidden max-md:hidden">
+              <InstallAppButton variant="text" />
             </div>
-            <AddressIndicator />
+            <div className="empty:hidden md:px-2">
+              <AddressIndicator />
+            </div>
           </div>
         </div>
       </div>

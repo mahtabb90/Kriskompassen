@@ -6,12 +6,16 @@ import InstallAppButton from "./InstallAppButton"
 
 vi.mock("../hooks/useInstallPrompt", () => ({ useInstallPrompt: vi.fn() }))
 
-function mountButton(canInstall: boolean, afterPrompt?: () => void) {
+function mountButton(
+  canInstall: boolean,
+  afterPrompt?: () => void,
+  variant?: "secondary" | "text"
+) {
   const promptInstall = vi.fn().mockResolvedValue("accepted")
   vi.mocked(useInstallPrompt).mockReturnValue({ canInstall, promptInstall })
   const view = render(
     <>
-      <InstallAppButton afterPrompt={afterPrompt} />
+      <InstallAppButton afterPrompt={afterPrompt} variant={variant} />
       <h1 id="page-heading" tabIndex={-1}>
         Hem
       </h1>
@@ -40,6 +44,16 @@ describe("InstallAppButton", () => {
     expect(button.tagName).toBe("BUTTON")
     expect(button.getAttribute("type")).toBe("button")
     expect(button.hasAttribute("aria-label")).toBe(false)
+    expect(button.querySelector("svg")).toBe(null)
+  })
+
+  it("adds a decorative icon in the text variant without changing the accessible name", () => {
+    mountButton(true, undefined, "text")
+
+    const button = screen.getByRole("button", { name: "Installera app" })
+    const icon = button.querySelector("svg")
+    expect(icon?.getAttribute("aria-hidden")).toBe("true")
+    expect(icon?.getAttribute("focusable")).toBe("false")
   })
 
   it("opens the install prompt and moves focus to the page heading", () => {
