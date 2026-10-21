@@ -5,6 +5,7 @@ import {
   saveAddress,
   setActiveAddress,
 } from "../services/addressStorageService"
+import { prefetchNearestShelters } from "../services/shelterPrefetchService"
 import type { Address, AddressLabel, SavedAddress } from "../types/address"
 
 interface State {
@@ -36,11 +37,21 @@ export function useSavedAddresses() {
     }
   }, [refresh])
 
-  /** Saves a new address. Activates it automatically if it is the first one saved. */
+  /**
+   * Saves a new address. Activates it automatically if it is the first one saved.
+   *
+   * When the saved address has coordinates, also kicks off a background prefetch of its
+   * nearest shelters so they are already cached offline later - e.g. if MCF's service is
+   * unreachable the next time this address is used. Never awaited: a slow or failed prefetch
+   * must not delay or fail the save itself.
+   */
   const addAddress = useCallback(
     async (address: Address, label: AddressLabel) => {
-      await saveAddress(address, label)
+      const saved = await saveAddress(address, label)
       await refresh()
+      if (typeof saved.lat === "number" && typeof saved.lon === "number") {
+        void prefetchNearestShelters({ lat: saved.lat, lon: saved.lon })
+      }
     },
     [refresh]
   )

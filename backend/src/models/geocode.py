@@ -55,3 +55,24 @@ class GeocodeResponse(BaseModel):
     lon: float | None = None
     message: str | None = None
     source: GeocodeSource
+
+
+class GeocodeCandidate(BaseModel):
+    """One address match from a forward geocode search, e.g. for a manually typed address."""
+
+    address: str
+    municipality: str | None = None
+    county: str | None = None
+    lat: float
+    lon: float
+
+
+class GeocodeSearchResponse(BaseModel):
+    """Reports every address match found for a free-text query, most relevant first.
+
+    An empty candidate list is a normal outcome for a query Nominatim cannot resolve, not an
+    UpstreamError.
+    """
+
+    candidates: list[GeocodeCandidate]
+    source: GeocodeSource

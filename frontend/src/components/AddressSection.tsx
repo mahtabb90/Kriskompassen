@@ -1,6 +1,11 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react"
 import { useAddress } from "../hooks/useAddress"
-import { LOW_ACCURACY_THRESHOLD_METERS, type Address, type AddressLabel } from "../types/address"
+import {
+  LOW_ACCURACY_THRESHOLD_METERS,
+  type Address,
+  type AddressLabel,
+  type GeocodeCandidate,
+} from "../types/address"
 import { isValidLatLon, parseCoordinates } from "../utils/coordinates"
 
 type LabelKind = AddressLabel["kind"]
@@ -31,24 +36,28 @@ interface AddressSectionProps {
 }
 
 /**
- * Lets the user compose one address by typing it or by fetching the device's position.
+ * Lets the user compose one address by typing it, pasting coordinates, or fetching the
+ * device's position.
  *
  * Both paths are always visible rather than gated behind a mode switch, so the "Hämta min
  * position" button stays a clearly visible control per the ticket's acceptance criteria.
- * A geolocated address is always labelled approximate; "Ändra adress" refills the form with
- * the resolved text for correction rather than hiding either control. Once an address is
- * resolved, the label picker and "Spara adress" appear in the same preview card; the caller
- * still owns the label/save state (and calls `onResolved` to track the pending address) via
- * `onSave`.
+ * A geolocated or coordinates address is always labelled approximate; "Ändra adress" refills
+ * the form with the resolved text for correction rather than hiding either control. Once an
+ * address is resolved, the label picker and "Spara adress" appear in the same preview card; the
+ * caller still owns the label/save state (and calls `onResolved` to track the pending address)
+ * via `onSave`.
  *
- * The same text field also accepts a latitude/longitude pair (decimal degrees, separated by
- * a comma and/or whitespace), e.g. pasted from another map service. Submitting such text skips
- * `submitManualAddress` and instead range-checks and reverse-geocodes it exactly like a fetched
- * device position — producing an approximate, re-lookupable `source: "coordinates"` address.
- * Text that is out of range shows an inline error before any network call; text that does not
- * look like coordinates at all falls through to the normal manual-address path unchanged. The
- * field keeps the typed coordinates until the lookup actually succeeds, so a failed lookup
- * (network error, timeout or no resolvable address) never forces the user to retype them.
+ * The same text field accepts either a street address or a latitude/longitude pair (decimal
+ * degrees, separated by a comma and/or whitespace), e.g. pasted from another map service. Text
+ * shaped like coordinates skips the address search and is instead range-checked and
+ * reverse-geocoded exactly like a fetched device position, producing an approximate,
+ * re-lookupable `source: "coordinates"` address; out-of-range text shows an inline error before
+ * any network call. Ordinary address text is forward-geocoded through the backend: a unique
+ * match resolves immediately, no match reports an error, and more than one match (e.g.
+ * "Storgatan 1" exists in several municipalities) shows a list for the user to pick from. The
+ * field keeps what was typed until a lookup actually succeeds, so a failed lookup never forces
+ * the user to retype it, and while "choosing" is in progress the user can still see and refine
+ * what they typed alongside the candidate list.
  */
 function AddressSection({
   onResolved,
@@ -62,32 +71,41 @@ function AddressSection({
   const {
     address,
     loading,
+    resolvingSource,
+    choosing,
+    candidates,
     failed,
     errorMessage,
     submitManualAddress,
+    selectCandidate,
     requestLocation,
     submitCoordinates,
   } = useAddress()
   const [inputValue, setInputValue] = useState("")
   const [coordinateRangeError, setCoordinateRangeError] = useState("")
-  const [lastSeenAddress, setLastSeenAddress] = useState<Address | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const candidatesHeadingRef = useRef<HTMLHeadingElement>(null)
   const helpTextId = useId()
   const geolocationSupported = "geolocation" in navigator
 
-  // Clears the field during render, the moment a coordinate lookup actually resolves to a new
-  // address — not in handleSubmit, where the lookup hasn't settled yet. A failed lookup never
-  // reaches this branch, so the typed coordinates stay put and the user can retry without
-  // retyping them. Comparing against `lastSeenAddress` (React's documented pattern for reacting
-  // to a value change during render) keeps this from re-clearing on every unrelated re-render.
-  if (address !== lastSeenAddress) {
-    setLastSeenAddress(address)
-    if (address?.source === "coordinates") setInputValue("")
+  // Adjusted during render (React's documented pattern for resetting state when a value
+  // changes, using state rather than a ref so it survives Strict Mode's extra render) instead
+  // of in an effect, since this is local UI state, not a call to an external system. Only a
+  // final resolution clears the input - while "choosing" is in progress, or after a failed
+  // lookup, the user can still see and refine what they typed.
+  const [previousAddress, setPreviousAddress] = useState<Address | null>(null)
+  if (address !== previousAddress) {
+    setPreviousAddress(address)
+    if (address) setInputValue("")
   }
 
   useEffect(() => {
     if (address) onResolved(address)
   }, [address, onResolved])
+
+  useEffect(() => {
+    if (choosing) candidatesHeadingRef.current?.focus()
+  }, [choosing])
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -107,12 +125,15 @@ function AddressSection({
 
     setCoordinateRangeError("")
     submitManualAddress(inputValue)
-    setInputValue("")
   }
 
   function handleEditAddress() {
     setInputValue(address?.text ?? "")
     inputRef.current?.focus()
+  }
+
+  function candidateKey(candidate: GeocodeCandidate, index: number): string {
+    return `${candidate.lat}-${candidate.lon}-${index}`
   }
 
   return (
@@ -153,9 +174,14 @@ function AddressSection({
           />
           <button
             type="submit"
-            className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-950"
+            disabled={loading}
+            className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-950 disabled:opacity-60"
           >
-            Bekräfta adress
+            {resolvingSource === "manual"
+              ? "Söker adress…"
+              : resolvingSource === "coordinates"
+                ? "Slår upp koordinater…"
+                : "Bekräfta adress"}
           </button>
         </div>
         <p id="address-format-hint" className="text-xs text-slate-500">
@@ -178,12 +204,37 @@ function AddressSection({
           "hover:bg-blue-50 disabled:opacity-60"
         }
       >
-        {loading ? "Hämtar position…" : "Hämta min position"}
+        {resolvingSource === "geolocated" ? "Hämtar position…" : "Hämta min position"}
       </button>
       {!geolocationSupported && (
         <p id={helpTextId} className="mt-1 text-sm text-slate-600">
           Den här webbläsaren stöder inte platshämtning. Ange adressen manuellt istället.
         </p>
+      )}
+
+      {choosing && (
+        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+          <h3
+            ref={candidatesHeadingRef}
+            tabIndex={-1}
+            className="text-base font-semibold text-slate-900"
+          >
+            Flera adresser hittades — välj rätt:
+          </h3>
+          <ul className="flex flex-col gap-2">
+            {candidates.map((candidate, index) => (
+              <li key={candidateKey(candidate, index)}>
+                <button
+                  type="button"
+                  onClick={() => selectCandidate(candidate)}
+                  className="min-h-12 w-full rounded-xl border-2 border-blue-900 bg-white px-4 py-2 text-left text-sm font-semibold text-blue-900 hover:bg-blue-50"
+                >
+                  {candidate.address}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div role="status">
