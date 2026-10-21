@@ -174,8 +174,10 @@ technology has not yet been fully verified.
 
 KrisKompassen is being developed as a **Progressive Web App (PWA)**, with installation and offline access as core goals.
 
-On supported browsers and devices, users can install the app on their phone or computer with the
-browser's own install feature; the app has no install button of its own:
+On supported browsers and devices, users can install the app on their phone or computer. Where the
+browser supports it, KrisKompassen shows an **Installera app** button: last in the navigation bar on
+wider screens and last in the **Meny** on phones. It is not shown once the app is installed or when
+it already runs as an installed app. Users can also use the browser's own install feature:
 
 - **Chrome and Edge (desktop and Android):** the install option in the address bar or browser menu.
 - **Safari on iPhone and iPad:** Share → **Add to Home Screen**.

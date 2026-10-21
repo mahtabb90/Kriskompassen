@@ -340,6 +340,20 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
   measure is `blue-900` at `opacity-60` against white. These values must still be verified with
   a contrast checker as required by section 2.5.
 
+### 6.6 Install App Button
+
+- **Variant:** The secondary/outlined button (section 6.2.2) with compact `px-4 py-2` padding, so
+  its 2px border keeps the 48px height (`min-h-12 min-w-12`) of the navigation links beside it.
+  The visible label **"Installera app"** is its accessible name; no `aria-label` and no icon.
+- **Placement:** Last in the `BottomNavigation` row from `48rem`, outside the link list. Below
+  `48rem`, last in the `MobileMenu` dialog, after the links in its scrolling region.
+- **Visibility:** Rendered only while the browser offers installation; no space is reserved
+  otherwise. At 768px and 1024px it fits in the existing navigation row without changing its
+  height. With enlarged text, where the links already wrap, it can add a row.
+- **Focus:** Selecting it opens the browser's prompt and removes the button. In the navigation row
+  focus moves to `#page-heading`; in the menu the dialog closes and focus returns to the **Meny**
+  button.
+
 ---
 
 ## 7. Navigation Patterns
