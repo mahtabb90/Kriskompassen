@@ -343,16 +343,20 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 ### 6.6 Install App Button
 
 - **Variant:** The secondary/outlined button (section 6.2.2) with compact `px-4 py-2` padding, so
-  its 2px border keeps the 48px height (`min-h-12 min-w-12`) of the navigation links beside it.
-  The visible label **"Installera app"** is its accessible name; no `aria-label` and no icon.
-- **Placement:** Last in the `BottomNavigation` row from `48rem`, outside the link list. Below
-  `48rem`, last in the `MobileMenu` dialog, after the links in its scrolling region.
+  its 2px border keeps the 48px minimum height (`min-h-12 min-w-12`). The visible label
+  **"Installera app"** is its accessible name; no `aria-label` and no icon.
+- **Placement:** From `48rem`, in the header's right column, 4px below the "Sparad information"
+  switch (the column's 8px gap reduced by `-mt-1`) and above the active address. The right column
+  spans the brand, tagline and connection rows plus a trailing flexible row, so the button uses the
+  space beside them and a taller right column never spreads the left rows apart. Below `48rem`,
+  last in the `MobileMenu` dialog, after the links in its scrolling region. It is an action, not a
+  page, so it is never part of the navigation links.
 - **Visibility:** Rendered only while the browser offers installation; no space is reserved
-  otherwise. At 768px and 1024px it fits in the existing navigation row without changing its
-  height. With enlarged text, where the links already wrap, it can add a row.
-- **Focus:** Selecting it opens the browser's prompt and removes the button. In the navigation row
-  focus moves to `#page-heading`; in the menu the dialog closes and focus returns to the **Meny**
-  button.
+  otherwise. Online without an active address, it fits beside the left column without changing the
+  header height. With an active address, or when the switch help text wraps, the header grows when
+  the button appears, but stays lower than the header before this layout.
+- **Focus:** Selecting it opens the browser's prompt and removes the button. In the header focus
+  moves to `#page-heading`; in the menu the dialog closes and focus returns to the **Meny** button.
 
 ---
 

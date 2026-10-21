@@ -425,7 +425,7 @@ Decided tooling:
   offline reopening and actual VoiceOver output are pending live verification; local build checks
   do not establish those results.
 - `pwaUpdateService.test.ts` covers registration failure only: a throwing or missing container, rejected `register`/`getRegistration`, and disabled bootstrap outside secure production builds. Update/activation flow tests remain out of scope.
-- Install prompt tests cover the service, hook, `InstallAppButton` and its focus handling in `BottomNavigation` and `MobileMenu` with synthetic events from `services/__fixtures__/installPrompt.ts`. The browser's real prompt and install flow require manual checks.
+- Install prompt tests cover the service, hook, `InstallAppButton` and its focus handling in `Header` and `MobileMenu` with synthetic events from `services/__fixtures__/installPrompt.ts`. The browser's real prompt and install flow require manual checks.
 - The backend pytest suite runs in CI whenever `backend/` changes (see §4) and must not need network access or environment variables.
 - Backend CORS tests provide their own JSON origin environment variable and mock upstream transport. They check that approved frontend origins can read successful feeds and 502/504 errors, and that unlisted origins or unsupported methods do not pass preflight.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
