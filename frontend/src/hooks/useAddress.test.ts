@@ -324,10 +324,18 @@ describe("useAddress", () => {
   })
 
   it("reports a coordinate network failure without discarding a previous manual address", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        candidates: [{ address: "Testgatan 1", lat: 1, lon: 2 }],
+        source: { apiName: "Nominatim" },
+      })
+    )
     const { result } = renderHook(() => useAddress())
     act(() => {
       result.current.submitManualAddress("Testgatan 1")
     })
+    await act(async () => {})
+    const resolvedManualAddress = result.current.address
 
     fetchMock.mockRejectedValue(new TypeError("network down"))
 
@@ -337,11 +345,7 @@ describe("useAddress", () => {
     await act(async () => {})
 
     expect(result.current.failed).toBe(true)
-    expect(result.current.address).toEqual({
-      text: "Testgatan 1",
-      source: "manual",
-      approximate: false,
-    })
+    expect(result.current.address).toEqual(resolvedManualAddress)
   })
 
   it("discards a second concurrent location request", async () => {
