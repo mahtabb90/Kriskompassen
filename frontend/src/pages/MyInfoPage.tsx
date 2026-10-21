@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from "react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
 import AddressSection from "../components/AddressSection"
+import RemoveAddressDialog from "../components/RemoveAddressDialog"
 import { useAddresses } from "../context/addressContext"
-import type { Address, AddressLabel } from "../types/address"
+import type { Address, AddressLabel, SavedAddress } from "../types/address"
 import { describeAddressLabel } from "../utils/addressLabel"
 
 type LabelKind = AddressLabel["kind"]
@@ -21,6 +22,12 @@ function MyInfoPage() {
   const [resetToken, setResetToken] = useState(0)
   const [saveError, setSaveError] = useState("")
   const [listError, setListError] = useState("")
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    address: SavedAddress
+    trigger: HTMLButtonElement
+  } | null>(null)
+  const focusRestoreIndexRef = useRef<number | null>(null)
+  const removeButtonRefs = useRef(new Map<string, HTMLButtonElement>())
 
   function handleResolved(address: Address) {
     setPendingAddress(address)
@@ -54,14 +61,26 @@ function MyInfoPage() {
     }
   }
 
-  async function handleRemove(id: string) {
+  async function handleRemove(id: string, trigger: HTMLButtonElement) {
     setListError("")
+    const index = addresses.findIndex((candidate) => candidate.id === id)
     try {
       await remove(id)
+      focusRestoreIndexRef.current = index
     } catch {
       setListError("Det gick inte att ta bort adressen. Försök igen.")
+      if (trigger.isConnected) trigger.focus({ preventScroll: true })
     }
   }
+
+  useEffect(() => {
+    const index = focusRestoreIndexRef.current
+    if (index === null) return
+    focusRestoreIndexRef.current = null
+    const next = addresses[Math.min(index, addresses.length - 1)]
+    const target = next ? removeButtonRefs.current.get(next.id) : null
+    ;(target ?? document.getElementById("page-heading"))?.focus({ preventScroll: true })
+  }, [addresses])
 
   return (
     <section>
@@ -108,7 +127,11 @@ function MyInfoPage() {
                 )}
                 <button
                   type="button"
-                  onClick={() => handleRemove(address.id)}
+                  ref={(element) => {
+                    if (element) removeButtonRefs.current.set(address.id, element)
+                    else removeButtonRefs.current.delete(address.id)
+                  }}
+                  onClick={(event) => setPendingRemoval({ address, trigger: event.currentTarget })}
                   className="min-h-12 min-w-12 rounded-xl border-2 border-red-800 bg-white px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50"
                 >
                   Ta bort
@@ -125,55 +148,32 @@ function MyInfoPage() {
         {listError}
       </div>
 
-      <AddressSection key={resetToken} onResolved={handleResolved} />
+      <AddressSection
+        key={resetToken}
+        onResolved={handleResolved}
+        labelKind={labelKind}
+        customLabelText={customLabelText}
+        onLabelKindChange={setLabelKind}
+        onCustomLabelTextChange={setCustomLabelText}
+        onSave={handleSave}
+        saveError={saveError}
+      />
 
-      {pendingAddress && (
-        <form
-          onSubmit={handleSave}
-          className="mt-4 flex flex-col gap-3 rounded-2xl border border-blue-200/80 bg-white p-6 shadow-sm sm:p-8"
-        >
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-semibold text-slate-700">
-              Vad är det här för plats?
-            </legend>
-            {(["hem", "arbete", "annan"] as const).map((kind) => (
-              <label
-                key={kind}
-                className="flex min-h-12 items-center gap-2 text-base text-slate-900"
-              >
-                <input
-                  type="radio"
-                  name="label-kind"
-                  value={kind}
-                  checked={labelKind === kind}
-                  onChange={() => setLabelKind(kind)}
-                  className="h-5 w-5"
-                />
-                {kind === "hem" ? "Hem" : kind === "arbete" ? "Arbete" : "Annan"}
-              </label>
-            ))}
-            {labelKind === "annan" && (
-              <input
-                type="text"
-                required
-                placeholder="T.ex. Sommarstuga"
-                aria-label="Egen etikett"
-                value={customLabelText}
-                onChange={(event) => setCustomLabelText(event.target.value)}
-                className="min-h-12 max-w-sm rounded-xl border-2 border-blue-900 px-4 py-2 text-base text-slate-900"
-              />
-            )}
-          </fieldset>
-          <button
-            type="submit"
-            className="inline-flex min-h-12 min-w-12 items-center justify-center self-start rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-950"
-          >
-            Spara adress
-          </button>
-          <div role="alert" className="text-sm font-medium text-red-800">
-            {saveError}
-          </div>
-        </form>
+      {pendingRemoval && (
+        <RemoveAddressDialog
+          key={pendingRemoval.address.id}
+          address={pendingRemoval.address}
+          onCancel={() => {
+            const { trigger } = pendingRemoval
+            setPendingRemoval(null)
+            if (trigger.isConnected) trigger.focus({ preventScroll: true })
+          }}
+          onConfirm={() => {
+            const { address, trigger } = pendingRemoval
+            setPendingRemoval(null)
+            void handleRemove(address.id, trigger)
+          }}
+        />
       )}
     </section>
   )

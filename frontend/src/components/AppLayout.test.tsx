@@ -291,27 +291,28 @@ describe("AppLayout VMA integration", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it("keeps the warning while keyboard mode changes update content and title on the same route", async () => {
+  it("keeps the warning while focused mode changes update content and title on the same route", async () => {
     fetchMock.mockResolvedValue(Response.json(feed()))
     mountLayout()
     const warningHeading = await screen.findByRole("heading", { name: info.event })
     const announcement = screen.getByRole("alert").firstChild
-    const online = screen.getByRole("radio", { name: "Online" })
-    const offline = screen.getByRole("radio", { name: "Offline" })
+    const toggle = screen.getByRole("switch", { name: "Sparad information" })
 
-    online.focus()
-    fireEvent.keyDown(online, { key: "ArrowRight" })
-    expect(offline.getAttribute("aria-checked")).toBe("true")
-    expect(document.activeElement).toBe(offline)
+    // jsdom does not turn Space/Enter into a native button click, so the activation is a click
+    // on the focused switch; the real key behaviour is verified manually.
+    toggle.focus()
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute("aria-checked")).toBe("true")
+    expect(document.activeElement).toBe(toggle)
     expect(screen.getByRole("heading", { name: "Hem – offline" }).dataset.pathname).toBe("/")
     await waitFor(() => expect(document.title).toBe("Hem – offline | KrisKompassen"))
     expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
     expect(screen.getByRole("alert").firstChild).toBe(announcement)
     expect(screen.getByText("Ansluten")).toBeTruthy()
 
-    fireEvent.keyDown(offline, { key: "ArrowLeft" })
-    expect(online.getAttribute("aria-checked")).toBe("true")
-    expect(document.activeElement).toBe(online)
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute("aria-checked")).toBe("false")
+    expect(document.activeElement).toBe(toggle)
     expect(screen.getByRole("heading", { name: "Hem" }).dataset.pathname).toBe("/")
     await waitFor(() => expect(document.title).toBe("Hem | KrisKompassen"))
     expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
@@ -325,25 +326,24 @@ describe("AppLayout VMA integration", () => {
     const warningHeading = await screen.findByRole("heading", { name: info.event })
     const live = screen.getByRole("alert")
     const announcement = live.firstChild
-    const online = screen.getByRole<HTMLButtonElement>("radio", { name: "Online" })
-    const offline = screen.getByRole("radio", { name: "Offline" })
+    const toggle = screen.getByRole("switch", { name: "Sparad information" })
 
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
     fireEvent(window, new Event("offline"))
     expect(screen.getByText("Ingen internetanslutning")).toBeTruthy()
     expect(
-      screen.getByText("Internetanslutningen försvann, så du har växlats till offline-läge.")
+      screen.getByText("Internetanslutningen försvann, så Sparad information har slagits på.")
     ).toBeTruthy()
-    expect(offline.getAttribute("aria-checked")).toBe("true")
-    expect(online.disabled).toBe(true)
+    expect(toggle.getAttribute("aria-checked")).toBe("true")
+    expect(toggle.getAttribute("aria-disabled")).toBe("true")
     expect(screen.getByRole("heading", { name: info.event })).toBe(warningHeading)
     expect(live.firstChild).toBe(announcement)
 
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true)
     fireEvent(window, new Event("online"))
     expect(screen.getByText("Ansluten")).toBeTruthy()
-    expect(offline.getAttribute("aria-checked")).toBe("true")
-    expect(online.disabled).toBe(false)
+    expect(toggle.getAttribute("aria-checked")).toBe("true")
+    expect(toggle.hasAttribute("aria-disabled")).toBe(false)
     fireEvent.click(screen.getByRole("button", { name: "Stäng" }))
     expect(screen.getByRole("alert")).toBe(live)
     expect(live.firstChild).toBe(announcement)
@@ -363,35 +363,33 @@ describe("AppLayout VMA integration", () => {
     expect(screen.getByRole("button", { name: "Försök igen" })).toBeTruthy()
   })
 
-  it("reserves measured space and reveals keyboard focus beneath the sticky banner", async () => {
-    const originalStyle = window.getComputedStyle.bind(window)
-    vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
-      const style = originalStyle(element)
-      if (element.tagName === "NAV") style.setProperty("position", "fixed")
-      return style
-    })
+  it("reserves space for the mobile menu button and reveals keyboard focus above it", async () => {
     fetchMock.mockResolvedValue(Response.json(feed()))
     const { unmount } = mountLayout()
     const notice = await screen.findByRole("complementary")
     const slot = notice.parentElement!
-    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
+    const trigger = screen.getByRole("button", { name: "Meny" })
+    vi.stubGlobal("innerHeight", 844)
     vi.spyOn(slot, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 390, 120))
-    vi.spyOn(navigation, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 770, 390, 74))
-    Object.defineProperty(navigation, "scrollHeight", { configurable: true, value: 72 })
-    const previousHeight = document.documentElement.style.getPropertyValue("--navigation-height")
+    vi.spyOn(trigger, "getBoundingClientRect").mockReturnValue(new DOMRect(135, 772, 120, 60))
     for (const measure of measureCallbacks) measure()
-    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe(
-      previousHeight
-    )
     await waitFor(() =>
       expect(document.documentElement.style.getPropertyValue("--vma-banner-height")).toBe("120px")
     )
-    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("74px")
+    // Distance from the viewport bottom to the button's top edge includes its safe-area offset.
+    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("72px")
     const heading = screen.getByRole("heading", { name: "Hem" })
     vi.spyOn(heading, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 50, 100, 40))
     heading.focus()
     await waitFor(() =>
       expect(window.scrollBy).toHaveBeenCalledWith({ top: -78, behavior: "instant" })
+    )
+    vi.mocked(window.scrollBy).mockClear()
+    vi.spyOn(heading, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 740, 100, 40))
+    heading.blur()
+    heading.focus()
+    await waitFor(() =>
+      expect(window.scrollBy).toHaveBeenCalledWith({ top: 16, behavior: "instant" })
     )
     vi.useFakeTimers()
     for (const measure of measureCallbacks) measure()
@@ -402,46 +400,42 @@ describe("AppLayout VMA integration", () => {
     expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("")
   })
 
-  it("reconsiders the bottom bar after resize while preserving the tall-content fallback", async () => {
+  it("reserves no bottom space when the mobile menu button is hidden at desktop width", async () => {
     const originalStyle = window.getComputedStyle.bind(window)
     vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
       const style = originalStyle(element)
-      if (element.tagName === "NAV") {
-        style.setProperty(
-          "position",
-          element.hasAttribute("data-overflows-viewport") ? "static" : "fixed"
-        )
+      if (element.tagName === "BUTTON" && element.textContent === "Meny") {
+        style.setProperty("display", "none")
       }
       return style
     })
-    vi.stubGlobal("innerHeight", 500)
     fetchMock.mockResolvedValue(Response.json(feed([])))
     mountLayout()
     await screen.findByRole("heading", { name: "Hem" })
-    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
-    let bottomContentHeight = 64
-    Object.defineProperty(navigation, "scrollHeight", {
-      configurable: true,
-      get: () => (navigation.hasAttribute("data-overflows-viewport") ? 380 : bottomContentHeight),
-    })
-    vi.spyOn(navigation, "getBoundingClientRect").mockImplementation(
-      () => new DOMRect(0, 500 - bottomContentHeight - 2, 360, bottomContentHeight + 2)
-    )
-    navigation.setAttribute("data-overflows-viewport", "")
     for (const measure of measureCallbacks) measure()
-    expect(navigation.hasAttribute("data-overflows-viewport")).toBe(true)
     await waitFor(() =>
       expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("0px")
     )
+  })
 
-    fireEvent.resize(window)
-    expect(navigation.hasAttribute("data-overflows-viewport")).toBe(false)
-    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("66px")
+  it("closes the mobile menu on navigation and leaves focus to the new page heading", async () => {
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }))
+    fetchMock.mockResolvedValue(Response.json(feed([])))
+    mountLayout()
+    await screen.findByRole("heading", { name: "Hem" })
+    const trigger = screen.getByRole("button", { name: "Meny" })
+    fireEvent.click(trigger)
+    const dialog = screen.getByRole("dialog", { name: "Meny" })
 
-    bottomContentHeight = 200
-    for (const measure of measureCallbacks) measure()
-    fireEvent.resize(window)
-    expect(navigation.hasAttribute("data-overflows-viewport")).toBe(true)
-    expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("0px")
+    fireEvent.click(within(dialog).getByRole("link", { name: "Krisinformation" }))
+
+    expect(screen.queryByRole("dialog")).toBe(null)
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Krisinformation" }))
+    expect(document.title).toBe("Krisinformation | KrisKompassen")
+    expect(trigger.getAttribute("aria-expanded")).toBe("false")
   })
 })

@@ -3,7 +3,8 @@ import ConnectionStatus from "./ConnectionStatus"
 import ModeToggle from "./ModeToggle"
 
 /**
- * Renders shared branding, the mode toggle and connectivity status within a ModeProvider.
+ * Renders shared branding, the "Sparad information" mode switch and connectivity status within
+ * a ModeProvider.
  *
  * Reserves the top device inset when no VMA notice owns it.
  *

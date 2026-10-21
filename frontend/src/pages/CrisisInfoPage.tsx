@@ -1,22 +1,21 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useLocation } from "react-router-dom"
 import CrisisCard from "../components/CrisisCard"
+import CrisisLoadFeedback from "../components/CrisisLoadFeedback"
 import { useMode, type Mode } from "../context/modeContext"
-import { mockCrisisData } from "../data/mockCrisisData"
+import { useCrisisResource } from "../hooks/useCrisisResource"
+import { fetchCrisisItems } from "../services/crisisService"
 import { getOfflineItems } from "../services/offlineService"
 import type { CrisisItem } from "../types/crisis"
-
-type OfflineListState =
-  { status: "loading" } | { status: "error" } | { status: "ready"; items: CrisisItem[] }
 
 /**
  * Lists crisis information for the currently selected mode.
  *
- * Online mode shows the full bundled dataset. Offline mode reads only items saved for
- * offline access from IndexedDB, making no network call. Items disappear from the offline
- * list as soon as they are removed, and keyboard focus moves to the next remaining card (or the
- * previous one, or the page heading when none remain) instead of being lost. Redirect notices are shown only in the mode that
- * produced them, including when browser history state survives a reload.
+ * Online mode fetches full articles from the backend on every entry into that mode.
+ * Offline mode reads only items saved in IndexedDB, making no article network call.
+ * Late results cannot cross modes. Removing an offline item moves keyboard focus to the next
+ * remaining card, the previous one, or the page heading when none remain. Redirect notices are
+ * shown only in the mode that produced them, including retained history state after a reload.
  */
 function CrisisInfoPage() {
   const { mode } = useMode()
@@ -24,30 +23,16 @@ function CrisisInfoPage() {
   const redirectNotice = location.state as { notice?: string; noticeMode?: Mode } | null
   const notice = redirectNotice?.noticeMode === mode ? redirectNotice.notice : undefined
 
-  const [offlineState, setOfflineState] = useState<OfflineListState>({ status: "loading" })
+  const load = useCallback(
+    (signal: AbortSignal) => (mode === "online" ? fetchCrisisItems(signal) : getOfflineItems()),
+    [mode]
+  )
+  const { state, retry, updateData } = useCrisisResource(mode, load)
   const [removedMessage, setRemovedMessage] = useState("")
   const headingRef = useRef<HTMLHeadingElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   // Card index to focus after the next offline list update, or "heading" when the list empties.
   const pendingFocus = useRef<number | "heading" | null>(null)
-
-  useEffect(() => {
-    if (mode !== "offline") return
-
-    let cancelled = false
-
-    getOfflineItems()
-      .then((items) => {
-        if (!cancelled) setOfflineState({ status: "ready", items })
-      })
-      .catch(() => {
-        if (!cancelled) setOfflineState({ status: "error" })
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [mode])
 
   useEffect(() => {
     const target = pendingFocus.current
@@ -59,32 +44,26 @@ function CrisisInfoPage() {
     } else {
       gridRef.current?.children[target]?.querySelector("a")?.focus()
     }
-  }, [offlineState])
+  }, [state])
 
   function handleToggle(item: CrisisItem, saved: boolean) {
-    if (saved) return
+    if (saved || mode !== "offline" || state.status !== "ready" || !gridRef.current) return
 
-    if (offlineState.status === "ready") {
-      const index = offlineState.items.findIndex((other) => other.id === item.id)
-      const active = document.activeElement
-      const focusWasInCard =
-        !active ||
-        active === document.body ||
-        Boolean(gridRef.current?.children[index]?.contains(active))
-      const remaining = offlineState.items.length - 1
+    const index = state.data.findIndex((other) => other.id === item.id)
+    const active = document.activeElement
+    const focusWasInCard =
+      !active ||
+      active === document.body ||
+      Boolean(gridRef.current?.children[index]?.contains(active))
+    const remaining = state.data.length - 1
 
-      // Focus would otherwise fall to the document when the card unmounts. The next card
-      // takes the removed card's index; after removing the last card, the previous one is used.
-      if (index >= 0 && focusWasInCard) {
-        pendingFocus.current = remaining === 0 ? "heading" : Math.min(index, remaining - 1)
-      }
+    // Focus would otherwise fall to the document when the card unmounts. The next card
+    // takes the removed card's index; after removing the last card, the previous one is used.
+    if (index >= 0 && focusWasInCard) {
+      pendingFocus.current = remaining === 0 ? "heading" : Math.min(index, remaining - 1)
     }
 
-    setOfflineState((current) =>
-      current.status === "ready"
-        ? { status: "ready", items: current.items.filter((other) => other.id !== item.id) }
-        : current
-    )
+    updateData((items) => items.filter((other) => other.id !== item.id))
     // The card that held the success message unmounts, so the page announces the removal.
     setRemovedMessage(`"${item.title}" har tagits bort från offlinelagringen.`)
   }
@@ -113,46 +92,39 @@ function CrisisInfoPage() {
         {removedMessage}
       </div>
 
-      {mode === "online" && (
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-          {mockCrisisData.map((item) => (
-            <CrisisCard key={item.id} item={item} />
-          ))}
+      {state.status !== "ready" && (
+        <div className={panelClassName}>
+          <CrisisLoadFeedback state={state} mode={mode} onRetry={retry} headingRef={headingRef} />
         </div>
       )}
 
-      {mode === "offline" && offlineState.status === "loading" && (
+      {mode === "online" && state.status === "ready" && state.data.length === 0 && (
         <p role="status" className={panelClassName}>
-          Läser sparad information…
+          Inga artiklar finns att visa just nu.
         </p>
       )}
 
-      {mode === "offline" && offlineState.status === "error" && (
-        <div role="alert" className={panelClassName}>
-          <p className="font-semibold text-red-800">
-            Det gick inte att läsa den sparade informationen från din enhet.
-          </p>
-          <p className="mt-2">
-            Ladda om sidan och försök igen. Om felet kvarstår kan webbläsaren blockera lokal
-            lagring.
-          </p>
-        </div>
-      )}
-
-      {mode === "offline" && offlineState.status === "ready" && offlineState.items.length === 0 && (
+      {mode === "offline" && state.status === "ready" && state.data.length === 0 && (
         <div className={panelClassName}>
-          <p className="font-semibold text-blue-900">Ingen krisinformation är sparad offline.</p>
+          <p className="font-semibold text-blue-900">Ingen krisinformation är sparad.</p>
           <p className="mt-2">
-            Växla till online-läge och välj "Spara offline" på de artiklar du vill kunna läsa utan
-            internetanslutning. De visas sedan här.
+            Stäng av Sparad information och välj "Spara offline" på de artiklar du vill kunna läsa
+            utan internetanslutning. De visas sedan här.
           </p>
         </div>
       )}
 
-      {mode === "offline" && offlineState.status === "ready" && offlineState.items.length > 0 && (
-        <div ref={gridRef} className="mt-6 grid gap-6 sm:grid-cols-2">
-          {offlineState.items.map((item) => (
-            <CrisisCard key={item.id} item={item} onToggle={(saved) => handleToggle(item, saved)} />
+      {state.status === "ready" && state.data.length > 0 && (
+        <div
+          ref={mode === "offline" ? gridRef : undefined}
+          className="mt-6 grid gap-6 sm:grid-cols-2"
+        >
+          {state.data.map((item) => (
+            <CrisisCard
+              key={item.id}
+              item={item}
+              onToggle={mode === "offline" ? (saved) => handleToggle(item, saved) : undefined}
+            />
           ))}
         </div>
       )}

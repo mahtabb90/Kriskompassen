@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react"
+import type { ReactNode } from "react"
 import { isSavedOffline, removeOffline, saveOffline } from "../services/offlineService"
 import type { CrisisItem } from "../types/crisis"
 
 interface OfflineToggleProps {
   item: CrisisItem
   onToggle?: (saved: boolean) => void
+  actions?: ReactNode
 }
 
 /**
@@ -17,8 +19,10 @@ interface OfflineToggleProps {
  * @param item The crisis item to save or remove. Its full content is stored when saving.
  * @param onToggle Called with the new saved state after a save or remove succeeds. Not called
  * when the storage operation fails.
+ * @param actions Optional extra controls rendered in the same row as the save/remove button.
+ * They stay separate from the button and own their own behaviour.
  */
-function OfflineToggle({ item, onToggle }: OfflineToggleProps) {
+function OfflineToggle({ item, onToggle, actions }: OfflineToggleProps) {
   const [saved, setSaved] = useState<boolean | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirmation, setConfirmation] = useState("")
@@ -82,21 +86,24 @@ function OfflineToggle({ item, onToggle }: OfflineToggleProps) {
         {saved === null ? "Kontrollerar sparad status…" : saved ? "Sparad offline" : "Inte sparad"}
       </p>
 
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={busy || saved === null}
-        className={
-          "inline-flex min-h-12 min-w-12 items-center justify-center self-start rounded-xl " +
-          "border-2 border-blue-900 px-5 py-3 font-semibold disabled:opacity-60 " +
-          (saved
-            ? "bg-white text-blue-900 hover:bg-blue-50"
-            : "bg-blue-900 text-white hover:bg-blue-950")
-        }
-      >
-        {busy ? "Arbetar…" : label}
-        <span className="sr-only">: {item.title}</span>
-      </button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={busy || saved === null}
+          className={
+            "inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl " +
+            "border-2 border-blue-900 px-5 py-3 font-semibold disabled:opacity-60 " +
+            (saved
+              ? "bg-white text-blue-900 hover:bg-blue-50"
+              : "bg-blue-900 text-white hover:bg-blue-950")
+          }
+        >
+          {busy ? "Arbetar…" : label}
+          <span className="sr-only">: {item.title}</span>
+        </button>
+        {actions}
+      </div>
 
       <div role="status" className="text-sm font-medium text-green-800">
         {confirmation}

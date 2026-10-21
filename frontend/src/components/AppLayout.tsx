@@ -4,6 +4,7 @@ import { useVmaBanner } from "../hooks/useVmaBanner"
 import { usePwaUpdate } from "../hooks/usePwaUpdate"
 import BottomNavigation from "./BottomNavigation"
 import Header from "./Header"
+import MobileMenu from "./MobileMenu"
 import VmaBanner from "./VmaBanner"
 import PwaUpdateNotice from "./PwaUpdateNotice"
 import VmaMessageDialog from "./VmaMessageDialog"
@@ -14,11 +15,12 @@ import type { VmaMessage } from "../types/vma"
  *
  * Child pages supply one h1 with id="page-heading" and tabIndex={-1}. Its text sets
  * the document title. Path changes focus that heading and scroll only as needed to
- * reveal it; initial loads and hash-only changes preserve browser focus. The measured
- * navigation, VMA and app-update heights reserve scroll space around focused content. VMA
- * requests and the update subscription belong to this persistent layout, not individual routes.
- * Viewport resizes recheck bottom placement before applying the tall-navigation fallback.
- * Resize notifications defer measurement to avoid resizing the bar during observer delivery.
+ * reveal it; initial loads and hash-only changes preserve browser focus. This is the only route
+ * focus owner; the mobile menu closes without focusing anything when a route is selected. The
+ * measured mobile menu button, VMA and app-update heights reserve scroll space around focused
+ * content, and the button reserves none from 48rem upwards. VMA requests and the update
+ * subscription belong to this persistent layout, not individual routes.
+ * Resize notifications defer measurement to avoid resizing observed elements during delivery.
  * A selected CAP snapshot, opened from the banner headline or its message list, stays readable
  * in a modal outside main while polling changes its feed validity or it leaves the banner.
  */
@@ -27,6 +29,7 @@ function AppLayout() {
   const previousPathname = useRef(pathname)
   const mainRef = useRef<HTMLElement>(null)
   const navigationRef = useRef<HTMLElement>(null)
+  const menuTriggerRef = useRef<HTMLButtonElement>(null)
   const bannerRef = useRef<HTMLDivElement>(null)
   const updateRef = useRef<HTMLDivElement>(null)
   const vma = useVmaBanner()
@@ -56,20 +59,27 @@ function AppLayout() {
   useLayoutEffect(() => {
     const main = mainRef.current
     const navigation = navigationRef.current
+    const menuTrigger = menuTriggerRef.current
     const banner = bannerRef.current
     const updateNotice = updateRef.current
-    if (!main || !navigation || !banner || !updateNotice) return
+    if (!main || !navigation || !menuTrigger || !banner || !updateNotice) return
 
     const root = document.documentElement
     const previousHeight = root.style.getPropertyValue("--navigation-height")
     const previousBannerHeight = root.style.getPropertyValue("--vma-banner-height")
     const previousUpdateHeight = root.style.getPropertyValue("--pwa-update-height")
-    const previousNavigationOverflow = navigation.getAttribute("data-overflows-viewport")
     let focusFrame = 0
     let measurementFrame = 0
 
+    // The menu button is fixed below 48rem and display: none from there upwards.
+    const menuTriggerVisible = () => getComputedStyle(menuTrigger).display !== "none"
+
     const keepFocusedContentVisible = () => {
       const focused = document.activeElement
+
+      // Don't scroll based on the bounds of the entire main content area.
+      if (focused === main) return
+
       const stickyUpdate = getComputedStyle(updateNotice).position === "sticky"
       if (
         !(focused instanceof HTMLElement) ||
@@ -79,14 +89,12 @@ function AppLayout() {
       )
         return
 
-      const fixedNavigation = getComputedStyle(navigation).position === "fixed"
-      if (fixedNavigation && navigation.contains(focused)) return
       const bannerBottom = banner.getBoundingClientRect().bottom
       const updateBounds = updateNotice.getBoundingClientRect()
       const updateBottom = stickyUpdate && updateBounds.height > 0 ? updateBounds.bottom : 0
       const visibleTop = Math.max(bannerBottom, updateBottom) + 8
-      const visibleBottom = fixedNavigation
-        ? navigation.getBoundingClientRect().top - 8
+      const visibleBottom = menuTriggerVisible()
+        ? menuTrigger.getBoundingClientRect().top - 8
         : window.innerHeight - 8
       const focusedBounds = focused.getBoundingClientRect()
       if (focusedBounds.top < visibleTop) {
@@ -106,18 +114,10 @@ function AppLayout() {
     }
 
     const updateReservedSpace = () => {
-      // Media-query rem units do not follow the user's enlarged root text size.
-      // Keep a tall navigation bar in normal flow instead of covering focused controls.
-      const navigationContentHeight =
-        navigation.scrollHeight - (parseFloat(getComputedStyle(navigation).paddingBottom) || 0)
-      navigation.toggleAttribute(
-        "data-overflows-viewport",
-        navigationContentHeight > window.innerHeight * 0.25
-      )
-      const height =
-        getComputedStyle(navigation).position === "fixed"
-          ? Math.ceil(navigation.getBoundingClientRect().height)
-          : 0
+      // Measuring from the viewport bottom includes the button's safe-area offset and gap.
+      const height = menuTriggerVisible()
+        ? Math.max(0, Math.ceil(window.innerHeight - menuTrigger.getBoundingClientRect().top))
+        : 0
 
       root.style.setProperty("--navigation-height", `${height}px`)
       root.style.setProperty(
@@ -137,13 +137,11 @@ function AppLayout() {
       // Changing placement during resize delivery can resize the observed bar again.
       measurementFrame = requestAnimationFrame(updateReservedSpace)
     })
-    observer.observe(navigation)
+    observer.observe(menuTrigger)
     observer.observe(banner)
     observer.observe(updateNotice)
     const onViewportResize = () => {
-      // The wrapped fallback can exceed the height limit even when the fixed row fits.
       cancelAnimationFrame(measurementFrame)
-      navigation.removeAttribute("data-overflows-viewport")
       updateReservedSpace()
     }
     window.addEventListener("resize", onViewportResize)
@@ -158,11 +156,6 @@ function AppLayout() {
       navigation.removeEventListener("focusin", scheduleFocusCheck)
       cancelAnimationFrame(focusFrame)
       cancelAnimationFrame(measurementFrame)
-      if (previousNavigationOverflow === null) {
-        navigation.removeAttribute("data-overflows-viewport")
-      } else {
-        navigation.setAttribute("data-overflows-viewport", previousNavigationOverflow)
-      }
       if (previousHeight) {
         root.style.setProperty("--navigation-height", previousHeight)
       } else {
@@ -236,6 +229,7 @@ function AppLayout() {
       </div>
       <Header reserveTopInset={!noticeVisible} />
       <BottomNavigation navigationRef={navigationRef} />
+      <MobileMenu triggerRef={menuTriggerRef} />
       <main
         id="main-content"
         ref={mainRef}

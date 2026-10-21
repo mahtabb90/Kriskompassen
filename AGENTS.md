@@ -25,10 +25,12 @@ The team updates the repo continuously, so this file can fall behind. **The repo
   versions and build timestamps are not displayed in the user interface. Physical verification
   on an existing iPhone installation is pending. This change uses one production publication
   and a manual check on the existing device.
-- Target users: the general public in Sweden. No login or user accounts are planned.
-- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level online/offline mode toggle (`ModeToggle`, backed by `ModeContext`) controls whether `/crisis` and `/crisis/:id` show the bundled mock dataset or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
-- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, a count and expandable list of any other active warnings, and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; the crisis articles still use mock data. While the app is open, the banner polls our backend (see §7); offline VMA storage is not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
-- Users save one or more addresses on the `/min-info` page, each composed by typing it or by fetching the device's position through the browser's Geolocation API (permission requested only on that button click). The backend reverse-geocodes fetched coordinates through OpenStreetMap Nominatim and returns a normalized `{found, address, municipality, county, lat, lon, source}` shape; `found: false` is a resolvable-but-unknown result, not an upstream error. Each saved address carries a label (`hem`, `arbete`, or `annan` with free text) and is persisted in IndexedDB (`savedAddresses` table; see §9's documented exception for storing this personal data locally). Exactly one saved address is active at a time — the one other features (e.g. future shelter search) use as the starting point; saving the first address activates it automatically, and `AddressIndicator` shows the active one as a discreet link in the header once one exists. **A manually typed address is never forward-geocoded or validated** — composing it only resolves the typed/fetched text, with coordinates present solely for a geolocated result; forward-geocoding/validating manual text is separate future work.
+- The app is installable through browsers' built-in install features (Chromium, Safari iOS "Add to Home Screen", Safari macOS "Add to Dock") and its precached shell starts offline after one online visit. There is no custom install UI.
+- Target users: the general public in Sweden.
+- **Binding product decision: KrisKompassen is intentionally account-free.** End-user accounts, account registration, sign-in/login, account-based profiles and account-based cloud persistence are out of scope and must not be implemented. A development ticket, issue or task description alone never overrides this decision. See §11 for what to do when a task asks for them, and §10 for how this relates to other authentication changes.
+- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level "Sparad information" switch (`ModeToggle`, backed by `ModeContext`; on = offline mode, off = online mode) controls whether `/crisis` and `/crisis/:id` show articles fetched from the backend API or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
+- A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, a count and expandable list of any other active warnings, and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; curated preparedness articles are served from a backend JSON file through a separate article API. While the app is open, the banner polls our backend (see §7); offline VMA storage is not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
+- Users save one or more addresses on the `/min-info` page, each composed by typing it or by fetching the device's position through the browser's Geolocation API (permission requested only on that button click). The backend reverse-geocodes fetched coordinates through OpenStreetMap Nominatim and returns a normalized `{found, address, municipality, county, lat, lon, source}` shape; `found: false` is a resolvable-but-unknown result, not an upstream error. Each saved address carries a label (`hem`, `arbete`, or `annan` with free text) and is persisted in IndexedDB (`savedAddresses` table; see §9's documented exception for storing this personal data locally). Exactly one saved address is active at a time — the one other features (e.g. future shelter search) use as the starting point; saving the first address activates it automatically, and `AddressIndicator` shows the active one as a discreet link in the header once one exists. **A manually typed address is never forward-geocoded or validated** — composing it only resolves the typed/fetched text, with coordinates present solely for a geolocated result; forward-geocoding/validating manual text is separate future work. **Exception:** typed/pasted text that is shaped like a latitude/longitude pair (decimal degrees, separated by a comma and/or whitespace, e.g. copied from another map service) is range-validated client-side (`frontend/src/utils/coordinates.ts`) and, if within range, reverse-geocoded through the same backend endpoint as a device position, producing `source: "coordinates"` — approximate and re-lookupable like `"geolocated"`, but with no `accuracy`. Out-of-range text shows an inline error before any network call; text not shaped like coordinates falls through to the normal manual path unchanged.
 - The banner title opens the full selected warning in an accessible native dialog with complete
   Swedish text, instructions, source, CAP issue/update time and available affected areas. Closing
   returns to the previous view. Local tests/browser checks do not establish live iPhone or spoken
@@ -83,7 +85,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   └── workflows/
 │       ├── backend-ci.yml   # backend Ruff and pytest when backend/ changes; PRs into dev/main and pushes to dev
 │       └── frontend-ci.yml  # frontend lint, format check, tests and build when frontend/ changes; same triggers
-├── backend/             # FastAPI VMA and geocoding API
+├── backend/             # FastAPI articles, VMA and geocoding API
 │   ├── DEVELOPMENT.md  # backend and VMA integration development guide
 │   ├── .python-version # Python 3.13
 │   ├── .env.example    # backend variable names only
@@ -92,9 +94,10 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   ├── src/
 │   │   ├── app.py      # application factory, lifespan and exported app
 │   │   ├── api/        # routers and dependencies
-│   │   ├── core/       # settings and upstream errors
+│   │   ├── core/       # settings, upstream and article errors
+│   │   ├── data/       # curated articles (crisis.json), published with the backend
 │   │   ├── models/     # Pydantic response models
-│   │   └── services/   # upstream fetching, JSON decoding and the shared VMA cache
+│   │   └── services/   # article file reading, upstream fetching and the shared VMA cache
 │   └── tests/          # pytest API, CORS and upstream response tests
 └── frontend/            # Vite + React + TypeScript PWA
     ├── .env.example    # frontend variable names only
@@ -103,26 +106,26 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── e2e/             # Playwright tests (planned, not created)
     ├── index.html       # HTML entry (lang="sv")
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
-    ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs
+    ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs and Cache-Control headers
     ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
-        ├── components/  # shared layout/header/navigation, VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice and crisis/offline controls
-        ├── config/      # central backend address, VMA request timeout and the geocode endpoint URL
+        ├── components/  # shared layout/header/navigation (desktop `BottomNavigation`, mobile `MobileMenu`, shared `navigationItems`), VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice and crisis/offline controls
+        ├── config/      # backend address, article/VMA/geocode endpoints and request timeout
         ├── context/     # ModeProvider.tsx + modeContext.ts and AddressProvider.tsx + addressContext.ts (context object, hook — split to satisfy react-refresh/only-export-components)
-        ├── data/        # mock data (mockCrisisData.ts)
+        ├── data/        # predefined emergency-kit recommendations (recommendedCrisisKit.ts)
         ├── db/          # Dexie database (db.ts)
-        ├── hooks/       # VMA request state/validity, address composition (useAddress), saved-addresses list/active state (useSavedAddresses) and shared PWA update subscription; adjacent tests
+        ├── hooks/       # keyed article requests (useCrisisResource), VMA state/validity, address composition (useAddress), saved-addresses list/active state (useSavedAddresses) and shared PWA update subscription; adjacent tests
         ├── pages/       # HomePage, CrisisInfoPage, CrisisKitPage, MyInfoPage (/min-info), NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
-        ├── services/    # offline storage, PWA update lifecycle, VMA, geocoding, geolocation and saved-address storage services; adjacent unit tests (addressStorageService has none yet — see §8)
+        ├── services/    # article transport/validation, offline storage, PWA updates, VMA, geocoding, geolocation and address storage; adjacent unit tests (addressStorageService has none yet — see §8)
         ├── types/       # shared crisis/VMA/address types
-        └── utils/       # small pure presentational helpers (e.g. describeAddressLabel)
+        └── utils/       # small pure presentational and validation helpers (e.g. describeAddressLabel, parseCoordinates)
 ```
 
 - New frontend code goes under `frontend/src/` in the matching folder above.
 - Frontend unit and component tests live next to the file they test: `Foo.test.tsx` beside `Foo.tsx`.
 - New backend code goes under `backend/src/`: routers and dependency providers in `api/`, settings and application errors in `core/`, Pydantic models in `models/`, and upstream I/O in `services/`. Tests belong in `backend/tests/`.
 - Several files in `components/` and `pages/` are empty placeholders (`SettingsPage.tsx`). Fill them in; do not delete them without asking.
-- `App.tsx` wraps the router in `ModeProvider` and registers routes inside the shared `AppLayout`. There are no separate offline routes: `CrisisInfoPage` (`/crisis`) and `DetailedCrisisCard` (`/crisis/:id`) both read `useMode()` and switch data source — the bundled mock dataset in online mode, `getOfflineItems()`/`getOfflineItem(id)` in offline mode — without the URL changing. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`. If the item shown on `/crisis/:id` is not available in the current mode (mode just switched, or the URL was opened directly), `DetailedCrisisCard` redirects to `/crisis` with an explanation passed via router location state, rather than showing an inline message. `ModeProvider` forces offline mode (with an explanation shown by `ConnectionStatus`) when the browser's `offline` event fires, and never switches back to online automatically — the user does that via `ModeToggle`, which is disabled for online mode while `navigator.onLine` is false.
+- `App.tsx` wraps the router in `ModeProvider` and registers routes inside the shared `AppLayout`. There are no separate offline routes: `CrisisInfoPage` (`/crisis`) and `DetailedCrisisCard` (`/crisis/:id`) both read `useMode()` and switch data source — articles fetched from the backend API in online mode, `getOfflineItems()`/`getOfflineItem(id)` in offline mode — without the URL changing. `OfflineToggle` saves and removes items in IndexedDB through `offlineService` and is used in both `CrisisCard` and `DetailedCrisisCard`. If a successful lookup finds that the item shown on `/crisis/:id` is not available in the current mode (mode just switched, or the URL was opened directly), `DetailedCrisisCard` redirects to `/crisis` with an explanation passed via router location state, rather than showing an inline message. `ModeProvider` forces offline mode (with an explanation shown by `ConnectionStatus`) when the browser's `offline` event fires, and never switches back to online automatically — the user does that via `ModeToggle`. `ModeToggle` is one native `<button role="switch" aria-checked>` containing the visible label (its accessible name) and the decorative track, so clicking either toggles the mode and Space/Enter work natively. A help text below it, linked with `aria-describedby`, explains the current mode. While `navigator.onLine` is false the switch cannot be turned off: it keeps focus with `aria-disabled="true"` (not `disabled`), only the track is dimmed, and the help text explains the restriction.
 
 - Crisis detail redirects carry `notice` and `noticeMode` in router location state. The crisis
   list derives the visible notice from the current mode, so an offline-access explanation
@@ -146,7 +149,7 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 
 CI: both workflows trigger on pull requests into `dev` or `main` and on pushes to `dev`. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npm run format:check`, `npm run test` and `npm run build` on Node from `frontend/.nvmrc`. `.github/workflows/backend-ci.yml` runs the backend install, `ruff check .`, `ruff format --check .` and `pytest` on Python from `backend/.python-version`. Each workflow always starts (no `on: paths:`) and has three jobs: a change-detection job that diffs against the PR base branch or the previous push with `git diff` and logs the changed files, the check job that runs only when its folder or its own workflow file changed, and a gate job. The check job runs as a matrix on `ubuntu-latest`, `windows-latest` and `macos-latest` (`fail-fast: false`, `defaults.run.shell: bash`, 15-minute timeout, OS in the job name, e.g. `Frontend lint, tests and build (windows-latest)`). Change detection and the gate jobs stay on Ubuntu only. The gate aggregates all matrix variants, so one failing OS fails it, and a skipped matrix still counts as skipped. Do not mark the per-OS jobs as required checks. If the diff cannot be computed, the checks run anyway. The gate jobs `Frontend CI result` and `Backend CI result` are the status checks to mark as required in branch protection; they fail when change detection fails or when needed checks did not succeed. PR runs share one concurrency group per pull request and are cancelled when superseded; each push to `dev` gets its own group (`github.run_id`), so push runs are never queued behind, or cancelled by, a later push and always run to completion. CI uses no third-party actions.
 
-Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint. The user configured Vercel to install backend dependencies from `requirements.txt`; that dashboard setting is not stored in the repo. Connection settings, local testing against the deployed backend and the scope of reported live verification are documented in `backend/DEVELOPMENT.md`.
+Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint. The user configured Vercel to install backend dependencies from `requirements.txt`; that dashboard setting is not stored in the repo. Connection settings, local testing against the deployed backend and the scope of reported live verification are documented in `backend/DEVELOPMENT.md`. `frontend/vercel.json` sets `Cache-Control: no-cache` for `/sw.js`, `/manifest.webmanifest` and `/index.html`, and `public, max-age=31536000, immutable` for `/assets/*`. `vite preview` ignores these headers; verify them on a Vercel deployment.
 
 Create the backend environment with Python 3.13 using `python3 -m venv .venv` and activate it with `source .venv/bin/activate`. On Windows PowerShell, use `py -3.13 -m venv .venv` and `.venv\Scripts\Activate.ps1`. See `backend/DEVELOPMENT.md` for environment configuration and manual verification commands.
 
@@ -155,7 +158,7 @@ Create the backend environment with Python 3.13 using `python3 -m venv .venv` an
 **Hard rules (team decision):**
 
 - ALL git handling (add, commit, push, merge, pull requests, etc.) is done manually by a human, NEVER by an agent.
-- Branches: permanent `main` and `dev`. Work branches: feature/, bugfix/, hotfix/, docs/ in kebab-case. Examples: feature/initial-scaffold, feature/login, bugfix/login-validation, hotfix/critical-crash, docs/update-readme.
+- Branches: permanent `main` and `dev`. Work branches: feature/, bugfix/, hotfix/, docs/ in kebab-case. Examples: feature/initial-scaffold, feature/crisis-search, bugfix/address-validation, hotfix/critical-crash, docs/update-readme.
 - PR flow: work branch -> pull request into dev -> approved by another developer. dev is merged into main only after the team has agreed in a meeting or in the chat. Never target main directly.
 
 Additional rules for agents:
@@ -240,6 +243,31 @@ Ticked by the human before the PR is posted, never by an agent.
 
 Frontend conventions visible in the existing code:
 
+- Crisis preparedness articles use `GET /api/v1/crisis` (full array) and
+  `GET /api/v1/crisis/{id}` (single article). The backend reads and validates the complete
+  `backend/src/data/crisis.json` file on demand in FastAPI's worker thread pool. Article IDs
+  and order stay stable. Text uses KrisKompassen's own Swedish wording with source attribution;
+  each article's source checks and review date are recorded in `backend/DEVELOPMENT.md`.
+  The summaries distinguish advance preparations from conditional actions during a disruption.
+  `fetchedAt` identifies the content edition's compilation/review time and changes only when
+  that content is compiled or verified again, never when an API request is served. These
+  routes use `Cache-Control: no-store`; missing articles return `404 crisis_not_found`,
+  while file/JSON/schema/duplicate-ID failures return `500 crisis_data_unavailable` in the
+  `{error: {code, message}}` envelope. A broken source never becomes an empty list or 404.
+- `CrisisArticle` contains public content only; `CrisisItem` retains the existing IndexedDB
+  shape with local `savedOffline` and optional `savedAt`. Frontend article services validate
+  complete responses, reject duplicate/mismatched IDs and unsafe source links, discard remote
+  saving metadata and apply a 10-second total deadline including the body. Only the documented
+  detail 404 is a missing article; generic deployment/router 404s remain fetch failures.
+- `useCrisisResource` keys article state by mode/resource and attempt, cancels obsolete requests
+  and ignores late results even if cancellation is not supported. Each online entry loads
+  afresh; offline reads only IndexedDB. Retries are explicit. No article response updates an
+  offline copy automatically. `CrisisLoadFeedback` presents Swedish loading/errors and a retry
+  control that stays mounted and uses `aria-disabled` while retrying. If that control still
+  owns focus when feedback disappears, focus returns to the stable page heading.
+  `DetailedCrisisCard` keeps one heading node across asynchronous states and also checks links
+  from older saved copies. Missing/invalid saved timestamps use the existing Swedish fallback.
+
 - TypeScript with strict unused checks (`noUnusedLocals`, `noUnusedParameters`, `erasableSyntaxOnly`, `verbatimModuleSyntax`).
 - Use `import type` / `type` modifiers for type-only imports (for example `import Dexie, { type Table } from "dexie"`).
 - Write function components declared with `function Name() {}`, followed by `export default Name`.
@@ -274,6 +302,7 @@ Frontend conventions visible in the existing code:
   updater adopt the release through an online opening and a full close/reopen after the new worker
   downloads; the new prompt requires the new
   app code to be loaded. Do not require a separate A/B test publication or clear local storage.
+- Manifest, iOS meta tags and precache (app shell, `assets/` images/fonts, `includeAssets` icons; `navigateFallback` `index.html`) are configured in `vite.config.ts` and `index.html`, with icon paths in one constant. A maskable icon is pending. `getServiceWorkerContainer()` treats a blocked `navigator.serviceWorker` as unsupported so the app still renders. User-facing behaviour: README "PWA and offline access".
 - Style with Tailwind utility classes in `className`. There are no separate CSS files beyond `index.css`.
 - Follow [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) for visual tokens and component patterns. VMA warning colours use the central `vma-surface`, `vma-foreground`, `vma-border` and `vma-focus` aliases in `index.css`; keep their documented contrast and focus treatment in sync with the implementation.
 - Put IndexedDB access in `db/` and `services/`, not in UI components. (`IndexedDbTest.tsx` is a test page and an exception.)
@@ -295,23 +324,12 @@ Navigation and accessibility:
 
 - Keep one `BrowserRouter` and one shared `AppLayout`. The layout owns the header, primary navigation, skip link, single `main` landmark, document title and route focus management.
 - Each routed page supplies one `h1` with `id="page-heading"` and `tabIndex={-1}`. The layout derives the document title from that heading and focuses it on pathname changes, including back/forward navigation. Initial loads and hash-only changes preserve browser focus.
-- Add public links to the typed `navigationItems` list in `BottomNavigation.tsx` and register their routes in `App.tsx`. Navigation currently uses exact matching; keep the same DOM links across screen sizes.
-- The navigation is fixed at the bottom below `48rem` viewport width when the viewport is at least `30rem` high; otherwise it stays above the content in normal flow. `AppLayout` also keeps it in normal flow when its content exceeds 25% of the viewport height, so enlarged text cannot cover focused controls. It measures the bar with `ResizeObserver` and maintains `--navigation-height` for content and scroll spacing.
-- Only the fixed mobile bottom bar uses a single horizontally scrolling row with full labels
-  and at least 48×48px targets. When its contents exceed the width available without controls,
-  two Swedish-labelled scroll arrows appear; unavailable directions use `aria-disabled` and
-  leave the tab order while retaining focus if already selected. Swiping and arrow actions
-  update direction availability. Arrow actions respect reduced motion; focus from the keyboard
-  or scripts and route changes reveal the relevant link with room for its outline. Pointer focus leaves
-  the link in place until selection completes, so a partially visible link remains tappable.
-  Returning to normal flow hides the controls and restores the existing wrapping layout.
-  New items remain in `navigationItems`;
-  scrolling does not assume a fixed item count or create a second set of links.
-  Viewport resizes recheck bottom placement before applying the 25% height safeguard, so a
-  previously wrapped bar cannot keep an otherwise compact bottom bar in normal flow.
-  ResizeObserver notifications defer layout measurement to an animation frame, allowing
-  placement changes without resizing the observed bar during notification delivery.
-- The VMA notice is sticky above the header and limited to 40dvh, with complete text in a keyboard-scrollable region. The layout measures `--vma-banner-height`, reserves top scroll padding and reveals focused main/navigation content between the notice and any fixed bottom bar. Only the first visible region owns the top safe-area inset. VMA live announcements persist across routes; the warning never takes focus when it arrives.
+- Add public links to the typed `navigationItems` list in `components/navigationItems.ts` and register their routes in `App.tsx`. Navigation currently uses exact matching. The desktop `BottomNavigation` and the mobile `MobileMenu` both render that one list; never duplicate labels or paths.
+- From `48rem` viewport width the navigation (`BottomNavigation`) stays in normal flow beneath the header with wrapping links. Below `48rem`, regardless of viewport height, it is hidden (`display: none`) and `MobileMenu` shows one fixed, horizontally centred **Meny** button (hamburger icon plus visible text, `bottom: max(0.75rem, env(safe-area-inset-bottom))`) instead.
+- `MobileMenu` opens a full-screen native modal `<dialog>` (`showModal()`) named **Meny** with a **Stäng menyn** button and the shared links in list order; the current route has `aria-current="page"` plus a non-colour cue. The button has `aria-expanded`/`aria-controls`. The modal makes the page inert, locks root/body scroll, wraps Tab at its boundaries and scrolls its link list internally, so it works on short screens and with enlarged text. It covers the VMA notice by design. Closed, it is out of the tab order and accessibility tree.
+- Menu focus: Escape or **Stäng menyn**, or selecting the current route, returns focus to the **Meny** button. Selecting another route closes the menu without focusing anything; the `AppLayout` pathname effect stays the only route-focus owner and focuses `#page-heading`. Crossing `48rem` while open closes the menu without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating).
+- `AppLayout` measures the **Meny** button (distance from its top to the viewport bottom, 0 while it is `display: none`) with `ResizeObserver` and maintains `--navigation-height` for content and scroll spacing and for revealing focused content above the button. ResizeObserver notifications defer layout measurement to an animation frame.
+- The VMA notice is sticky above the header and limited to 40dvh, with complete text in a keyboard-scrollable region. The layout measures `--vma-banner-height`, reserves top scroll padding and reveals focused main/navigation content between the notice and the fixed mobile menu button. Only the first visible region owns the top safe-area inset. VMA live announcements persist across routes; the warning never takes focus when it arrives.
 - The banner heading contains a 48px underlined button with `aria-haspopup="dialog"` and a pointer
   cursor; the dialog's close button also uses a pointer cursor. The native
   modal sits outside `main`, uses `showModal()` and initially focuses its labelled heading. Its
@@ -330,8 +348,8 @@ Navigation and accessibility:
 
 Documentation audience and placement:
 
-- `README.md` is outward-facing: write for users, external visitors and stakeholders. Describe the project's purpose, current capabilities, user-relevant limitations and high-level project context.
-- Keep development guides, implementation details, component contracts, internal routes, developer commands and test/verification procedures out of README. A code change does not automatically require a README update.
+- `README.md` is outward-facing: write for users, external visitors and stakeholders. Describe the project's purpose, current capabilities, user-relevant limitations and high-level project context. It also includes a newcomer quick start for running the app locally: runtime requirements, dependency installation and starting both servers on macOS/Linux and Windows PowerShell.
+- Keep detailed development guides, implementation details, component contracts, internal routes, advanced configuration and test/verification procedures out of README. Local installation/start commands belong in its quick start; link to existing developer documentation for further details. A code change does not automatically require a README update.
 - Put development instructions and conventions in `AGENTS.md` or an existing developer-facing document. Keep code contracts and implementation rationale in JSDoc and comments according to `documentation-baseline.md`. Record task-specific verification steps and results in the task report or PR description.
 - Update README when the public description of the project or its user-facing behaviour changes. Update the relevant developer documentation when internal behaviour, commands or structure change.
 
@@ -351,7 +369,15 @@ Backend conventions:
 - Ruff decides formatting and lint rules. `ruff check .` and `ruff format --check .` must pass.
 - The application factory in `src/app.py` creates a shared HTTPX client through FastAPI lifespan. Routers obtain it through dependency injection; upstream fetching and response validation remain separate.
 - `GET /api/v1/vmas` returns `{data, checkedAt, stale}`, where `data` is `{timestamp, alerts, source}` from SR's VMA API. `checkedAt` is the last successful SR check; `stale` is true when the latest SR attempt failed and that earlier feed is returned instead. Pydantic validates the timezone-bearing timestamp and strict JSON alerts list, preserving malformed entries for frontend classification. The backend supplies source/API attribution independently of upstream data, including empty feeds. Public API metadata strips credentials, query parameters and fragments. Individual records must be validated before presentation.
-- `GET /api/v1/geocode?lat=&lon=` reverse-geocodes one position through OpenStreetMap Nominatim and returns `{found, address, municipality, county, lat, lon, message, source}`. `found: false` (Nominatim has no result, or its response cannot be read as a complete address) is a normal `200`, not an `UpstreamError`; `upstream_invalid_response` is reserved for JSON that fails to decode. Missing/out-of-range `lat`/`lon` get FastAPI's own `422 {"detail": [...]}` shape, which intentionally differs from the `{"error": {...}}` envelope used for upstream failures. Geocode responses always use `Cache-Control: no-store`. See `backend/DEVELOPMENT.md` for the Nominatim usage policy and attribution requirement.
+- `GET /api/v1/geocode?lat=&lon=` reverse-geocodes one position through OpenStreetMap Nominatim and returns `{found, address, municipality, county, lat, lon, message, source}`. `found: false` (Nominatim has no result, or its response cannot be read as a complete address) is a normal `200`, not an `UpstreamError`; `upstream_invalid_response` is reserved for JSON that fails to decode. Missing/out-of-range `lat`/`lon` get FastAPI's own `422 {"detail": [...]}` shape, which intentionally differs from the `{"error": {...}}` envelope used for upstream failures. Geocode responses always use `Cache-Control: no-store` to the browser regardless of the server-side cache below. See `backend/DEVELOPMENT.md` for the Nominatim usage policy and attribution requirement.
+- `GeocodeCache` (`src/services/geocode_cache.py`) is the shared per-instance cache behind `GET /api/v1/geocode`, backed by a shared `NominatimThrottle`:
+  - Keyed by the exact `(lat, lon)` pair received, not a rounded position; only an identical repeat lookup is served from memory.
+  - `KRISKOMPASSEN_GEOCODE_CACHE_TTL_SECONDS` (default 300s) and `KRISKOMPASSEN_GEOCODE_MIN_INTERVAL_SECONDS` (default 1s, matching Nominatim's usage policy) are environment-configurable, unlike `VMA_CACHE_TTL_SECONDS`.
+  - A single `asyncio.Lock` serializes cache misses: identical concurrent lookups collapse into one Nominatim call; distinct concurrent lookups queue behind the same lock and each pay the throttle's wait, so the backend never exceeds the configured interval between Nominatim calls regardless of client count.
+  - A failed fetch (`UpstreamError`) is never cached and is raised exactly as before; the next request for the same coordinate retries immediately. Only a successful response (`found: true` or `found: false`) is cached.
+  - No stale fallback: an expired entry is a miss, not a stale hit. Expired entries are purged lazily on the next miss.
+  - Per instance, in memory; resets on cold start, same as `VmaCache`.
+  - `KRISKOMPASSEN_GEOCODE_MAX_QUEUE_DEPTH` (default 10) caps how many misses may be waiting on or fetching through the lock at once. A real crisis mostly produces distinct positions (every user has their own GPS fix), so the TTL cache barely helps there — most requests queue behind the throttle regardless. A lookup arriving once the queue is full fails fast with `UpstreamError("geocode_queue_full", ..., status_code=503)` instead of growing the queue and the wait without bound.
 - Upstream failures use the documented `error.code` / `error.message` envelope and HTTP 502 or 504. Never turn failures into a successful empty result.
 - `VmaCache` (`src/services/vma_cache.py`) is the shared cache behind `GET /api/v1/vmas`:
   - `VMA_CACHE_TTL_SECONDS` (60 s, a team decision because SR documents no rate limit) is set only in `src/core/config.py`.
@@ -359,7 +385,7 @@ Backend conventions:
   - Concurrent requests share one SR call through an `asyncio.Lock`.
   - The cache is per instance and resets on cold start.
   - A failure without a cached feed returns the error envelope with HTTP 502 or 504, never a successful empty result. With a cached feed, it returns that feed with `stale: true` and unchanged `checkedAt`.
-  - Fresh responses use `Cache-Control: max-age=<remaining TTL>`; stale and error responses use `no-store`. Never set `s-maxage`. `/api/v1/geocode` has no equivalent cache yet.
+  - Fresh responses use `Cache-Control: max-age=<remaining TTL>`; stale and error responses use `no-store`. Never set `s-maxage`. `/api/v1/geocode` has its own, differently-shaped server-side cache (`GeocodeCache`, see above) but always sends `no-store` to the browser.
   - Cache age uses an injectable monotonic clock; `checkedAt` uses an injectable wall clock.
 - Backend settings use the `KRISKOMPASSEN_` environment prefix. Frontend backend address, VMA timeout and the geocode endpoint URL live in `frontend/src/config/apiConfig.ts`. See `backend/DEVELOPMENT.md` for defaults, CORS and the official API evidence.
 
@@ -376,17 +402,10 @@ Decided tooling:
 
 - Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. `fake-indexeddb` and Playwright remain planned and are not installed.
 - Frontend VMA tests cover validation, mapping, transport, banner selection, request state, polling (interval, overlap, offline/visibility pause and reconnection), status text, local time transitions and shared layout integration with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Component/hook integration tests replace `fetch` while retaining real validation/mapping, so no backend is required. No test page or mock mode is bundled with the app. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Manual browser layout checks complement these tests; jsdom does not verify real rendering or spoken screen-reader output.
-- Layout integration tests mount the real `ModeProvider`, mode toggle and connectivity status alongside the VMA banner. They cover keyboard mode changes, title updates, connection loss and recovery while preserving the warning and its single request.
-- Navigation component tests cover overflow controls, scroll limits, reduced motion, focused
-  and current-link visibility, pointer selection/cancellation, changing menu width, normal-flow
-  fallback and observer cleanup
-  using controlled measurements. Layout tests also verify reserved bottom-bar space and
-  restoration after viewport resize while retaining the tall-content fallback. Real
-  responsive rendering, touch gestures and spoken screen-reader output require browser/device checks.
-- Crisis list regression tests mount the real mode provider, toggle and crisis list/detail
-  routes with mocked offline storage. They cover the unsaved-item redirect, immediate notice
-  removal on returning online, retained offline notices on an online mount and the existing
-  online not-found explanation.
+- Layout integration tests mount the real `ModeProvider`, "Sparad information" switch and connectivity status alongside the VMA banner. They cover mode changes from the focused switch, title updates, connection loss and recovery while preserving the warning and its single request.
+- `ModeToggle` tests cover switch semantics, clicks on the switch and its label, `aria-checked`, the help text, the automatic switch on connection loss, the `aria-disabled` restriction with its explanation and the retained saved mode after reconnection. jsdom does not turn Space/Enter into a native button click, so the tests assert a native `<button>` and keyboard activation is verified manually in a browser.
+- Navigation tests: `BottomNavigation` tests cover the shared list, `aria-current` and the absence of scroll controls. `MobileMenu` tests cover the closed state, `aria-expanded`/`aria-controls`, link order, `aria-current`, Stäng menyn and native-close focus return, route selection (a different route leaves focus to the layout; the current route returns it to the button), scroll lock and restoration, Tab wrapping, closing when the viewport reaches desktop width, offline navigation and cleanup. Layout tests cover the reserved space and focus reveal above the button, no reserved space while it is hidden, and route-heading focus after selecting a menu link. jsdom does not apply CSS breakpoints, inertness, Escape handling, the top layer or safe-area insets; those, touch use and spoken screen-reader output require browser/device checks.
+- Article tests cover strict response validation, safe links, transport/total deadlines, cancellation, fresh loads across mode/ID changes, retries, late results and StrictMode replay. Synthetic article fixtures live in `frontend/src/services/__fixtures__/crisis.ts` and are never an app data source. Component tests retain real fetching/validation with mocked HTTP and offline storage, covering save payloads, legacy copies without `savedAt`, missing-item redirects, mode-bound notices, removal focus, stable detail headings and asynchronous document titles. Backend article tests cover the bundled file, malformed/missing/unreadable data, duplicate IDs, complete-source validation, per-request reads and CORS on success, 404 and 500. Real IndexedDB and browser checks complement these tests.
 - VMA detail tests cover complete content/metadata, escaped markup, safe links, validity/request
   notices, selection retention, repeat opening and explicit focus/scroll cleanup. The adjacent
   `components/__fixtures__/dialog.ts` supplies missing jsdom open/close methods only; actual modal
@@ -396,6 +415,7 @@ Decided tooling:
   guide for this change. Existing VMA and layout tests remain. Device migration, saved articles,
   offline reopening and actual VoiceOver output are pending live verification; local build checks
   do not establish those results.
+- `pwaUpdateService.test.ts` covers registration failure only: a throwing or missing container, rejected `register`/`getRegistration`, and disabled bootstrap outside secure production builds. Update/activation flow tests remain out of scope.
 - The backend pytest suite runs in CI whenever `backend/` changes (see §4) and must not need network access or environment variables.
 - Backend CORS tests provide their own JSON origin environment variable and mock upstream transport. They check that approved frontend origins can read successful feeds and 502/504 errors, and that unlisted origins or unsupported methods do not pass preflight.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
@@ -426,7 +446,7 @@ Decided tooling:
 - Reintroduce separate online/offline routes (e.g. `/offline`, `/offline/:id`) or otherwise encode the selected mode in the URL. The team decided online/offline is a shared `ModeContext` read by `/crisis` and `/crisis/:id` instead (see §3) specifically so the URL never changes on a mode switch. If a task description points back toward separate routes, stop and ask, and remind them of this decision, rather than silently reintroducing it.
 - Change the PWA or service worker config (`VitePWA` in `vite.config.ts`, manifest, caching).
 - Create or change any backend database schema.
-- Add or change authentication or authorization.
+- Add or change authentication or authorization that is not an end-user account system (for example protecting an operational or administrative endpoint). End-user accounts, registration and login are not subject to approval: they are out of scope under the account-free decision in §1 and cannot be introduced by a ticket or by approving a plan for one.
 - Touch deploy, hosting or CI config (`frontend/vercel.json`, `.github/workflows/`). The frontend has a Vercel SPA fallback. CI workflows are `backend-ci.yml` and `frontend-ci.yml`. Project creation, environment settings and actual deployment remain account-side work.
 - Delete, move or rename files.
 - Change TypeScript, ESLint, Prettier, Ruff or build configuration.
@@ -449,6 +469,15 @@ Every task starts with a checklist and ends with a checklist. The two are compar
 - [ ] Items from section 10 that need approval: ...
 - [ ] Verification: commands to run
 ```
+
+**Account-free check (before planning any implementation).** If a task or ticket asks for end-user accounts, registration, login, account-based profiles or account-based cloud persistence, do not plan or implement it. The ticket does not authorize it (see §1). Stop and:
+
+1. State explicitly that the request conflicts with the project's account-free product decision.
+2. Identify the underlying user need (for example keeping settings, or keeping information available later).
+3. Propose account-free alternatives that fit the existing architecture, such as device-local settings or locally saved crisis information in IndexedDB.
+4. Keep every alternative within the local-storage and personal-data rules in §9. Do not propose storing personal data locally beyond what §9 already permits, and do not weaken those rules.
+
+Wait for the human's decision before continuing.
 
 **While working:**
 
@@ -491,6 +520,6 @@ Anything done that was not in the plan is listed separately under "Not in plan".
 - No secrets, no stray debug code, no unused files.
 - Code comments and docs are in English. UI text is in Swedish.
 - Frontend code follows `documentation-baseline.md`.
-- README reflects changes to the outward-facing project description, capabilities and user-relevant limitations. Internal behaviour, command and structure changes are documented in `AGENTS.md` or the relevant developer documentation, not automatically in README.
+- README reflects changes to the outward-facing project description, capabilities, user-relevant limitations and local quick start. Internal behaviour, advanced commands and structure changes are documented in `AGENTS.md` or the relevant developer documentation, not automatically in README.
 - AGENTS.md matches the current state of the repo (see section 0).
 - The PR targets `dev` and is approved by another developer.

@@ -1,0 +1,56 @@
+[
+  {
+    "id": "food-in-crisis",
+    "title": "Mat i kris",
+    "description": "Planera måltider som fungerar när du inte kan handla eller använda spisen.",
+    "content": "Bygg upp ett matförråd som räcker till hela hushållet i minst en vecka. Välj mat som ger tillräckligt med energi och kan förvaras i rumstemperatur.\n\nHa både mat som kan ätas direkt och mat som går snabbt att tillaga med lite vatten. Knäckebröd, konserverade bönor och gryn är exempel på sådant som kan ingå i förrådet. Fyll på förrådet stegvis. När du handlar kan du köpa lite extra av den mat du brukar äta.",
+    "source": "Krisinformation.se",
+    "sourceUrl": "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+    "fetchedAt": "2026-10-20T12:37:11.000Z"
+  },
+  {
+    "id": "drinking-water-in-crisis",
+    "title": "Dricksvatten i kris",
+    "description": "Lagra dricksvatten hemma och planera hur du kan få tag på mer om vattenförsörjningen avbryts.",
+    "content": "Räkna med tre till fem liter vatten per vuxen och dygn till dryck, matlagning och grundläggande hygien. Om du har husdjur behöver du också ta hänsyn till deras vattenbehov.\n\nAnvänd rena flaskor eller dunkar som är avsedda för dricksvatten. Fyll dem med dricksvatten av god kvalitet, förslut dem väl och förvara vattnet mörkt och svalt. Ha också en dunk att hämta vatten i om kommunen ordnar vattenutdelning.\n\nVid en störning i vattenförsörjningen ska du följa kommunens besked om vattenkvaliteten. Vid en kokningsrekommendation ska allt vatten till dryck och matlagning kokas upp tills det bubblar kraftigt. Låt det kokta vattnet svalna i en ren behållare. Kokning oskadliggör bakterier, virus och parasiter. Vatten med kemiska föroreningar blir inte säkert att dricka genom kokning.",
+    "source": "Krisinformation.se",
+    "sourceUrl": "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+    "fetchedAt": "2026-10-20T12:37:11.000Z"
+  },
+  {
+    "id": "medication-in-crisis",
+    "title": "Läkemedel i kris",
+    "description": "Se över dina recept och planera uttagen i god tid inför en eventuell kris.",
+    "content": "Socialstyrelsen rekommenderar att du som använder receptbelagda läkemedel under en längre tid har en månads förbrukning hemma som reserv. Rådet gäller också förbrukningsartiklar som vården har skrivit ut för långvarig användning.\n\nSe över när dina recept behöver förnyas och planera dina uttag i god tid utifrån vad recepten tillåter. Använd de äldsta läkemedlen först. Har du redan en månads förbrukning i reserv har du den beredskap som rekommenderas.\n\nRekommendationen gäller inte receptfria läkemedel eller förbrukningsartiklar som inte har skrivits ut av vården. Den omfattar inte heller läkemedel för kortvariga behandlingar, dospåsar eller livsmedel på recept. Läkemedel eller doseringar som fortfarande provas ut är också undantagna. Detsamma gäller läkemedel som av medicinska skäl inte kan hämtas ut i förväg.\n\nKontakta den som skriver ut dina läkemedel eller förbrukningsartiklar om du är osäker på vad som gäller för dig eller inte kan ordna en månads förbrukning hemma.",
+    "source": "Krisinformation.se",
+    "sourceUrl": "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+    "fetchedAt": "2026-10-20T12:37:11.000Z"
+  },
+  {
+    "id": "heating-in-crisis",
+    "title": "Värme i kris",
+    "description": "Planera hur hushållet kan hålla värmen om uppvärmningen slutar fungera.",
+    "content": "Välj i förväg ett rum där hushållet kan samlas om bostaden blir kall. Ha varma kläder, filtar, liggunderlag och sovsäckar tillgängliga.\n\nVid ett värmeavbrott hjälper flera lager kläder, mössa och varma strumpor dig att hålla värmen. Lägg mattor eller filtar på golvet och täta dragiga springor vid dörrar och fönster. Håll utrymningsvägarna fria och se till att ventilationen fungerar.\n\nOm du planerar att använda en kamin eller annan värmekälla, läs anvisningarna om placering, avstånd och ventilation i förväg. Följ dem och vädra regelbundet när värmekällan används. Hantera bränsle försiktigt och placera levande ljus på säkert avstånd från brännbara material. Använd inte en kamin eller levande ljus när du sover.",
+    "source": "Krisinformation.se",
+    "sourceUrl": "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+    "fetchedAt": "2026-10-20T12:37:11.000Z"
+  },
+  {
+    "id": "communication-in-crisis",
+    "title": "Kommunikation i kris",
+    "description": "Planera för att kunna ta del av viktig information och hålla kontakt med närstående vid störningar.",
+    "content": "Ta i förväg reda på hur du kan få viktig samhällsinformation om elen, internet eller mobilnätet slutar fungera. Se till att du har en radio som fungerar med batterier, solceller eller vev. Ha extra batterier till batteridriven utrustning.\n\nSkriv ner viktiga telefonnummer på papper och ha en laddad powerbank till mobilen. Om du har bil kan du också lyssna på bilradion och använda en mobilladdare som fungerar i bilen.\n\nVid en kris ger din lokala P4-kanal i Sveriges Radio information om läget och myndigheternas råd.",
+    "source": "Krisinformation.se",
+    "sourceUrl": "https://www.krisinformation.se/din-beredskap/kommunikation/om-internet-och-telefoni-gar-ner/",
+    "fetchedAt": "2026-10-20T12:37:11.000Z"
+  },
+  {
+    "id": "hygiene-in-crisis",
+    "title": "Toalett och hygien i kris",
+    "description": "Planera inför toalettbesök och tvätt som kräver lite eller inget vatten.",
+    "content": "Planera hur du kan sköta toalettbesök och personlig hygien om du blir utan vatten. Ha toalettpapper, våtservetter, handsprit och en hink med tättslutande lock hemma. Komplettera med blöjor och mensskydd om det behövs i hushållet.\n\nVid vattenbrist ska det vatten som finns i första hand användas till dryck och matlagning. Var noga med handhygienen även när tillgången till vatten är begränsad.\n\nTa i förväg reda på vilka råd kommunen ger om toalettbesök utan spolning och hantering av toalettavfall. Följ kommunens anvisningar vid ett avbrott. Avfallshanteringen kan skilja sig mellan kommuner.",
+    "source": "Krisinformation.se",
+    "sourceUrl": "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+    "fetchedAt": "2026-10-20T12:37:11.000Z"
+  }
+]
