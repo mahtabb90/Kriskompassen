@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type RefObject } from "react"
 import { NavLink, useLocation } from "react-router-dom"
+import InstallAppButton from "./InstallAppButton"
 import { navigationItems } from "./navigationItems"
 
 interface MobileMenuProps {
@@ -17,7 +18,8 @@ type CloseReason = "manual" | "navigation" | "viewport"
  * keyboard and assistive technology while closed. Scroll is locked while open and the link list
  * scrolls internally. Closing by button or Escape, or selecting the current route, returns focus
  * to the trigger. Selecting another route leaves focus to AppLayout's route heading focus, and
- * crossing 48rem closes the menu without focusing the now hidden trigger.
+ * crossing 48rem closes the menu without focusing the now hidden trigger. When the browser offers
+ * installation, an install button follows the links; selecting it closes the menu manually.
  *
  * @param triggerRef Gives the shared layout access to the button to reserve scroll space for it.
  */
@@ -168,29 +170,36 @@ function MobileMenu({ triggerRef }: MobileMenuProps) {
               Stäng menyn
             </button>
           </div>
-          <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-4 py-4">
-            {navigationItems.map(({ to, label, end }) => (
-              <li key={to}>
-                <NavLink
-                  to={to}
-                  end={end}
-                  onClick={() => {
-                    // Re-selecting the current route changes nothing for AppLayout to focus.
-                    closeReason.current = pathname === to ? "manual" : "navigation"
-                    dialogRef.current?.close()
-                  }}
-                  className={({ isActive }) =>
-                    "flex min-h-12 items-center rounded-xl px-4 py-3 text-lg leading-normal wrap-anywhere " +
-                    (isActive
-                      ? "bg-blue-900 font-bold text-white underline decoration-2 underline-offset-4"
-                      : "font-medium text-slate-700 hover:bg-slate-100 hover:text-blue-900")
-                  }
-                >
-                  {label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+            <ul className="space-y-2">
+              {navigationItems.map(({ to, label, end }) => (
+                <li key={to}>
+                  <NavLink
+                    to={to}
+                    end={end}
+                    onClick={() => {
+                      // Re-selecting the current route changes nothing for AppLayout to focus.
+                      closeReason.current = pathname === to ? "manual" : "navigation"
+                      dialogRef.current?.close()
+                    }}
+                    className={({ isActive }) =>
+                      "flex min-h-12 items-center rounded-xl px-4 py-3 text-lg leading-normal wrap-anywhere " +
+                      (isActive
+                        ? "bg-blue-900 font-bold text-white underline decoration-2 underline-offset-4"
+                        : "font-medium text-slate-700 hover:bg-slate-100 hover:text-blue-900")
+                    }
+                  >
+                    {label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 empty:hidden">
+              {/* Moving focus out of the open modal would escape its focus containment, so the
+                  menu closes and returns focus to the trigger like any manual close. */}
+              <InstallAppButton afterPrompt={() => dialogRef.current?.close()} />
+            </div>
+          </div>
         </div>
       </dialog>
     </>
