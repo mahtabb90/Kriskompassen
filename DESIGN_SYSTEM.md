@@ -286,6 +286,25 @@ Used for toggled states or alternate actions (e.g. "Ta bort offlinekopia", "Visa
   - Hover: light blue tint background (`#eff6ff`).
   - Disabled: `opacity-60`.
 
+#### 6.2.3 Text Button (tertiary)
+Used for secondary actions that should not compete with nearby controls (e.g. "Installera app" in
+the header).
+
+- **Classes:**
+  `relative inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm
+  font-semibold text-blue-900 underline underline-offset-4 hover:bg-blue-50 active:bg-blue-50
+  after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']`
+- **Visual:** No border or fill at rest; the underline and blue text mark it as interactive, like
+  standalone text links (section 6.3). The `px-2` aligns its content with switch and help-text
+  content that uses the same padding. An optional 20×20px inline SVG icon precedes the label,
+  uses `currentColor`, has `aria-hidden="true"` and `focusable="false"`, and never replaces the
+  visible label.
+- **Target size:** The visible box is 32px high; the `after` pseudo-element extends the hit area
+  by 8px above and below to 48px, keeping the project's 48×48px standard (section 6.1). The
+  extended hit area must not overlap other interactive targets, so keep at least 8px between the
+  visible box and neighbouring controls.
+- **Focus:** The universal focus outline (section 8.1) surrounds the visible box.
+
 ### 6.3 Text and Content Links
 
 - **Standalone Text Links:**
@@ -339,6 +358,27 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
   reverse. The restricted state only occurs while the switch is on, so the dimmed track to
   measure is `blue-900` at `opacity-60` against white. These values must still be verified with
   a contrast checker as required by section 2.5.
+
+### 6.6 Install App Button
+
+- **Variant:** In the header, the text button (section 6.2.3) with a decorative download icon, so
+  it has less visual weight than the "Sparad information" switch. In the mobile menu, the
+  secondary/outlined button (section 6.2.2) with compact `px-4 py-2` padding, so its 2px border
+  keeps the 48px minimum height (`min-h-12 min-w-12`), without an icon. The visible label
+  **"Installera app"** is the accessible name in both; no `aria-label`.
+- **Placement:** From `48rem`, in the header's right column, 8px below the "Sparad information"
+  help text and 8px above the active address. The column is left-aligned, and the switch, help
+  text, button and address all use 8px (`px-2`) inline padding, so their content shares one left
+  edge. The right column spans the brand, tagline and connection rows plus a trailing flexible row,
+  so the button uses the space beside them and a taller right column never spreads the left rows
+  apart. Below `48rem`, last in the `MobileMenu` dialog, after the links in its scrolling region.
+  It is an action, not a page, so it is never part of the navigation links.
+- **Visibility:** Rendered only while the browser offers installation; no space is reserved
+  otherwise. Online without an active address, it fits beside the left column without changing the
+  header height. When the switch help text wraps the header grows by 8px, and with an active
+  address by 40px, but it stays lower than the header before this layout.
+- **Focus:** Selecting it opens the browser's prompt and removes the button. In the header focus
+  moves to `#page-heading`; in the menu the dialog closes and focus returns to the **Meny** button.
 
 ---
 
