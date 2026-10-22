@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useRef, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import ShelterDistance from "../components/ShelterDistance"
+import ShelterGeneralInfo from "../components/ShelterGeneralInfo"
+import ShelterSaveToggle from "../components/ShelterSaveToggle"
 import { useAddresses } from "../context/addressContext"
 import { useCrisisResource } from "../hooks/useCrisisResource"
+import { useSavedShelters } from "../hooks/useSavedShelters"
 import { getCachedShelterById } from "../services/shelterStorageService"
 import { haversineDistanceMeters, type GeoPoint } from "../utils/distance"
 import { formatShelterCapacity } from "../utils/formatCapacity"
@@ -37,6 +40,7 @@ function ShelterDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { activeAddress } = useAddresses()
+  const { shelters: savedShelters, isSaved, save, remove, updateComment } = useSavedShelters()
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   const load = useCallback(() => (id ? getCachedShelterById(id) : Promise.resolve(undefined)), [id])
@@ -63,6 +67,25 @@ function ShelterDetailPage() {
   const locationLabel = shelter
     ? describeShelterLocation(shelter, activeAddress?.municipality)
     : undefined
+  const shelterSaved = shelter ? isSaved(shelter.id) : false
+  const savedRecord = shelter ? savedShelters.find((saved) => saved.id === shelter.id) : undefined
+  const [commentConfirmation, setCommentConfirmation] = useState("")
+  // Clears a stale confirmation when navigating to a different shelter, per React's "storing
+  // information from previous renders" pattern (see ShelterPage's mode-driven tab for the same
+  // approach) - avoids a lingering "Kommentar sparad." from the previous shelter's page.
+  const [confirmationForId, setConfirmationForId] = useState(id)
+  if (id !== confirmationForId) {
+    setConfirmationForId(id)
+    setCommentConfirmation("")
+  }
+  const handleToggleSave = useCallback(() => {
+    if (!shelter) return
+    if (isSaved(shelter.id)) {
+      void remove(shelter.id)
+    } else {
+      void save(shelter)
+    }
+  }, [shelter, isSaved, save, remove])
 
   return (
     <article className="overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm">
@@ -125,38 +148,55 @@ function ShelterDetailPage() {
               )}
             </dl>
 
-            <a
-              href={buildOpenStreetMapUrl(shelter)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-6 inline-flex min-h-12 items-center font-semibold text-blue-900 underline underline-offset-4 hover:text-blue-950"
-            >
-              Visa skyddsrummet på kartan
-              <span className="sr-only"> (öppnas i ny flik)</span>
-            </a>
+            <div className="mt-6">
+              <ShelterSaveToggle saved={shelterSaved} onToggle={handleToggleSave} />
+            </div>
 
-            <section className="mt-8 border-t border-slate-200 pt-6">
-              <h2 className="text-xl font-bold text-blue-900">Om skyddsrum</h2>
-              <p className="mt-3 max-w-prose text-slate-700">
-                Skyddsrum är utrymmen som ska skydda mot tryckvåg och splitter vid höjd beredskap
-                eller krig. De är märkta med en skylt vid entrén: en orange ruta med en blå
-                triangel.
-              </p>
-              <p className="mt-3 max-w-prose text-slate-700">
-                Om skyddsrummen behöver tas i bruk har fastighetsägaren upp till två dygn på sig att
-                ställa i ordning dem med vatten, värme, ventilation och toaletter. Ta själv med dig
-                mat, vatten, mediciner, hygienartiklar, varma kläder, ficklampa och mobiltelefon med
-                laddare.
-              </p>
+            {shelterSaved && (
+              <div className="mt-4">
+                <label
+                  htmlFor="shelter-comment"
+                  className="block text-sm font-medium text-slate-600"
+                >
+                  Kommentar som hjälper dig hitta hit (visas i listan, max 50 tecken)
+                </label>
+                <input
+                  key={savedRecord?.id ?? "unsaved"}
+                  id="shelter-comment"
+                  type="text"
+                  maxLength={50}
+                  defaultValue={savedRecord?.comment ?? ""}
+                  onChange={() => setCommentConfirmation("")}
+                  onBlur={(event) => {
+                    if (!shelter) return
+                    const value = event.target.value
+                    void updateComment(shelter.id, value).then(() =>
+                      setCommentConfirmation("Kommentar sparad.")
+                    )
+                  }}
+                  placeholder="T.ex. Kommunhuset"
+                  className="mt-1 w-full max-w-sm rounded-xl border-2 border-blue-900 px-4 py-3 font-medium text-blue-900 placeholder:font-normal placeholder:text-slate-400"
+                />
+                <div role="status" className="mt-2 text-sm font-medium text-green-800">
+                  {commentConfirmation}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 border-t border-slate-200 pt-6">
               <a
-                href="https://www.krisinformation.se/forbered-dig/skyddsrum-utrymning-och-varningssystem/skyddsrum/"
+                href={buildOpenStreetMapUrl(shelter)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 inline-flex min-h-12 items-center font-medium text-blue-900 underline underline-offset-4"
+                className="inline-flex min-h-12 items-center font-semibold text-blue-900 underline underline-offset-4 hover:text-blue-950"
               >
-                Läs mer om skyddsrum hos Krisinformation.se
+                Visa skyddsrummet på kartan
                 <span className="sr-only"> (öppnas i ny flik)</span>
               </a>
+            </div>
+
+            <section className="mt-8 border-t border-slate-200 pt-6">
+              <ShelterGeneralInfo />
             </section>
           </>
         )}

@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useAddresses, type AddressContextValue } from "../context/addressContext"
-import { getCachedShelterById } from "../services/shelterStorageService"
+import {
+  getCachedShelterById,
+  getSavedShelters,
+  removeSavedShelter,
+  saveShelter,
+  setSavedShelterComment,
+} from "../services/shelterStorageService"
 import type { CachedShelter } from "../types/shelter"
 import ShelterDetailPage from "./ShelterDetailPage"
 
@@ -13,6 +19,10 @@ vi.mock("../context/addressContext", () => ({
 
 vi.mock("../services/shelterStorageService", () => ({
   getCachedShelterById: vi.fn(),
+  getSavedShelters: vi.fn(),
+  saveShelter: vi.fn(),
+  removeSavedShelter: vi.fn(),
+  setSavedShelterComment: vi.fn(),
 }))
 
 const fullShelter: CachedShelter = {
@@ -61,6 +71,10 @@ function renderDetail(id = fullShelter.id) {
 
 beforeEach(() => {
   mockActiveAddress()
+  vi.mocked(getSavedShelters).mockResolvedValue([])
+  vi.mocked(saveShelter).mockResolvedValue(undefined)
+  vi.mocked(removeSavedShelter).mockResolvedValue(undefined)
+  vi.mocked(setSavedShelterComment).mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -127,6 +141,131 @@ describe("ShelterDetailPage with missing fields", () => {
 
     await screen.findByRole("heading", { name: "Kantarellen 11, Solna kommun" })
     expect(screen.queryByText("Avstånd från din plats")).toBeNull()
+  })
+})
+
+describe("ShelterDetailPage save button", () => {
+  it("saves an unsaved shelter and flips to the saved state", async () => {
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    renderDetail()
+    await screen.findByRole("heading", { name: "Kantarellen 11, Solna kommun" })
+
+    expect(screen.getByText("Inte sparat")).toBeTruthy()
+    const saveButton = screen.getByRole("button", { name: "Spara skyddsrum" })
+
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: null,
+      },
+    ])
+    fireEvent.click(saveButton)
+
+    expect(saveShelter).toHaveBeenCalledExactlyOnceWith(fullShelter)
+    expect(await screen.findByText("Sparat skyddsrum")).toBeTruthy()
+    expect(await screen.findByRole("button", { name: "Ta bort sparat skyddsrum" })).toBeTruthy()
+  })
+
+  it("removes an already-saved shelter", async () => {
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: null,
+      },
+    ])
+    renderDetail()
+
+    await screen.findByText("Sparat skyddsrum")
+    const saveButton = screen.getByRole("button", { name: "Ta bort sparat skyddsrum" })
+
+    vi.mocked(getSavedShelters).mockResolvedValue([])
+    fireEvent.click(saveButton)
+
+    expect(removeSavedShelter).toHaveBeenCalledExactlyOnceWith(fullShelter.id)
+    expect(await screen.findByRole("button", { name: "Spara skyddsrum" })).toBeTruthy()
+  })
+})
+
+describe("ShelterDetailPage comment", () => {
+  it("hides the comment field when the shelter is not saved", async () => {
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    renderDetail()
+    await screen.findByRole("heading", { name: "Kantarellen 11, Solna kommun" })
+
+    expect(screen.queryByLabelText(/Kommentar/)).toBeNull()
+  })
+
+  it("shows the comment field, prefilled, once the shelter is saved", async () => {
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: "Kommunhuset",
+      },
+    ])
+    renderDetail()
+
+    const input = await screen.findByLabelText<HTMLInputElement>(/Kommentar/)
+    expect(input.value).toBe("Kommunhuset")
+  })
+
+  it("persists an edited comment on blur", async () => {
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: null,
+      },
+    ])
+    renderDetail()
+
+    const input = await screen.findByLabelText<HTMLInputElement>(/Kommentar/)
+    fireEvent.change(input, { target: { value: "Kommunhuset" } })
+    fireEvent.blur(input)
+
+    expect(setSavedShelterComment).toHaveBeenCalledExactlyOnceWith(fullShelter.id, "Kommunhuset")
+  })
+
+  it("shows a confirmation after a successful save, and clears it while editing again", async () => {
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: null,
+      },
+    ])
+    renderDetail()
+
+    const input = await screen.findByLabelText<HTMLInputElement>(/Kommentar/)
+    expect(screen.queryByText("Kommentar sparad.")).toBeNull()
+
+    fireEvent.change(input, { target: { value: "Kommunhuset" } })
+    fireEvent.blur(input)
+    expect(await screen.findByText("Kommentar sparad.")).toBeTruthy()
+
+    fireEvent.change(input, { target: { value: "Kommunhuset, källaren" } })
+    expect(screen.queryByText("Kommentar sparad.")).toBeNull()
   })
 })
 
