@@ -105,8 +105,8 @@ function MobileMenu({ triggerRef }: MobileMenuProps) {
         className={
           "fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-20 -translate-x-1/2 " +
           "inline-flex min-h-12 min-w-12 cursor-pointer items-center justify-center gap-2 " +
-          "rounded-xl border-2 border-blue-900 bg-blue-900 px-5 py-3 font-semibold text-white " +
-          "shadow-lg hover:bg-blue-950 md:hidden"
+          "rounded-xl border-2 border-blue-900 bg-amber-300 px-5 py-3 font-semibold text-blue-900 " +
+          "shadow-lg hover:bg-amber-200 active:bg-amber-400 md:hidden"
         }
       >
         <svg

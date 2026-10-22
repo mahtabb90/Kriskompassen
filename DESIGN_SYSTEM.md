@@ -53,7 +53,7 @@ To ensure accessible contrast ratios, eliminate visual glare, and provide comfor
 
 - **UI Primary Blue (`#1E3A8A` / `blue-900`):** An adapted deep blue providing strong contrast (>= 4.5:1) for headings, text links, buttons, and focus indicators against white surfaces.
 - **Page Canvas (`#D7E2EF`):** A softened, muted tint of the brand light blue that provides a restful background canvas behind content cards and page content without causing eye strain.
-- **UI Accent Amber (`#FBBF24` / `amber-400`):** A warm yellow brand accent used in the signature crisis-information bar.
+- **UI Accent Amber (`#FBBF24` / `amber-400`):** A warm yellow brand accent used in the signature crisis-information bar and, as the softer `amber-300` tint, the background of the fixed mobile **Meny** button (with dark blue text and icon).
 - **Surface White (`#FFFFFF` / `bg-white`):** Crisp white content cards and header/navigation surfaces for clear text presentation.
 
 | Token / Name | Hex / Value | Tailwind Class | Usage |
@@ -389,7 +389,7 @@ KrisKompassen shows the same primary links, from the shared `navigationItems` li
 ### 7.1 Responsive Placement
 
 - **Mobile Viewports (`width < 48rem`, any height):**
-  The in-flow navigation is hidden. One fixed **Meny** button sits at the bottom centre (`fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2`): a primary blue button (`bg-blue-900`, white text, `rounded-xl`, `shadow-lg`, minimum 48×48px) with a decorative hamburger SVG (`aria-hidden`) and the visible text "Meny". It stays fixed while scrolling and in landscape.
+  The in-flow navigation is hidden. One fixed **Meny** button sits at the bottom centre (`fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2`): a brand-accent amber button (`bg-amber-300`, `border-blue-900`, dark blue `text-blue-900` text and icon, `hover:bg-amber-200`, `active:bg-amber-400`, `rounded-xl`, `shadow-lg`, minimum 48×48px) with a decorative hamburger SVG (`aria-hidden`) and the visible text "Meny". It stays fixed while scrolling and in landscape.
 - **Desktop & Wide Viewports (`width >= 48rem`):**
   `BottomNavigation` renders in standard document flow directly beneath the header, with a 2px top border in the page canvas colour (`border-t-2 border-t-[#D7E2EF]`) and a 1px bottom border (`border-b border-b-slate-200`). Links wrap onto further rows; there is no horizontal scrolling. The Meny button and dialog are not shown.
 
