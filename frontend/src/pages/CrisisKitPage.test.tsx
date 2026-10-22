@@ -127,6 +127,11 @@ describe("CrisisKitPage custom-item creation", () => {
     expect(await screen.findByRole("heading", { name: "Ficklampa" })).toBeTruthy()
     expect((screen.getByLabelText("Namn") as HTMLInputElement).value).toBe("")
     expect((screen.getByLabelText("Kategori") as HTMLSelectElement).value).toBe("Övrigt")
+    expect(
+      await screen.findByText("Saken har lagts till i din krislåda.", {
+        selector: '[role="status"]',
+      })
+    ).toBeTruthy()
   })
 
   it("prevents submission when the name contains only whitespace", async () => {
@@ -156,6 +161,7 @@ describe("CrisisKitPage custom-item creation", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("Storage failed")
     expect(screen.queryByRole("heading", { name: "Nödradio" })).toBeNull()
   })
+  expect(screen.queryByText("Saken har lagts till i din krislåda.")).toBeNull()
 
   it("shows an error if the initial load fails", async () => {
     vi.mocked(getCrisisKitItems).mockRejectedValueOnce(new Error("Storage failed"))

@@ -22,6 +22,7 @@ function CrisisKitPage() {
     useState<(typeof CRISIS_KIT_CATEGORIES)[number]>("Övrigt")
   const [isAddingItem, setIsAddingItem] = useState(false)
   const [addItemError, setAddItemError] = useState<string | null>(null)
+  const [addItemMessage, setAddItemMessage] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadItems() {
@@ -38,6 +39,8 @@ function CrisisKitPage() {
   }, [])
 
   async function handleOwnershipChange(item: CrisisKitItemType, isOwned: boolean) {
+    setAddItemMessage(null)
+
     if (item.isCustom) {
       await updateCustomCrisisKitItemOwnership(item.id, isOwned)
     } else {
@@ -52,6 +55,8 @@ function CrisisKitPage() {
   }
 
   async function handleExpirationDateSave(item: CrisisKitItemType, expirationDate: string | null) {
+    setAddItemMessage(null)
+
     if (item.isCustom) {
       await updateCustomCrisisKitItem(item.id, item.name, item.category, expirationDate)
     } else {
@@ -82,6 +87,8 @@ function CrisisKitPage() {
     name: string,
     category: CrisisKitItemType["category"]
   ) {
+    setAddItemMessage(null)
+
     await updateCustomCrisisKitItem(item.id, name, category, item.expirationDate)
 
     setItems((currentItems) =>
@@ -92,6 +99,8 @@ function CrisisKitPage() {
   }
 
   async function handleCustomItemDelete(item: CrisisKitItemType) {
+    setAddItemMessage(null)
+
     await deleteCustomCrisisKitItem(item.id)
     setItems((currentItems) => currentItems.filter((currentItem) => currentItem.id !== item.id))
   }
@@ -100,10 +109,12 @@ function CrisisKitPage() {
     event.preventDefault()
     setIsAddingItem(true)
     setAddItemError(null)
+    setAddItemMessage(null)
 
     try {
       const newItem = await addCustomCrisisKitItem(newItemName, newItemCategory)
       setItems((currentItems) => [...currentItems, newItem])
+      setAddItemMessage("Saken har lagts till i din krislåda.")
       setNewItemName("")
       setNewItemCategory("Övrigt")
     } catch (error) {
@@ -146,7 +157,10 @@ function CrisisKitPage() {
             id="new-item-name"
             type="text"
             value={newItemName}
-            onChange={(event) => setNewItemName(event.target.value)}
+            onChange={(event) => {
+              setNewItemName(event.target.value)
+              setAddItemMessage(null)
+            }}
             maxLength={200}
             required
             disabled={isAddingItem}
@@ -161,9 +175,10 @@ function CrisisKitPage() {
           <select
             id="new-item-category"
             value={newItemCategory}
-            onChange={(event) =>
+            onChange={(event) => {
               setNewItemCategory(event.target.value as (typeof CRISIS_KIT_CATEGORIES)[number])
-            }
+              setAddItemMessage(null)
+            }}
             disabled={isAddingItem}
             className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
           >
@@ -178,6 +193,15 @@ function CrisisKitPage() {
         {addItemError && (
           <p className="mt-3 text-sm font-medium text-red-800" role="alert">
             {addItemError}
+          </p>
+        )}
+
+        {addItemMessage && (
+          <p className="mt-3 text-sm font-medium text-green-800" role="status">
+            <span aria-hidden="true" className="mr-2">
+              ✓
+            </span>
+            {addItemMessage}
           </p>
         )}
 
@@ -259,13 +283,13 @@ function CrisisKitPage() {
                           return (
                             <details
                               key={subcategory}
-                              className="group rounded-xl border border-blue-100 bg-slate-50"
+                              className="subcategory-group rounded-xl border border-blue-100 bg-slate-50"
                             >
                               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-xl p-4 font-semibold text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
                                 <h4 className="text-base font-semibold">{subcategory}</h4>
                                 <span
                                   aria-hidden="true"
-                                  className="shrink-0 text-lg transition-transform group-open:rotate-180"
+                                  className="shrink-0 text-lg transition-transform [details.subcategory-group[open]_&]:rotate-180"
                                 >
                                   ▾
                                 </span>
