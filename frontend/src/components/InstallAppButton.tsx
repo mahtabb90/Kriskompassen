@@ -12,7 +12,7 @@ const variantClasses = {
     "hover:bg-blue-50 active:bg-blue-50",
   // The pseudo-element extends the 32px box to a 48px hit area without adding layout height.
   text:
-    "relative inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 " +
+    "relative inline-flex min-h-8 cursor-pointer items-baseline gap-2 rounded-xl px-2 py-1.5 " +
     "text-sm font-semibold text-blue-900 underline underline-offset-4 hover:bg-blue-50 " +
     "active:bg-blue-50 after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']",
 }
@@ -57,7 +57,7 @@ function InstallAppButton({
           fill="none"
           aria-hidden="true"
           focusable="false"
-          className="shrink-0"
+          className="shrink-0 self-center"
         >
           <path
             d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"
