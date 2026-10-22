@@ -13,9 +13,10 @@ const ADDRESS_DISPLAY_MAX_LENGTH = 30
  * on the "Min info" page this links to, not here. "Aktuell adress:" is plain text, not part of
  * the link, so only the address itself reads as clickable; the two are allowed to wrap onto
  * separate lines if the available width is too narrow, rather than overflowing or clipping.
- * Shows only the municipality, not the full street address, to keep this short; a geolocated
- * address always has one, a manually typed address does not, since it is never geocoded, so
- * the full text is shown as a fallback, truncated to a fixed display length.
+ * Shows only the municipality, not the full street address, to keep this short; every resolved
+ * address has one (a manually typed address is forward-geocoded to a specific match before it
+ * can become active, same as a geolocated one), but the full text is shown as a fallback,
+ * truncated to a fixed display length, in case it is somehow missing.
  */
 function AddressIndicator() {
   const { activeAddress } = useAddresses()
@@ -29,7 +30,7 @@ function AddressIndicator() {
       Aktuell adress:{" "}
       <Link
         to="/min-info"
-        className="inline-flex min-h-12 items-center underline underline-offset-4 hover:text-blue-950"
+        className="inline-flex min-h-12 max-w-full items-center wrap-anywhere underline underline-offset-4 hover:text-blue-950"
       >
         {truncateForDisplay(addressText, ADDRESS_DISPLAY_MAX_LENGTH)}
       </Link>

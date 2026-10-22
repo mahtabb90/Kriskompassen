@@ -72,16 +72,18 @@ function CrisisKitItem({
     }
   }
 
-  async function handleExpirationSave() {
+  async function handleExpirationSave(dateToSave = expirationDate) {
     setIsSavingExpiration(true)
     setExpirationError(null)
     setExpirationMessage(null)
 
     try {
-      await onExpirationDateSave(item, expirationDate || null)
+      await onExpirationDateSave(item, dateToSave || null)
+      setExpirationDate(dateToSave)
       setExpirationMessage("Ändringen har sparats.")
     } catch {
       setExpirationError("Det gick inte att spara datumet. Kontrollera datumet och försök igen.")
+      setExpirationDate(item.expirationDate ?? "")
     } finally {
       setIsSavingExpiration(false)
     }
@@ -166,7 +168,7 @@ function CrisisKitItem({
               maxLength={200}
               required
               disabled={isSavingCustomItem}
-              className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
             />
           </div>
 
@@ -184,7 +186,7 @@ function CrisisKitItem({
                 setEditedCategory(event.target.value as CrisisKitItemType["category"])
               }
               disabled={isSavingCustomItem}
-              className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800"
             >
               {CRISIS_KIT_CATEGORIES.map((category) => (
                 <option key={category} value={category}>
@@ -204,7 +206,7 @@ function CrisisKitItem({
             <button
               type="submit"
               disabled={isSavingCustomItem || !editedName.trim()}
-              className="min-h-11 rounded-lg bg-blue-800 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 rounded-lg bg-blue-800 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-900    disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSavingCustomItem ? "Sparar..." : "Spara ändringar"}
             </button>
@@ -212,7 +214,7 @@ function CrisisKitItem({
               type="button"
               onClick={handleEditCancel}
               disabled={isSavingCustomItem}
-              className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50    disabled:cursor-not-allowed disabled:opacity-50"
             >
               Avbryt
             </button>
@@ -243,7 +245,7 @@ function CrisisKitItem({
                 type="button"
                 onClick={handleEditStart}
                 disabled={isDeletingCustomItem}
-                className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50    disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Redigera
               </button>
@@ -251,7 +253,7 @@ function CrisisKitItem({
                 type="button"
                 onClick={handleCustomItemDelete}
                 disabled={isDeletingCustomItem}
-                className="min-h-11 rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50   focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isDeletingCustomItem ? "Tar bort..." : "Ta bort"}
               </button>
@@ -271,7 +273,7 @@ function CrisisKitItem({
                 checked={item.isOwned}
                 disabled={isSavingOwnership}
                 onChange={handleOwnershipChange}
-                className="size-5 accent-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                className="size-5 accent-blue-800   "
               />
               <span className="text-sm font-medium text-slate-700">
                 {isSavingOwnership ? "Sparar..." : "Jag har den här saken"}
@@ -291,7 +293,7 @@ function CrisisKitItem({
               onClick={() => setIsExpirationEditorOpen((isOpen) => !isOpen)}
               aria-expanded={isExpirationEditorOpen}
               aria-controls={expirationEditorId}
-              className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+              className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-slate-50   "
             >
               <svg
                 aria-hidden="true"
@@ -359,10 +361,10 @@ function CrisisKitItem({
                         : undefined
                   }
                   aria-invalid={Boolean(expirationError)}
-                  className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+                  className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800   "
                 />
 
-                {isExpired && (
+                {isExpired && !hasExpirationChanges && (
                   <p className="mt-2 text-sm font-medium text-red-800">
                     Det är dags att kontrollera saken igen.
                   </p>
@@ -384,6 +386,9 @@ function CrisisKitItem({
                     className="mt-2 text-sm font-medium text-green-800"
                     role="status"
                   >
+                    <span aria-hidden="true" className="mr-2">
+                      ✓
+                    </span>
                     {expirationMessage}
                   </p>
                 )}
@@ -391,25 +396,21 @@ function CrisisKitItem({
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={handleExpirationSave}
+                    onClick={() => handleExpirationSave()}
                     disabled={isSavingExpiration || !hasExpirationChanges}
-                    className="min-h-11 rounded-lg bg-blue-800 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 text-base font-semibold text-white hover:bg-blue-950 active:bg-blue-950 disabled:opacity-60"
                   >
                     {isSavingExpiration ? "Sparar..." : "Spara datum"}
                   </button>
 
-                  {expirationDate && (
+                  {(expirationDate || item.expirationDate) && (
                     <button
                       type="button"
-                      onClick={() =>
-                        handleExpirationDateChange({
-                          target: { value: "" },
-                        } as ChangeEvent<HTMLInputElement>)
-                      }
+                      onClick={() => handleExpirationSave("")}
                       disabled={isSavingExpiration}
-                      className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-base font-semibold text-blue-900 hover:bg-blue-50 active:bg-blue-50 disabled:opacity-60"
                     >
-                      Rensa datum
+                      {isSavingExpiration ? "Sparar..." : "Rensa datum"}
                     </button>
                   )}
                 </div>

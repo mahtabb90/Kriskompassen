@@ -53,7 +53,7 @@ To ensure accessible contrast ratios, eliminate visual glare, and provide comfor
 
 - **UI Primary Blue (`#1E3A8A` / `blue-900`):** An adapted deep blue providing strong contrast (>= 4.5:1) for headings, text links, buttons, and focus indicators against white surfaces.
 - **Page Canvas (`#D7E2EF`):** A softened, muted tint of the brand light blue that provides a restful background canvas behind content cards and page content without causing eye strain.
-- **UI Accent Amber (`#FBBF24` / `amber-400`):** A warm yellow brand accent used in the signature crisis-information bar.
+- **UI Accent Amber (`#FBBF24` / `amber-400`):** A warm yellow brand accent used in the signature crisis-information bar and, as the softer `amber-300` tint, the background of the fixed mobile **Meny** button (with dark blue text and icon).
 - **Surface White (`#FFFFFF` / `bg-white`):** Crisp white content cards and header/navigation surfaces for clear text presentation.
 
 | Token / Name | Hex / Value | Tailwind Class | Usage |
@@ -286,6 +286,25 @@ Used for toggled states or alternate actions (e.g. "Ta bort offlinekopia", "Visa
   - Hover: light blue tint background (`#eff6ff`).
   - Disabled: `opacity-60`.
 
+#### 6.2.3 Text Button (tertiary)
+Used for secondary actions that should not compete with nearby controls (e.g. "Installera app" in
+the header).
+
+- **Classes:**
+  `relative inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm
+  font-semibold text-blue-900 underline underline-offset-4 hover:bg-blue-50 active:bg-blue-50
+  after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']`
+- **Visual:** No border or fill at rest; the underline and blue text mark it as interactive, like
+  standalone text links (section 6.3). The `px-2` aligns its content with switch and help-text
+  content that uses the same padding. An optional 20×20px inline SVG icon precedes the label,
+  uses `currentColor`, has `aria-hidden="true"` and `focusable="false"`, and never replaces the
+  visible label.
+- **Target size:** The visible box is 32px high; the `after` pseudo-element extends the hit area
+  by 8px above and below to 48px, keeping the project's 48×48px standard (section 6.1). The
+  extended hit area must not overlap other interactive targets, so keep at least 8px between the
+  visible box and neighbouring controls.
+- **Focus:** The universal focus outline (section 8.1) surrounds the visible box.
+
 ### 6.3 Text and Content Links
 
 - **Standalone Text Links:**
@@ -322,9 +341,12 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 - **Help text:** A `px-2 text-sm text-slate-600` paragraph below the switch, referenced by
   `aria-describedby`, describes the current state. Its `px-2` matches the button's horizontal
   padding, so the label and help text start at the same x-position in every state; the button
-  keeps its padding and 48×48px target. The switch block has a fixed width (`w-full max-w-xs`,
-  `md:w-xs` where the header column is auto-sized), so the help text wraps within it and the
-  label, track and help text stay in place in every state; only the thumb moves. The label
+  keeps its padding and 48×48px target. The header constrains the control group to `w-full
+  max-w-xs` within a shrinkable column, independently of help-text length. The switch button
+  fills that width and uses `justify-between`, keeping the label, track and help text in place
+  across states; only the thumb moves. From `48rem`, the group offsets its trailing 8px padding
+  with `-mr-2`, so the track reaches the cards' right edge while label and help retain their
+  shared left edge. The label
   **"Sparad information"** is the same in every state. Copy: off **"Visar aktuell information
   från internet."**, on **"Visar endast information som är sparad på enheten."**, on without a
   connection **"Visar endast information som är sparad på enheten. Du kan stänga av det när
@@ -333,12 +355,37 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
   focusable and its explanation is read. Only the track is dimmed (`opacity-60`) and the button
   shows `cursor-not-allowed`; the label and help text keep full contrast.
 - **Reflow:** The button wraps (`flex-wrap`), so at enlarged text sizes the track moves below the
-  label rather than being clipped.
+  label rather than being clipped. The track's `ml-auto` keeps it at the right edge on either row.
 - **Contrast:** The off and on tracks against white are expected to exceed 3:1 (`slate-600`
   approximately 7.5:1, `blue-900` approximately 10:1), and the white thumb is the same pair in
   reverse. The restricted state only occurs while the switch is on, so the dimmed track to
   measure is `blue-900` at `opacity-60` against white. These values must still be verified with
   a contrast checker as required by section 2.5.
+
+### 6.6 Install App Button
+
+- **Variant:** In the header, the text button (section 6.2.3) with a decorative download icon, so
+  it has less visual weight than the "Sparad information" switch. In the mobile menu, the
+  secondary/outlined button (section 6.2.2) with compact `px-4 py-2` padding, so its 2px border
+  keeps the 48px minimum height (`min-h-12 min-w-12`), without an icon. The visible label
+  **"Installera app"** is the accessible name in both; no `aria-label`.
+- **Placement:** From `48rem`, beside connectivity status in the header's left column, with a
+  16px horizontal gap. The row wraps with an 8px vertical gap when space is limited. The button
+  stays outside the status live region; the connection-loss notice spans the space below the
+  row. The right column contains the switch and active address, whose trailing padding and
+  offset align the track and address link with the cards' right edge. The address link can wrap
+  within the column, including long words. Header columns can shrink and have a 24px gap.
+  Status/installation and the address occupy the same final desktop grid row, aligned by their
+  first text baseline. The status dot and install icon use `self-center`, so the text supplies
+  the baseline instead of the decorative shapes. The switch spans the preceding brand, tagline
+  and flexible rows, so longer help text does not spread the brand and tagline apart. Below
+  `48rem`, last in the `MobileMenu` dialog, after the links in its scrolling region.
+  It is an action, not a page, so it is never part of the navigation links.
+- **Visibility:** Rendered only while the browser offers installation; no space is reserved
+  otherwise. Placing it beside status avoids an additional row below the active address. The
+  header still grows naturally when text or controls need to wrap, without overlap or clipping.
+- **Focus:** Selecting it opens the browser's prompt and removes the button. In the header focus
+  moves to `#page-heading`; in the menu the dialog closes and focus returns to the **Meny** button.
 
 ---
 
@@ -349,7 +396,7 @@ KrisKompassen shows the same primary links, from the shared `navigationItems` li
 ### 7.1 Responsive Placement
 
 - **Mobile Viewports (`width < 48rem`, any height):**
-  The in-flow navigation is hidden. One fixed **Meny** button sits at the bottom centre (`fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2`): a primary blue button (`bg-blue-900`, white text, `rounded-xl`, `shadow-lg`, minimum 48×48px) with a decorative hamburger SVG (`aria-hidden`) and the visible text "Meny". It stays fixed while scrolling and in landscape.
+  The in-flow navigation is hidden. One fixed **Meny** button sits at the bottom centre (`fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2`): a brand-accent amber button (`bg-amber-300`, `border-blue-900`, dark blue `text-blue-900` text and icon, `hover:bg-amber-200`, `active:bg-amber-400`, `rounded-xl`, `shadow-lg`, minimum 48×48px) with a decorative hamburger SVG (`aria-hidden`) and the visible text "Meny". It stays fixed while scrolling and in landscape.
 - **Desktop & Wide Viewports (`width >= 48rem`):**
   `BottomNavigation` renders in standard document flow directly beneath the header, with a 2px top border in the page canvas colour (`border-t-2 border-t-[#D7E2EF]`) and a 1px bottom border (`border-b border-b-slate-200`). Links wrap onto further rows; there is no horizontal scrolling. The Meny button and dialog are not shown.
 

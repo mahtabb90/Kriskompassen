@@ -29,9 +29,8 @@ function ModeToggle() {
   }
 
   return (
-    // The header's md+ column is auto-sized, so a fixed width keeps the block from shifting when
-    // the help text changes length between states; w-full alone would follow the content there.
-    <div className="flex w-full max-w-xs flex-col items-start gap-1 md:w-xs">
+    // The header constrains the width independently of the help text, keeping all states aligned.
+    <div className="flex w-full max-w-xs flex-col items-start gap-1">
       <button
         type="button"
         role="switch"
@@ -40,7 +39,7 @@ function ModeToggle() {
         aria-describedby={helpTextId}
         onClick={handleClick}
         className={
-          "inline-flex min-h-12 min-w-12 max-w-full flex-wrap items-center gap-x-3 gap-y-1 " +
+          "inline-flex min-h-12 w-full min-w-12 flex-wrap items-center justify-between gap-x-3 gap-y-1 " +
           "rounded-xl px-2 py-2 text-left " +
           (blocked ? "cursor-not-allowed" : "hover:bg-blue-50")
         }
@@ -53,7 +52,7 @@ function ModeToggle() {
         <span
           aria-hidden="true"
           className={
-            "inline-flex h-7 w-12 shrink-0 items-center rounded-full border-2 px-0.5 " +
+            "ml-auto inline-flex h-7 w-12 shrink-0 items-center rounded-full border-2 px-0.5 " +
             "transition-colors duration-150 motion-reduce:transition-none " +
             (saved ? "border-blue-900 bg-blue-900 " : "border-slate-600 bg-slate-600 ") +
             (blocked ? "opacity-60" : "")

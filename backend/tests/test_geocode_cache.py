@@ -9,8 +9,13 @@ from src.api.dependencies import get_geocode_cache, get_http_client
 from src.app import create_app
 from src.core.config import Settings
 from src.core.errors import UpstreamError
-from src.models.geocode import GeocodeResponse, GeocodeSource
-from src.services.geocode_cache import GeocodeCache, NominatimThrottle
+from src.models.geocode import (
+    GeocodeCandidate,
+    GeocodeResponse,
+    GeocodeSearchResponse,
+    GeocodeSource,
+)
+from src.services.geocode_cache import GeocodeCache, GeocodeSearchCache, NominatimThrottle
 
 CONCURRENT_REQUESTS = 10
 # Enough event-loop turns for every in-memory request to reach the cache before release.
@@ -443,3 +448,125 @@ def test_repeated_identical_request_through_the_api_is_served_from_cache() -> No
     assert [response.status_code for response in responses] == [200, 200]
     assert responses[0].json() == responses[1].json()
     assert all(response.headers["Cache-Control"] == "no-store" for response in responses)
+
+
+def _search_response(address: str = "Exempelgatan 1, Exempelstad") -> GeocodeSearchResponse:
+    return GeocodeSearchResponse(
+        candidates=[
+            GeocodeCandidate(address=address, municipality="Exempelstad", lat=59.0, lon=18.0)
+        ],
+        source=GeocodeSource(apiUrl="https://upstream.example/search"),
+    )
+
+
+class FakeSearchNominatim:
+    """Returns queued outcomes and counts every call, like a stand-in for search_geocode."""
+
+    def __init__(self, *outcomes: GeocodeSearchResponse | UpstreamError) -> None:
+        """Queues outcomes in call order."""
+        self.calls = 0
+        self.outcomes = list(outcomes)
+
+    async def fetch(self) -> GeocodeSearchResponse:
+        """Simulates one Nominatim call."""
+        self.calls += 1
+        outcome = self.outcomes.pop(0)
+        if isinstance(outcome, UpstreamError):
+            raise outcome
+        return outcome
+
+
+def _search_cache(
+    clock: FakeClock,
+    ttl_seconds: float = 300.0,
+    min_interval_seconds: float = 1.0,
+    max_queue_depth: int = 100,
+) -> GeocodeSearchCache:
+    throttle = NominatimThrottle(min_interval_seconds, monotonic=clock.monotonic, sleep=_no_sleep)
+    return GeocodeSearchCache(ttl_seconds, throttle, max_queue_depth, monotonic=clock.monotonic)
+
+
+def test_search_first_lookup_fetches() -> None:
+    """Calls Nominatim for an empty cache."""
+    clock = FakeClock()
+    cache = _search_cache(clock)
+    nominatim = FakeSearchNominatim(_search_response())
+
+    result = asyncio.run(cache.get_or_fetch("Storgatan 1", nominatim.fetch))
+
+    assert nominatim.calls == 1
+    assert len(result.candidates) == 1
+
+
+def test_search_identical_query_within_ttl_is_served_from_cache() -> None:
+    """Serves a repeat of the same query from memory within the TTL, ignoring case/whitespace."""
+    clock = FakeClock()
+    cache = _search_cache(clock)
+    nominatim = FakeSearchNominatim(_search_response())
+    asyncio.run(cache.get_or_fetch("Storgatan 1", nominatim.fetch))
+
+    clock.advance(299)
+    result = asyncio.run(cache.get_or_fetch("  storgatan 1  ", nominatim.fetch))
+
+    assert nominatim.calls == 1
+    assert len(result.candidates) == 1
+
+
+def test_search_distinct_queries_are_cached_separately() -> None:
+    """Never serves one query's result for a different query."""
+    clock = FakeClock()
+    cache = _search_cache(clock)
+    nominatim = FakeSearchNominatim(_search_response("A"), _search_response("B"))
+
+    asyncio.run(cache.get_or_fetch("Storgatan 1", nominatim.fetch))
+    asyncio.run(cache.get_or_fetch("Kungsgatan 2", nominatim.fetch))
+
+    assert nominatim.calls == 2
+
+
+def test_search_failed_fetch_is_not_cached_and_retries_immediately() -> None:
+    """Propagates UpstreamError exactly as raised and never caches the failed attempt."""
+    clock = FakeClock()
+    cache = _search_cache(clock)
+    error = UpstreamError("upstream_timeout", "Tog för lång tid.", status_code=504)
+    nominatim = FakeSearchNominatim(error, _search_response())
+
+    with pytest.raises(UpstreamError):
+        asyncio.run(cache.get_or_fetch("Storgatan 1", nominatim.fetch))
+
+    result = asyncio.run(cache.get_or_fetch("Storgatan 1", nominatim.fetch))
+
+    assert nominatim.calls == 2
+    assert len(result.candidates) == 1
+
+
+def test_reverse_and_forward_lookups_share_one_throttle_and_lock() -> None:
+    """Paces a forward search behind a preceding reverse lookup when both share one throttle.
+
+    Mirrors the reverse-only throttling test, but across GeocodeCache and GeocodeSearchCache -
+    this is the property app.py relies on: Nominatim's usage policy applies to this app's
+    combined traffic, not to each endpoint independently.
+    """
+    clock = FakeClock()
+    sleeps: list[float] = []
+
+    async def record_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        clock.advance(seconds)
+
+    throttle = NominatimThrottle(1.0, monotonic=clock.monotonic, sleep=record_sleep)
+    lock = asyncio.Lock()
+    reverse_cache = GeocodeCache(300.0, throttle, 100, monotonic=clock.monotonic, lock=lock)
+    search_cache = GeocodeSearchCache(300.0, throttle, 100, monotonic=clock.monotonic, lock=lock)
+    reverse_nominatim = FakeNominatim(_response())
+    search_nominatim = FakeSearchNominatim(_search_response())
+
+    async def run() -> None:
+        await reverse_cache.get_or_fetch(59.0, 18.0, reverse_nominatim.fetch)
+        await search_cache.get_or_fetch("Storgatan 1", search_nominatim.fetch)
+
+    asyncio.run(run())
+
+    assert reverse_nominatim.calls == 1
+    assert search_nominatim.calls == 1
+    assert sleeps == [1.0]

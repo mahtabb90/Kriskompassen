@@ -7,6 +7,7 @@ import {
   saveAddress,
   setActiveAddress,
 } from "../services/addressStorageService"
+import { prefetchNearestShelters } from "../services/shelterPrefetchService"
 import type { SavedAddress } from "../types/address"
 import { useSavedAddresses } from "./useSavedAddresses"
 
@@ -15,6 +16,10 @@ vi.mock("../services/addressStorageService", () => ({
   saveAddress: vi.fn(),
   setActiveAddress: vi.fn(),
   removeAddress: vi.fn(),
+}))
+
+vi.mock("../services/shelterPrefetchService", () => ({
+  prefetchNearestShelters: vi.fn(),
 }))
 
 const home: SavedAddress = {
@@ -39,6 +44,7 @@ beforeEach(() => {
   vi.mocked(saveAddress).mockResolvedValue(home)
   vi.mocked(setActiveAddress).mockResolvedValue(undefined)
   vi.mocked(removeAddress).mockResolvedValue(undefined)
+  vi.mocked(prefetchNearestShelters).mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -86,6 +92,41 @@ describe("useSavedAddresses", () => {
       { kind: "hem" }
     )
     expect(result.current.addresses).toEqual([home])
+    // The manually typed fixture has no coordinates, so there is nothing to prefetch.
+    expect(prefetchNearestShelters).not.toHaveBeenCalled()
+  })
+
+  it("prefetches nearest shelters in the background when the saved address has coordinates", async () => {
+    const geolocated: SavedAddress = { ...home, lat: 59.33, lon: 18.07 }
+    vi.mocked(saveAddress).mockResolvedValue(geolocated)
+    const { result } = renderHook(() => useSavedAddresses())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      await result.current.addAddress(
+        { text: "Hemgatan 1", source: "geolocated", approximate: true, lat: 59.33, lon: 18.07 },
+        { kind: "hem" }
+      )
+    })
+
+    expect(prefetchNearestShelters).toHaveBeenCalledExactlyOnceWith({ lat: 59.33, lon: 18.07 })
+  })
+
+  it("does not let a slow prefetch delay addAddress resolving", async () => {
+    const geolocated: SavedAddress = { ...home, lat: 59.33, lon: 18.07 }
+    vi.mocked(saveAddress).mockResolvedValue(geolocated)
+    vi.mocked(prefetchNearestShelters).mockReturnValue(new Promise(() => {}))
+    const { result } = renderHook(() => useSavedAddresses())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await expect(
+      act(async () => {
+        await result.current.addAddress(
+          { text: "Hemgatan 1", source: "geolocated", approximate: true, lat: 59.33, lon: 18.07 },
+          { kind: "hem" }
+        )
+      })
+    ).resolves.toBeUndefined()
   })
 
   it("activates a saved address and refreshes the list", async () => {

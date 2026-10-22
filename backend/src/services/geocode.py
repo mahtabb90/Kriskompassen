@@ -10,11 +10,21 @@ from pydantic import ValidationError
 
 from src.core.config import Settings
 from src.core.errors import UpstreamError
-from src.models.geocode import GeocodeResponse, GeocodeSource, UpstreamGeocodeResult
+from src.models.geocode import (
+    GeocodeCandidate,
+    GeocodeResponse,
+    GeocodeSearchResponse,
+    GeocodeSource,
+    UpstreamGeocodeResult,
+)
 
 _NOT_FOUND_MESSAGE = "Ingen adress kunde hittas för den angivna positionen."
 _MUNICIPALITY_KEYS = ("municipality", "city", "town", "village")
 _COUNTY_KEYS = ("county", "state")
+# Nominatim's usage policy (~1 request/second) applies to this app's total traffic, not per
+# endpoint, so search results are capped rather than paginated - see geocode_cache.py's shared
+# NominatimThrottle, used by both reverse and forward lookups.
+SEARCH_RESULT_LIMIT = 5
 
 
 def _reject_json_constant(value: str) -> NoReturn:
@@ -42,27 +52,20 @@ def _first_address_value(address: dict[str, str], keys: tuple[str, ...]) -> str 
     return None
 
 
-async def _fetch_geocode_payload(
-    client: httpx.AsyncClient, settings: Settings, lat: float, lon: float
+async def _fetch_nominatim_json(
+    client: httpx.AsyncClient, settings: Settings, url: str, params: dict[str, object]
 ) -> object:
     """Fetches one upstream response and decodes JSON within the configured time budget.
 
     Returns unvalidated JSON. Raises UpstreamError on timeout, transport failure, non-success
     HTTP, or invalid JSON. A structurally valid "no result" response is not an error here;
-    classifying it happens in fetch_geocode.
+    classifying it happens in the caller.
     """
     try:
         async with asyncio.timeout(settings.geocode_timeout_seconds):
             response = await client.get(
-                str(settings.geocode_api_url),
-                params={
-                    "format": "jsonv2",
-                    "lat": lat,
-                    "lon": lon,
-                    "zoom": 18,
-                    "addressdetails": 1,
-                    "accept-language": "sv",
-                },
+                url,
+                params=params,
                 headers={
                     "Accept": "application/json",
                     "User-Agent": settings.geocode_user_agent,
@@ -99,6 +102,42 @@ async def _fetch_geocode_payload(
         ) from error
 
 
+async def _fetch_geocode_payload(
+    client: httpx.AsyncClient, settings: Settings, lat: float, lon: float
+) -> object:
+    return await _fetch_nominatim_json(
+        client,
+        settings,
+        str(settings.geocode_api_url),
+        {
+            "format": "jsonv2",
+            "lat": lat,
+            "lon": lon,
+            "zoom": 18,
+            "addressdetails": 1,
+            "accept-language": "sv",
+        },
+    )
+
+
+async def _fetch_search_payload(
+    client: httpx.AsyncClient, settings: Settings, query: str
+) -> object:
+    return await _fetch_nominatim_json(
+        client,
+        settings,
+        str(settings.geocode_search_api_url),
+        {
+            "q": query,
+            "format": "jsonv2",
+            "addressdetails": 1,
+            "limit": SEARCH_RESULT_LIMIT,
+            "accept-language": "sv",
+            "countrycodes": "se",
+        },
+    )
+
+
 async def fetch_geocode(
     client: httpx.AsyncClient, settings: Settings, lat: float, lon: float
 ) -> GeocodeResponse:
@@ -128,3 +167,38 @@ async def fetch_geocode(
         lon=result.lon,
         source=source,
     )
+
+
+async def search_geocode(
+    client: httpx.AsyncClient, settings: Settings, query: str
+) -> GeocodeSearchResponse:
+    """Forward-geocodes free text (e.g. a manually typed address) into every plausible match.
+
+    An empty candidate list is a normal result for a query Nominatim cannot resolve, not an
+    UpstreamError - so is a single malformed entry within an otherwise valid array, which is
+    skipped rather than failing every other candidate. Raises UpstreamError only for transport,
+    timeout or JSON-decode failures.
+    """
+    payload = await _fetch_search_payload(client, settings, query)
+    source = GeocodeSource(apiUrl=_public_geocode_url(settings))
+
+    if not isinstance(payload, list):
+        return GeocodeSearchResponse(candidates=[], source=source)
+
+    candidates: list[GeocodeCandidate] = []
+    for item in payload:
+        try:
+            result = UpstreamGeocodeResult.model_validate(item)
+        except ValidationError:
+            continue
+        candidates.append(
+            GeocodeCandidate(
+                address=result.display_name,
+                municipality=_first_address_value(result.address, _MUNICIPALITY_KEYS),
+                county=_first_address_value(result.address, _COUNTY_KEYS),
+                lat=result.lat,
+                lon=result.lon,
+            )
+        )
+
+    return GeocodeSearchResponse(candidates=candidates, source=source)

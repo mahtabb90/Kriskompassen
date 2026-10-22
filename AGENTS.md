@@ -25,7 +25,7 @@ The team updates the repo continuously, so this file can fall behind. **The repo
   versions and build timestamps are not displayed in the user interface. Physical verification
   on an existing iPhone installation is pending. This change uses one production publication
   and a manual check on the existing device.
-- The app is installable through browsers' built-in install features (Chromium, Safari iOS "Add to Home Screen", Safari macOS "Add to Dock") and its precached shell starts offline after one online visit. There is no custom install UI.
+- The app is installable through browsers' built-in install features (Chromium, Safari iOS "Add to Home Screen", Safari macOS "Add to Dock") and its precached shell starts offline after one online visit. Where the browser fires `beforeinstallprompt`, an **Installera app** button opens the browser's own install prompt (see §7). Browsers without that event rely on their own install features.
 - Target users: the general public in Sweden.
 - **Binding product decision: KrisKompassen is intentionally account-free.** End-user accounts, account registration, sign-in/login, account-based profiles and account-based cloud persistence are out of scope and must not be implemented. A development ticket, issue or task description alone never overrides this decision. See §11 for what to do when a task asks for them, and §10 for how this relates to other authentication changes.
 - Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level "Sparad information" switch (`ModeToggle`, backed by `ModeContext`; on = offline mode, off = online mode) controls whether `/crisis` and `/crisis/:id` show articles fetched from the backend API or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
@@ -109,15 +109,15 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs and Cache-Control headers
     ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
-        ├── components/  # shared layout/header/navigation (desktop `BottomNavigation`, mobile `MobileMenu`, shared `navigationItems`), VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice and crisis/offline controls
+        ├── components/  # shared layout/header/navigation (desktop `BottomNavigation`, mobile `MobileMenu`, shared `navigationItems`), VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice, InstallAppButton and crisis/offline controls
         ├── config/      # backend address, article/VMA/geocode endpoints and request timeout
         ├── context/     # ModeProvider.tsx + modeContext.ts and AddressProvider.tsx + addressContext.ts (context object, hook — split to satisfy react-refresh/only-export-components)
         ├── data/        # predefined emergency-kit recommendations (recommendedCrisisKit.ts)
         ├── db/          # Dexie database (db.ts)
-        ├── hooks/       # keyed article requests (useCrisisResource), VMA state/validity, address composition (useAddress), saved-addresses list/active state (useSavedAddresses) and shared PWA update subscription; adjacent tests
+        ├── hooks/       # keyed article requests (useCrisisResource), VMA state/validity, address composition (useAddress), saved-addresses list/active state (useSavedAddresses) and shared PWA update and install prompt subscriptions; adjacent tests
         ├── pages/       # HomePage, CrisisInfoPage, CrisisKitPage, MyInfoPage (/min-info), NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
-        ├── services/    # article transport/validation, offline storage, PWA updates, VMA, geocoding, geolocation and address storage; adjacent unit tests (addressStorageService has none yet — see §8)
-        ├── types/       # shared crisis/VMA/address types
+        ├── services/    # article transport/validation, offline storage, PWA updates and install prompts, VMA, geocoding, geolocation and address storage; adjacent unit tests (addressStorageService has none yet — see §8)
+        ├── types/       # shared crisis/VMA/address/PWA types
         └── utils/       # small pure presentational and validation helpers (e.g. describeAddressLabel, parseCoordinates)
 ```
 
@@ -164,6 +164,9 @@ Create the backend environment with Python 3.13 using `python3 -m venv .venv` an
 Additional rules for agents:
 
 - Agents may run read-only git commands only: `git status`, `git log`, `git diff`, `git branch -a`.
+- Agents never add their own temporary files to the repo: screenshots or other images, measurement or verification scripts, logs or other scratch files. Keep them in the agent's scratchpad or another directory outside the working tree.
+- Agents never install temporary tools or packages in the project (`package.json`, `package-lock.json`, `requirements*.txt`) for their own measurements or verification. Install them outside the repo.
+- Screenshots for a PR are attached by the human directly in GitHub, not committed to the repo.
 - At the end of a task, the agent suggests a commit message and, when the task is complete, a PR title and description in the formats below. The human decides whether to use them and posts them manually.
 
 **Commit message format** (Conventional Commits with a detailed body):
@@ -294,6 +297,15 @@ Frontend conventions visible in the existing code:
   offer, including offline; explicit activation uses `SKIP_WAITING`, waits for control and reloads
   the current document at most once. A 15-second activation timeout removes reload authorization
   and offers retry. Another tab's activation never automatically reloads this document.
+- `installPromptService` owns the `beforeinstallprompt` and `appinstalled` listeners outside React:
+  - `main.tsx` starts it before the first render, because the event can fire before React mounts.
+  - It calls `preventDefault()` and retains the latest event. `canInstall` is true only while an
+    event is retained and `(display-mode: standalone)` does not match.
+  - Feature detection only: no user-agent sniffing or browser lists.
+  - `promptInstall()` clears the event and calls `prompt()` synchronously, within the click's user
+    activation. A decline or `appinstalled` hides the offer until the browser fires a new event.
+  - `useInstallPrompt()` subscribes to it; `InstallAppButton` renders nothing while `canInstall`
+    is false. Placement and focus follow [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) §6.6.
 - PWA generation uses `generateSW`, `registerType: "prompt"`, `injectRegister: false`,
   `skipWaiting: false` and `clientsClaim: true`, retaining `/sw.js`, scope `/` and manifest identity.
   Bootstrap starts registration only in secure production builds. The updater never accesses
@@ -323,6 +335,16 @@ Cross-platform (CI runs on Ubuntu, Windows and macOS, see section 4):
 Navigation and accessibility:
 
 - Keep one `BrowserRouter` and one shared `AppLayout`. The layout owns the header, primary navigation, skip link, single `main` landmark, document title and route focus management.
+- From `48rem`, the header uses two shrinkable columns. Its right control group is capped at
+  `20rem`, independently of help-text length. The switch track and active address align with the
+  cards' right edge; the label and help text share a left edge. The active address follows the
+  switch help. `Installera app` sits beside the connectivity status in the left column, outside
+  its live region, and wraps below it when needed. The connection-loss notice stays below that
+  row. Status/installation and the address share the final desktop grid row and align by their
+  first text baseline. A flexible row above them accommodates longer switch help without spreading
+  the brand and tagline apart. Below `48rem`, header content stacks on the left and installation
+  stays in the menu.
+  See `DESIGN_SYSTEM.md` sections 6.5–6.6 for padding, spacing and target details.
 - Each routed page supplies one `h1` with `id="page-heading"` and `tabIndex={-1}`. The layout derives the document title from that heading and focuses it on pathname changes, including back/forward navigation. Initial loads and hash-only changes preserve browser focus.
 - Add public links to the typed `navigationItems` list in `components/navigationItems.ts` and register their routes in `App.tsx`. Navigation currently uses exact matching. The desktop `BottomNavigation` and the mobile `MobileMenu` both render that one list; never duplicate labels or paths.
 - From `48rem` viewport width the navigation (`BottomNavigation`) stays in normal flow beneath the header with wrapping links. Below `48rem`, regardless of viewport height, it is hidden (`display: none`) and `MobileMenu` shows one fixed, horizontally centred **Meny** button (hamburger icon plus visible text, `bottom: max(0.75rem, env(safe-area-inset-bottom))`) instead.
@@ -416,6 +438,7 @@ Decided tooling:
   offline reopening and actual VoiceOver output are pending live verification; local build checks
   do not establish those results.
 - `pwaUpdateService.test.ts` covers registration failure only: a throwing or missing container, rejected `register`/`getRegistration`, and disabled bootstrap outside secure production builds. Update/activation flow tests remain out of scope.
+- Install prompt tests cover the service, hook, `InstallAppButton` and its focus handling in `Header` and `MobileMenu` with synthetic events from `services/__fixtures__/installPrompt.ts`. The browser's real prompt and install flow require manual checks.
 - The backend pytest suite runs in CI whenever `backend/` changes (see §4) and must not need network access or environment variables.
 - Backend CORS tests provide their own JSON origin environment variable and mock upstream transport. They check that approved frontend origins can read successful feeds and 502/504 errors, and that unlisted origins or unsupported methods do not pass preflight.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.

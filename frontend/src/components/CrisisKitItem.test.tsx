@@ -108,19 +108,18 @@ describe("CrisisKitItem interactions", () => {
     expect(await screen.findByText("Ändringen har sparats.")).toBeTruthy()
   })
 
-  it("clears the expiration date when the cleared value is saved", async () => {
-    renderItem({ ...baseItem, expirationDate: "2030-06-15" })
+  it("clears the expiration date immediately when Rensa datum is clicked", async () => {
+    const itemWithDate = { ...baseItem, expirationDate: "2030-06-15" }
+    renderItem(itemWithDate)
 
     fireEvent.click(screen.getByRole("button", { name: /2030-06-15/ }))
     fireEvent.click(screen.getByRole("button", { name: "Rensa datum" }))
-    fireEvent.click(screen.getByRole("button", { name: "Spara datum" }))
 
     await waitFor(() => {
-      expect(onExpirationDateSave).toHaveBeenCalledWith(
-        { ...baseItem, expirationDate: "2030-06-15" },
-        null
-      )
+      expect(onExpirationDateSave).toHaveBeenCalledWith(itemWithDate, null)
     })
+
+    expect(await screen.findByText("Ändringen har sparats.")).toBeTruthy()
   })
 
   it("shows an error when saving the expiration date fails", async () => {
