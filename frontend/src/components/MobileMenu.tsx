@@ -19,7 +19,8 @@ type CloseReason = "manual" | "navigation" | "viewport"
  * scrolls internally. Closing by button or Escape, or selecting the current route, returns focus
  * to the trigger. Selecting another route leaves focus to AppLayout's route heading focus, and
  * crossing 48rem closes the menu without focusing the now hidden trigger. When the browser offers
- * installation, an install button follows the links; selecting it closes the menu manually.
+ * installation, an install button sits right-aligned in a fixed footer below the scrolling links,
+ * as the last control; selecting it closes the menu manually. The footer is hidden while empty.
  *
  * @param triggerRef Gives the shared layout access to the button to reserve scroll space for it.
  */
@@ -194,11 +195,11 @@ function MobileMenu({ triggerRef }: MobileMenuProps) {
                 </li>
               ))}
             </ul>
-            <div className="mt-4 empty:hidden">
-              {/* Moving focus out of the open modal would escape its focus containment, so the
-                  menu closes and returns focus to the trigger like any manual close. */}
-              <InstallAppButton afterPrompt={() => dialogRef.current?.close()} />
-            </div>
+          </div>
+          <div className="flex shrink-0 justify-end border-t border-slate-200 px-4 py-3 empty:hidden">
+            {/* Moving focus out of the open modal would escape its focus containment, so the
+                menu closes and returns focus to the trigger like any manual close. */}
+            <InstallAppButton afterPrompt={() => dialogRef.current?.close()} />
           </div>
         </div>
       </dialog>
