@@ -100,7 +100,7 @@ function MyInfoPage() {
               key={address.id}
               className="flex flex-col gap-2 rounded-2xl border border-blue-200/80 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
             >
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-blue-900">
                   {describeAddressLabel(address.label)}
                 </p>
@@ -111,16 +111,16 @@ function MyInfoPage() {
                     : "Hämtad automatiskt – ungefärlig"}
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
                 {address.isActive ? (
-                  <p className="flex items-center gap-2 text-sm font-semibold text-green-800">
+                  <p className="flex min-h-12 items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-green-800">
                     <span aria-hidden="true">✓</span> Aktuell plats
                   </p>
                 ) : (
                   <button
                     type="button"
                     onClick={() => handleSetActive(address.id)}
-                    className="min-h-12 min-w-12 rounded-xl border-2 border-blue-900 bg-white px-4 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-50"
+                    className="min-h-12 w-60 rounded-xl border-2 border-blue-900 bg-white px-4 py-2 text-center text-sm font-semibold text-blue-900 hover:bg-blue-50"
                   >
                     Ange som aktuell plats
                   </button>
@@ -132,7 +132,7 @@ function MyInfoPage() {
                     else removeButtonRefs.current.delete(address.id)
                   }}
                   onClick={(event) => setPendingRemoval({ address, trigger: event.currentTarget })}
-                  className="min-h-12 min-w-12 rounded-xl border-2 border-red-800 bg-white px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50"
+                  className="min-h-12 w-28 rounded-xl border-2 border-red-800 bg-white px-4 py-2 text-center text-sm font-semibold text-red-800 hover:bg-red-50"
                 >
                   Ta bort
                   <span className="sr-only">
