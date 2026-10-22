@@ -249,6 +249,16 @@ describe("MobileMenu install button", () => {
     expect(footer?.nextElementSibling).toBe(null)
   })
 
+  it("uses the text button with a decorative icon, named by its visible label", () => {
+    offerInstall()
+    const { dialog } = openMenu()
+    const install = within(dialog).getByRole("button", { name: "Installera app" })
+    const icon = install.querySelector("svg")
+    expect(icon?.getAttribute("aria-hidden")).toBe("true")
+    expect(icon?.getAttribute("focusable")).toBe("false")
+    expect(install.hasAttribute("aria-label")).toBe(false)
+  })
+
   it("is the last control in DOM order and for Tab wrapping in both directions", () => {
     offerInstall()
     const { dialog } = openMenu()

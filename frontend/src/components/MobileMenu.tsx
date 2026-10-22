@@ -199,7 +199,7 @@ function MobileMenu({ triggerRef }: MobileMenuProps) {
           <div className="flex shrink-0 justify-end border-t border-slate-200 px-4 py-3 empty:hidden">
             {/* Moving focus out of the open modal would escape its focus containment, so the
                 menu closes and returns focus to the trigger like any manual close. */}
-            <InstallAppButton afterPrompt={() => dialogRef.current?.close()} />
+            <InstallAppButton afterPrompt={() => dialogRef.current?.close()} variant="text" />
           </div>
         </div>
       </dialog>
