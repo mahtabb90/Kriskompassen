@@ -164,6 +164,9 @@ Create the backend environment with Python 3.13 using `python3 -m venv .venv` an
 Additional rules for agents:
 
 - Agents may run read-only git commands only: `git status`, `git log`, `git diff`, `git branch -a`.
+- Agents never add their own temporary files to the repo: screenshots or other images, measurement or verification scripts, logs or other scratch files. Keep them in the agent's scratchpad or another directory outside the working tree.
+- Agents never install temporary tools or packages in the project (`package.json`, `package-lock.json`, `requirements*.txt`) for their own measurements or verification. Install them outside the repo.
+- Screenshots for a PR are attached by the human directly in GitHub, not committed to the repo.
 - At the end of a task, the agent suggests a commit message and, when the task is complete, a PR title and description in the formats below. The human decides whether to use them and posts them manually.
 
 **Commit message format** (Conventional Commits with a detailed body):
