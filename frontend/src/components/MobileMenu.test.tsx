@@ -80,6 +80,7 @@ describe("MobileMenu", () => {
       "Hem",
       "Krisinformation",
       "Min krislåda",
+      "Skyddsrum",
       "Min info",
     ])
     expect(links.map((link) => link.getAttribute("href"))).toEqual(

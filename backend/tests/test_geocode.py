@@ -312,3 +312,138 @@ def test_default_upstream_is_nominatim(monkeypatch: pytest.MonkeyPatch) -> None:
     """Uses the public Nominatim reverse endpoint without requiring an API key."""
     monkeypatch.delenv("KRISKOMPASSEN_GEOCODE_API_URL", raising=False)
     assert str(Settings().geocode_api_url) == "https://nominatim.openstreetmap.org/reverse"
+
+
+NOMINATIM_SEARCH_RESULTS = [
+    NOMINATIM_RESULT,
+    {
+        **NOMINATIM_RESULT,
+        "lat": "59.858500",
+        "lon": "17.638927",
+        "display_name": "Drottninggatan 1, 753 10 Uppsala, Sverige",
+        "address": {
+            **NOMINATIM_RESULT["address"],
+            "city": "Uppsala",
+            "municipality": "Uppsala kommun",
+        },
+    },
+]
+
+
+def _request_geocode_search(
+    handler: UpstreamHandler,
+    *,
+    q: str = "Storgatan 1",
+    timeout_seconds: float = 1.0,
+    upstream_url: str = "https://upstream.example/search",
+) -> httpx.Response:
+    async def run_request() -> httpx.Response:
+        settings = Settings(
+            geocode_search_api_url=upstream_url,
+            geocode_timeout_seconds=timeout_seconds,
+            cors_origins=[],
+        )
+        application = create_app(settings)
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as upstream:
+
+            async def provide_upstream() -> httpx.AsyncClient:
+                return upstream
+
+            application.dependency_overrides[get_http_client] = provide_upstream
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=application),
+                base_url="http://backend.example",
+            ) as client:
+                return await client.get("/api/v1/geocode/search", params={"q": q})
+
+    return asyncio.run(run_request())
+
+
+def test_search_maps_every_candidate() -> None:
+    """Maps each array entry from Nominatim's search result into a candidate."""
+    response = _request_geocode_search(
+        lambda _request: httpx.Response(200, json=NOMINATIM_SEARCH_RESULTS)
+    )
+
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+    body = response.json()
+    assert len(body["candidates"]) == 2
+    assert body["candidates"][0]["address"] == "Drottninggatan 1, 111 51 Stockholm, Sverige"
+    assert body["candidates"][0]["municipality"] == "Stockholm kommun"
+    assert body["candidates"][1]["municipality"] == "Uppsala kommun"
+    assert body["source"]["apiName"] == "Nominatim"
+
+
+def test_search_sends_query_and_restricts_to_sweden() -> None:
+    """Sends the typed query and restricts results to Sweden."""
+
+    def upstream(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["q"] == "Storgatan 1, Uppsala"
+        assert request.url.params["countrycodes"] == "se"
+        assert request.url.params["limit"] == "5"
+        return httpx.Response(200, json=[])
+
+    response = _request_geocode_search(upstream, q="Storgatan 1, Uppsala")
+
+    assert response.status_code == 200
+
+
+def test_search_returns_empty_candidates_for_no_match() -> None:
+    """Treats an empty result array as a normal outcome, not an UpstreamError."""
+    response = _request_geocode_search(lambda _request: httpx.Response(200, json=[]))
+
+    assert response.status_code == 200
+    assert response.json()["candidates"] == []
+
+
+def test_search_skips_a_malformed_candidate_without_failing_siblings() -> None:
+    """Skips one entry that fails validation but still returns the valid siblings."""
+    broken = {**NOMINATIM_RESULT, "lat": "not-a-number"}
+    response = _request_geocode_search(
+        lambda _request: httpx.Response(200, json=[broken, NOMINATIM_SEARCH_RESULTS[1]])
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()["candidates"]) == 1
+
+
+def test_search_reports_upstream_http_failure() -> None:
+    """Reports an unsuccessful upstream response as a gateway failure."""
+    response = _request_geocode_search(
+        lambda _request: httpx.Response(503, text="Private upstream diagnostics")
+    )
+
+    _assert_failure(response, 502, "upstream_http_error")
+
+
+def test_search_rejects_an_empty_query() -> None:
+    """Rejects an empty query with FastAPI's own validation response, before any upstream call."""
+
+    def fail_if_called(_request: httpx.Request) -> httpx.Response:
+        raise AssertionError("Query validation must fail before any upstream call.")
+
+    async def run_request() -> httpx.Response:
+        settings = Settings(cors_origins=[])
+        application = create_app(settings)
+        async with httpx.AsyncClient(transport=httpx.MockTransport(fail_if_called)) as upstream:
+
+            async def provide_upstream() -> httpx.AsyncClient:
+                return upstream
+
+            application.dependency_overrides[get_http_client] = provide_upstream
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=application),
+                base_url="http://backend.example",
+            ) as client:
+                return await client.get("/api/v1/geocode/search", params={"q": ""})
+
+    response = asyncio.run(run_request())
+
+    assert response.status_code == 422
+
+
+def test_default_search_upstream_is_nominatim(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Uses the public Nominatim search endpoint without requiring an API key."""
+    monkeypatch.delenv("KRISKOMPASSEN_GEOCODE_SEARCH_API_URL", raising=False)
+    assert str(Settings().geocode_search_api_url) == "https://nominatim.openstreetmap.org/search"

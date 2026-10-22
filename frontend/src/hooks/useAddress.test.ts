@@ -32,19 +32,88 @@ afterEach(() => {
 })
 
 describe("useAddress", () => {
-  it("confirms a manually entered address", () => {
-    const { result } = renderHook(() => useAddress())
+  it("resolves a manually entered address with a unique search match", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        candidates: [
+          {
+            address: "Testgatan 1, Exempelstad",
+            municipality: "Exempelstad kommun",
+            lat: 59.0,
+            lon: 18.0,
+          },
+        ],
+        source: { apiName: "Nominatim" },
+      })
+    )
 
+    const { result } = renderHook(() => useAddress())
     act(() => {
       result.current.submitManualAddress("  Testgatan 1  ")
     })
+    expect(result.current.loading).toBe(true)
+    expect(result.current.resolvingSource).toBe("manual")
 
+    await act(async () => {})
+
+    expect(result.current.loading).toBe(false)
+    expect(result.current.failed).toBe(false)
+    expect(result.current.choosing).toBe(false)
     expect(result.current.address).toEqual({
-      text: "Testgatan 1",
+      text: "Testgatan 1, Exempelstad",
       source: "manual",
       approximate: false,
+      lat: 59.0,
+      lon: 18.0,
+      municipality: "Exempelstad kommun",
     })
-    expect(result.current.failed).toBe(false)
+  })
+
+  it("moves to choosing when the search returns several matches, then resolves the pick", async () => {
+    const candidates = [
+      { address: "Storgatan 1, Stockholm", municipality: "Stockholm kommun", lat: 59.3, lon: 18.0 },
+      { address: "Storgatan 1, Uppsala", municipality: "Uppsala kommun", lat: 59.9, lon: 17.6 },
+    ]
+    fetchMock.mockResolvedValue(Response.json({ candidates, source: { apiName: "Nominatim" } }))
+
+    const { result } = renderHook(() => useAddress())
+    act(() => {
+      result.current.submitManualAddress("Storgatan 1")
+    })
+    await act(async () => {})
+
+    expect(result.current.choosing).toBe(true)
+    expect(result.current.address).toBeNull()
+    expect(result.current.candidates).toHaveLength(2)
+
+    act(() => {
+      result.current.selectCandidate(result.current.candidates[1])
+    })
+
+    expect(result.current.choosing).toBe(false)
+    expect(result.current.address).toEqual({
+      text: "Storgatan 1, Uppsala",
+      source: "manual",
+      approximate: false,
+      lat: 59.9,
+      lon: 17.6,
+      municipality: "Uppsala kommun",
+    })
+  })
+
+  it("reports an error when the address search finds no match", async () => {
+    fetchMock.mockResolvedValue(Response.json({ candidates: [], source: { apiName: "Nominatim" } }))
+
+    const { result } = renderHook(() => useAddress())
+    act(() => {
+      result.current.submitManualAddress("Obefintliggatan 999")
+    })
+    await act(async () => {})
+
+    expect(result.current.failed).toBe(true)
+    expect(result.current.choosing).toBe(false)
+    expect(result.current.address).toBeNull()
+    expect(result.current.errorMessage).toContain("Ingen adress hittades")
   })
 
   it("ignores an empty or whitespace-only manual address", () => {
@@ -55,6 +124,7 @@ describe("useAddress", () => {
     })
 
     expect(result.current.address).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it("fetches the device position and reverse-geocodes it as an approximate address", async () => {
@@ -152,15 +222,24 @@ describe("useAddress", () => {
   })
 
   it("reports a resolvable-but-unknown position without discarding the previous address", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        candidates: [{ address: "Testgatan 1, Exempelstad", lat: 59.0, lon: 18.0 }],
+        source: { apiName: "Nominatim" },
+      })
+    )
+
     const { result } = renderHook(() => useAddress())
     act(() => {
       result.current.submitManualAddress("Testgatan 1")
     })
+    await act(async () => {})
+    const resolvedManualAddress = result.current.address
 
     getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
       onSuccess({ coords: { latitude: 0, longitude: 0 } } as GeolocationPosition)
     })
-    fetchMock.mockResolvedValue(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ found: false, message: "Ingen adress kunde hittas." })
     )
 
@@ -171,11 +250,7 @@ describe("useAddress", () => {
 
     expect(result.current.failed).toBe(true)
     expect(result.current.errorMessage).toBe("Ingen adress kunde hittas.")
-    expect(result.current.address).toEqual({
-      text: "Testgatan 1",
-      source: "manual",
-      approximate: false,
-    })
+    expect(result.current.address).toEqual(resolvedManualAddress)
   })
 
   it("reverse-geocodes a typed coordinate pair as an approximate address with no accuracy", async () => {
@@ -249,10 +324,18 @@ describe("useAddress", () => {
   })
 
   it("reports a coordinate network failure without discarding a previous manual address", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        candidates: [{ address: "Testgatan 1", lat: 1, lon: 2 }],
+        source: { apiName: "Nominatim" },
+      })
+    )
     const { result } = renderHook(() => useAddress())
     act(() => {
       result.current.submitManualAddress("Testgatan 1")
     })
+    await act(async () => {})
+    const resolvedManualAddress = result.current.address
 
     fetchMock.mockRejectedValue(new TypeError("network down"))
 
@@ -262,11 +345,7 @@ describe("useAddress", () => {
     await act(async () => {})
 
     expect(result.current.failed).toBe(true)
-    expect(result.current.address).toEqual({
-      text: "Testgatan 1",
-      source: "manual",
-      approximate: false,
-    })
+    expect(result.current.address).toEqual(resolvedManualAddress)
   })
 
   it("discards a second concurrent location request", async () => {

@@ -36,11 +36,20 @@ const work: SavedAddress = {
   isActive: false,
 }
 
+function searchResponse(
+  candidates: { address: string; municipality?: string; lat: number; lon: number }[]
+): Response {
+  return Response.json({ candidates, source: { apiName: "Nominatim" } })
+}
+
 let restoreDialog: () => void
+let fetchMock = vi.fn<typeof fetch>()
 
 beforeEach(() => {
   restoreDialog = installDialogTestMethods()
+  fetchMock = vi.fn<typeof fetch>()
   vi.stubGlobal("navigator", { geolocation: { getCurrentPosition: vi.fn() } })
+  vi.stubGlobal("fetch", fetchMock)
   vi.mocked(getSavedAddresses).mockResolvedValue([])
   vi.mocked(setActiveAddress).mockResolvedValue(undefined)
   vi.mocked(removeAddress).mockResolvedValue(undefined)
@@ -133,6 +142,7 @@ describe("MyInfoPage", () => {
   })
 
   it("saves a newly resolved address with a fixed label", async () => {
+    fetchMock.mockResolvedValue(searchResponse([{ address: "Jobbgatan 2", lat: 59.0, lon: 18.0 }]))
     mount()
     await waitFor(() => expect(getSavedAddresses).toHaveBeenCalled())
     const saved = { ...work, id: "3" }
@@ -140,7 +150,9 @@ describe("MyInfoPage", () => {
     vi.mocked(getSavedAddresses).mockResolvedValue([saved])
 
     fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Jobbgatan 2" } })
-    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    })
 
     fireEvent.click(screen.getByRole("radio", { name: "Arbete" }))
     await act(async () => {
@@ -148,7 +160,7 @@ describe("MyInfoPage", () => {
     })
 
     expect(saveAddress).toHaveBeenCalledWith(
-      { text: "Jobbgatan 2", source: "manual", approximate: false },
+      { text: "Jobbgatan 2", source: "manual", approximate: false, lat: 59.0, lon: 18.0 },
       { kind: "arbete" }
     )
     // The add form resets (AddressSection remounts) once the save completes.
@@ -156,11 +168,16 @@ describe("MyInfoPage", () => {
   })
 
   it("requires custom text before saving a address labelled 'annan'", async () => {
+    fetchMock.mockResolvedValue(
+      searchResponse([{ address: "Sommarstuga 3", lat: 59.0, lon: 18.0 }])
+    )
     mount()
     await waitFor(() => expect(getSavedAddresses).toHaveBeenCalled())
 
     fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Sommarstuga 3" } })
-    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    })
     fireEvent.click(screen.getByRole("radio", { name: "Annan" }))
 
     const customLabelInput = screen.getByLabelText("Egen etikett")
@@ -173,17 +190,20 @@ describe("MyInfoPage", () => {
     })
 
     expect(saveAddress).toHaveBeenCalledWith(
-      { text: "Sommarstuga 3", source: "manual", approximate: false },
+      { text: "Sommarstuga 3", source: "manual", approximate: false, lat: 59.0, lon: 18.0 },
       { kind: "annan", text: "Sommarstuga" }
     )
   })
 
   it("keeps the label picker inside the address preview card instead of a separate one", async () => {
+    fetchMock.mockResolvedValue(searchResponse([{ address: "Jobbgatan 2", lat: 59.0, lon: 18.0 }]))
     mount()
     await waitFor(() => expect(getSavedAddresses).toHaveBeenCalled())
 
     fireEvent.change(screen.getByLabelText("Adress"), { target: { value: "Jobbgatan 2" } })
-    fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Bekräfta adress" }))
+    })
 
     const previewCard = screen.getByRole("status")
     expect(within(previewCard).getByRole("button", { name: "Ändra adress" })).toBeTruthy()
