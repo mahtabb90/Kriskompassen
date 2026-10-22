@@ -1,5 +1,5 @@
 import { useRef, type RefObject } from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import ShelterListItem from "../components/ShelterListItem"
 import ShelterLoadFeedback from "../components/ShelterLoadFeedback"
 import { useAddresses } from "../context/addressContext"
@@ -58,6 +58,8 @@ function NearestShelters({ origin, headingRef }: NearestSheltersProps) {
 function ShelterPage() {
   const { activeAddress, loading } = useAddresses()
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const location = useLocation()
+  const notice = (location.state as { notice?: string } | null)?.notice
   const origin: GeoPoint | null =
     typeof activeAddress?.lat === "number" && typeof activeAddress?.lon === "number"
       ? { lat: activeAddress.lat, lon: activeAddress.lon }
@@ -73,6 +75,12 @@ function ShelterPage() {
       >
         Skyddsrum i närheten
       </h1>
+
+      {notice && (
+        <div role="alert" className={`${panelClassName} text-amber-900`}>
+          {notice}
+        </div>
+      )}
 
       {loading && (
         <p role="status" className={panelClassName}>

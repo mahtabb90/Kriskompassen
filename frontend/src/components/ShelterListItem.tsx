@@ -1,15 +1,19 @@
+import { Link } from "react-router-dom"
 import { useAddresses } from "../context/addressContext"
 import type { NearestShelter } from "../hooks/useNearestShelters"
+import { formatDistanceMeters } from "../utils/distance"
+import { formatShelterCapacity } from "../utils/formatCapacity"
 import { buildOpenStreetMapUrl } from "../utils/mapLink"
 import { describeShelterLocation } from "../utils/shelterLabel"
+import { describeShelterType } from "../utils/shelterType"
 
 interface ShelterListItemProps {
   shelter: NearestShelter
 }
 
 /**
- * Renders one nearby shelter's location description, number, and - when known - its type and
- * capacity, plus a link to its exact position on a map.
+ * Renders one nearby shelter's distance, location description, number, and - when known - its
+ * type and capacity, plus a link to its exact position on a map.
  *
  * MCF genuinely registers several separate shelters under one shared address, sometimes with
  * identical coordinates and capacity too, so the shelter's own number is shown even though the
@@ -20,8 +24,9 @@ interface ShelterListItemProps {
 function ShelterListItem({ shelter }: ShelterListItemProps) {
   const { activeAddress } = useAddresses()
   const details = [
-    shelter.type,
-    shelter.capacity !== null ? `${shelter.capacity} platser` : null,
+    formatDistanceMeters(shelter.distanceMeters),
+    shelter.type ? describeShelterType(shelter.type) : null,
+    shelter.capacity !== null ? formatShelterCapacity(shelter.capacity) : null,
   ].filter((value): value is string => Boolean(value))
 
   return (
@@ -38,15 +43,23 @@ function ShelterListItem({ shelter }: ShelterListItemProps) {
           <p className="mt-1 text-sm text-slate-600">Skyddsrumsnummer {shelter.number}</p>
         )}
         {details.length > 0 && <p className="mt-1 text-sm text-slate-600">{details.join(" · ")}</p>}
-        <a
-          href={buildOpenStreetMapUrl(shelter)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 inline-flex min-h-12 items-center font-semibold text-blue-900 underline underline-offset-4 hover:text-blue-950"
-        >
-          Visa på karta
-          <span className="sr-only"> (öppnas i ny flik)</span>
-        </a>
+        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <Link
+            to={`/skyddsrum/${shelter.id}`}
+            className="inline-flex min-h-12 items-center font-semibold text-blue-900 underline underline-offset-4 hover:text-blue-950"
+          >
+            Visa detaljer
+          </Link>
+          <a
+            href={buildOpenStreetMapUrl(shelter)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-12 items-center font-semibold text-blue-900 underline underline-offset-4 hover:text-blue-950"
+          >
+            Visa på karta
+            <span className="sr-only"> (öppnas i ny flik)</span>
+          </a>
+        </div>
       </div>
     </li>
   )
