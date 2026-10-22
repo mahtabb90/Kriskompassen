@@ -164,6 +164,9 @@ Create the backend environment with Python 3.13 using `python3 -m venv .venv` an
 Additional rules for agents:
 
 - Agents may run read-only git commands only: `git status`, `git log`, `git diff`, `git branch -a`.
+- Agents never add their own temporary files to the repo: screenshots or other images, measurement or verification scripts, logs or other scratch files. Keep them in the agent's scratchpad or another directory outside the working tree.
+- Agents never install temporary tools or packages in the project (`package.json`, `package-lock.json`, `requirements*.txt`) for their own measurements or verification. Install them outside the repo.
+- Screenshots for a PR are attached by the human directly in GitHub, not committed to the repo.
 - At the end of a task, the agent suggests a commit message and, when the task is complete, a PR title and description in the formats below. The human decides whether to use them and posts them manually.
 
 **Commit message format** (Conventional Commits with a detailed body):
@@ -332,6 +335,16 @@ Cross-platform (CI runs on Ubuntu, Windows and macOS, see section 4):
 Navigation and accessibility:
 
 - Keep one `BrowserRouter` and one shared `AppLayout`. The layout owns the header, primary navigation, skip link, single `main` landmark, document title and route focus management.
+- From `48rem`, the header uses two shrinkable columns. Its right control group is capped at
+  `20rem`, independently of help-text length. The switch track and active address align with the
+  cards' right edge; the label and help text share a left edge. The active address follows the
+  switch help. `Installera app` sits beside the connectivity status in the left column, outside
+  its live region, and wraps below it when needed. The connection-loss notice stays below that
+  row. Status/installation and the address share the final desktop grid row and align by their
+  first text baseline. A flexible row above them accommodates longer switch help without spreading
+  the brand and tagline apart. Below `48rem`, header content stacks on the left and installation
+  stays in the menu.
+  See `DESIGN_SYSTEM.md` sections 6.5–6.6 for padding, spacing and target details.
 - Each routed page supplies one `h1` with `id="page-heading"` and `tabIndex={-1}`. The layout derives the document title from that heading and focuses it on pathname changes, including back/forward navigation. Initial loads and hash-only changes preserve browser focus.
 - Add public links to the typed `navigationItems` list in `components/navigationItems.ts` and register their routes in `App.tsx`. Navigation currently uses exact matching. The desktop `BottomNavigation` and the mobile `MobileMenu` both render that one list; never duplicate labels or paths.
 - From `48rem` viewport width the navigation (`BottomNavigation`) stays in normal flow beneath the header with wrapping links. Below `48rem`, regardless of viewport height, it is hidden (`display: none`) and `MobileMenu` shows one fixed, horizontally centred **Meny** button (hamburger icon plus visible text, `bottom: max(0.75rem, env(safe-area-inset-bottom))`) instead.

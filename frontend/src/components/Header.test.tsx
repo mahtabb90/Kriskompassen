@@ -69,18 +69,23 @@ describe("Header install button", () => {
     expect(screen.queryByRole("button", { name: "Installera app" })).toBe(null)
   })
 
-  it("follows the mode switch and precedes the active address", async () => {
+  it("follows connectivity status before the mode switch and active address", async () => {
     vi.mocked(getSavedAddresses).mockResolvedValue([activeAddress])
     offerInstall()
     mountHeader()
     const address = await screen.findByRole("link", { name: "Storgatan 1" })
     const install = screen.getByRole("button", { name: "Installera app" })
     const modeSwitch = screen.getByRole("switch", { name: "Sparad information" })
+    const status = screen.getByRole("status")
 
-    expect(modeSwitch.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+    expect(status.textContent).toBe("Ansluten")
+    expect(status.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING
     )
-    expect(install.compareDocumentPosition(address) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+    expect(install.compareDocumentPosition(modeSwitch) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    )
+    expect(modeSwitch.compareDocumentPosition(address) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING
     )
   })

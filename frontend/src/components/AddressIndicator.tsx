@@ -30,7 +30,7 @@ function AddressIndicator() {
       Aktuell adress:{" "}
       <Link
         to="/min-info"
-        className="inline-flex min-h-12 items-center underline underline-offset-4 hover:text-blue-950"
+        className="inline-flex min-h-12 max-w-full items-center wrap-anywhere underline underline-offset-4 hover:text-blue-950"
       >
         {truncateForDisplay(addressText, ADDRESS_DISPLAY_MAX_LENGTH)}
       </Link>

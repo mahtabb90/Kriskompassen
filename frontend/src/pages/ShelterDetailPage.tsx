@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
+import ShelterDistance from "../components/ShelterDistance"
 import { useAddresses } from "../context/addressContext"
 import { useCrisisResource } from "../hooks/useCrisisResource"
 import { getCachedShelterById } from "../services/shelterStorageService"
-import { formatDistanceMeters, haversineDistanceMeters, type GeoPoint } from "../utils/distance"
+import { haversineDistanceMeters, type GeoPoint } from "../utils/distance"
 import { formatShelterCapacity } from "../utils/formatCapacity"
 import { buildOpenStreetMapUrl } from "../utils/mapLink"
 import { describeShelterLocation } from "../utils/shelterLabel"
@@ -57,8 +58,7 @@ function ShelterDetailPage() {
     typeof activeAddress?.lat === "number" && typeof activeAddress?.lon === "number"
       ? { lat: activeAddress.lat, lon: activeAddress.lon }
       : null
-  const distanceLabel =
-    shelter && origin ? formatDistanceMeters(haversineDistanceMeters(origin, shelter)) : null
+  const distanceMeters = shelter && origin ? haversineDistanceMeters(origin, shelter) : null
   const typeLabel = shelter?.type ? describeShelterType(shelter.type) : null
   const locationLabel = shelter
     ? describeShelterLocation(shelter, activeAddress?.municipality)
@@ -118,7 +118,11 @@ function ShelterDetailPage() {
               {shelter.capacity !== null && (
                 <Field label="Kapacitet">{formatShelterCapacity(shelter.capacity)}</Field>
               )}
-              {distanceLabel && <Field label="Avstånd från din plats">{distanceLabel}</Field>}
+              {distanceMeters !== null && (
+                <Field label="Avstånd från din plats">
+                  <ShelterDistance meters={distanceMeters} />
+                </Field>
+              )}
             </dl>
 
             <a
