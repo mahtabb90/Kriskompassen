@@ -291,14 +291,15 @@ Used for secondary actions that should not compete with nearby controls (e.g. "I
 the header and in the mobile menu footer).
 
 - **Classes:**
-  `relative inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm
+  `relative inline-flex min-h-8 cursor-pointer items-baseline gap-2 rounded-xl px-2 py-1.5 text-sm
   font-semibold text-blue-900 underline underline-offset-4 hover:bg-blue-50 active:bg-blue-50
   after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']`
 - **Visual:** No border or fill at rest; the underline and blue text mark it as interactive, like
-  standalone text links (section 6.3). The `px-2` aligns its content with switch and help-text
-  content that uses the same padding. An optional 20×20px inline SVG icon precedes the label,
-  uses `currentColor`, has `aria-hidden="true"` and `focusable="false"`, and never replaces the
-  visible label.
+  standalone text links (section 6.3). The `px-2` keeps the focus outline and hover tint clear of
+  the label. The label sets the baseline (`items-baseline`), so the button aligns with
+  neighbouring text such as the connection status. An optional 20×20px inline SVG icon precedes
+  the label, is vertically centred with `self-center`, uses `currentColor`, has
+  `aria-hidden="true"` and `focusable="false"`, and never replaces the visible label.
 - **Target size:** The visible box is 32px high; the `after` pseudo-element extends the hit area
   by 8px above and below to 48px, keeping the project's 48×48px standard (section 6.1). The
   extended hit area must not overlap other interactive targets, so keep at least 8px between the
