@@ -341,9 +341,12 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 - **Help text:** A `px-2 text-sm text-slate-600` paragraph below the switch, referenced by
   `aria-describedby`, describes the current state. Its `px-2` matches the button's horizontal
   padding, so the label and help text start at the same x-position in every state; the button
-  keeps its padding and 48×48px target. The switch block has a fixed width (`w-full max-w-xs`,
-  `md:w-xs` where the header column is auto-sized), so the help text wraps within it and the
-  label, track and help text stay in place in every state; only the thumb moves. The label
+  keeps its padding and 48×48px target. The header constrains the control group to `w-full
+  max-w-xs` within a shrinkable column, independently of help-text length. The switch button
+  fills that width and uses `justify-between`, keeping the label, track and help text in place
+  across states; only the thumb moves. From `48rem`, the group offsets its trailing 8px padding
+  with `-mr-2`, so the track reaches the cards' right edge while label and help retain their
+  shared left edge. The label
   **"Sparad information"** is the same in every state. Copy: off **"Visar aktuell information
   från internet."**, on **"Visar endast information som är sparad på enheten."**, on without a
   connection **"Visar endast information som är sparad på enheten. Du kan stänga av det när
@@ -352,7 +355,7 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
   focusable and its explanation is read. Only the track is dimmed (`opacity-60`) and the button
   shows `cursor-not-allowed`; the label and help text keep full contrast.
 - **Reflow:** The button wraps (`flex-wrap`), so at enlarged text sizes the track moves below the
-  label rather than being clipped.
+  label rather than being clipped. The track's `ml-auto` keeps it at the right edge on either row.
 - **Contrast:** The off and on tracks against white are expected to exceed 3:1 (`slate-600`
   approximately 7.5:1, `blue-900` approximately 10:1), and the white thumb is the same pair in
   reverse. The restricted state only occurs while the switch is on, so the dimmed track to
@@ -366,17 +369,21 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
   secondary/outlined button (section 6.2.2) with compact `px-4 py-2` padding, so its 2px border
   keeps the 48px minimum height (`min-h-12 min-w-12`), without an icon. The visible label
   **"Installera app"** is the accessible name in both; no `aria-label`.
-- **Placement:** From `48rem`, in the header's right column, 8px below the "Sparad information"
-  help text and 8px above the active address. The column is left-aligned, and the switch, help
-  text, button and address all use 8px (`px-2`) inline padding, so their content shares one left
-  edge. The right column spans the brand, tagline and connection rows plus a trailing flexible row,
-  so the button uses the space beside them and a taller right column never spreads the left rows
-  apart. Below `48rem`, last in the `MobileMenu` dialog, after the links in its scrolling region.
+- **Placement:** From `48rem`, beside connectivity status in the header's left column, with a
+  16px horizontal gap. The row wraps with an 8px vertical gap when space is limited. The button
+  stays outside the status live region; the connection-loss notice spans the space below the
+  row. The right column contains the switch and active address, whose trailing padding and
+  offset align the track and address link with the cards' right edge. The address link can wrap
+  within the column, including long words. Header columns can shrink and have a 24px gap.
+  Status/installation and the address occupy the same final desktop grid row, aligned by their
+  first text baseline. The status dot and install icon use `self-center`, so the text supplies
+  the baseline instead of the decorative shapes. The switch spans the preceding brand, tagline
+  and flexible rows, so longer help text does not spread the brand and tagline apart. Below
+  `48rem`, last in the `MobileMenu` dialog, after the links in its scrolling region.
   It is an action, not a page, so it is never part of the navigation links.
 - **Visibility:** Rendered only while the browser offers installation; no space is reserved
-  otherwise. Online without an active address, it fits beside the left column without changing the
-  header height. When the switch help text wraps the header grows by 8px, and with an active
-  address by 40px, but it stays lower than the header before this layout.
+  otherwise. Placing it beside status avoids an additional row below the active address. The
+  header still grows naturally when text or controls need to wrap, without overlap or clipping.
 - **Focus:** Selecting it opens the browser's prompt and removes the button. In the header focus
   moves to `#page-heading`; in the menu the dialog closes and focus returns to the **Meny** button.
 
