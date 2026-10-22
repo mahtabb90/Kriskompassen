@@ -53,9 +53,10 @@ describe("ShelterListItem with full data", () => {
 
     expect(screen.getByText("Kantarellen 11, Solna kommun")).toBeTruthy()
     expect(screen.getByText("Skyddsrumsnummer 120599-3")).toBeTruthy()
-    const details = screen.getByText(/350 m/)
-    expect(details.textContent).toContain("Skyddsrum")
-    expect(details.textContent).toContain("platser")
+    expect(screen.getByText("350 m (fågelvägen)").getAttribute("aria-hidden")).toBe("true")
+    expect(screen.getByText("350 meter fågelvägen")).toBeTruthy()
+    const otherDetails = screen.getByText(/platser/)
+    expect(otherDetails.textContent).toContain("Skyddsrum")
 
     const detailLink = screen.getByRole("link", { name: "Visa detaljer" })
     expect(detailLink.getAttribute("href")).toBe(`/skyddsrum/${fullShelter.id}`)
@@ -80,6 +81,6 @@ describe("ShelterListItem with missing fields", () => {
     renderItem(sparse)
 
     expect(screen.queryByText(/Skyddsrumsnummer/)).toBeNull()
-    expect(screen.getByText("1,5 km")).toBeTruthy()
+    expect(screen.getByText("1,5 km (fågelvägen)")).toBeTruthy()
   })
 })

@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom"
 import { useAddresses } from "../context/addressContext"
 import type { NearestShelter } from "../hooks/useNearestShelters"
-import { formatDistanceMeters } from "../utils/distance"
 import { formatShelterCapacity } from "../utils/formatCapacity"
 import { buildOpenStreetMapUrl } from "../utils/mapLink"
 import { describeShelterLocation } from "../utils/shelterLabel"
 import { describeShelterType } from "../utils/shelterType"
+import ShelterDistance from "./ShelterDistance"
 
 interface ShelterListItemProps {
   shelter: NearestShelter
@@ -23,8 +23,7 @@ interface ShelterListItemProps {
  */
 function ShelterListItem({ shelter }: ShelterListItemProps) {
   const { activeAddress } = useAddresses()
-  const details = [
-    formatDistanceMeters(shelter.distanceMeters),
+  const otherDetails = [
     shelter.type ? describeShelterType(shelter.type) : null,
     shelter.capacity !== null ? formatShelterCapacity(shelter.capacity) : null,
   ].filter((value): value is string => Boolean(value))
@@ -42,7 +41,10 @@ function ShelterListItem({ shelter }: ShelterListItemProps) {
         {shelter.number && (
           <p className="mt-1 text-sm text-slate-600">Skyddsrumsnummer {shelter.number}</p>
         )}
-        {details.length > 0 && <p className="mt-1 text-sm text-slate-600">{details.join(" · ")}</p>}
+        <p className="mt-1 text-sm text-slate-600">
+          <ShelterDistance meters={shelter.distanceMeters} />
+          {otherDetails.length > 0 && ` · ${otherDetails.join(" · ")}`}
+        </p>
         <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
           <Link
             to={`/skyddsrum/${shelter.id}`}

@@ -39,3 +39,14 @@ export function formatDistanceMeters(distanceMeters: number): string {
   if (distanceMeters < 1000) return `${Math.round(distanceMeters)} m`
   return `${(distanceMeters / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 1 })} km`
 }
+
+/**
+ * Formats a distance with its unit spelled out, e.g. "350 meter" or "1,2 kilometer".
+ *
+ * Pairs with formatDistanceMeters: the abbreviated form is for sighted users, this one for
+ * screen readers, since assistive tech does not reliably expand "m"/"km" on its own.
+ */
+export function formatDistanceMetersForScreenReader(distanceMeters: number): string {
+  if (distanceMeters < 1000) return `${Math.round(distanceMeters)} meter`
+  return `${(distanceMeters / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 1 })} kilometer`
+}
