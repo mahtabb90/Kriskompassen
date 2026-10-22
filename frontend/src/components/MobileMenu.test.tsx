@@ -3,6 +3,8 @@ import { createRef } from "react"
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { MemoryRouter, useLocation } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { installPromptEvent } from "../services/__fixtures__/installPrompt"
+import { installPromptService } from "../services/installPromptService"
 import { installDialogTestMethods } from "./__fixtures__/dialog"
 import MobileMenu from "./MobileMenu"
 import { navigationItems } from "./navigationItems"
@@ -204,5 +206,52 @@ describe("MobileMenu", () => {
     expect(dialog.open).toBe(false)
     expect(viewportListeners).toHaveLength(0)
     expect(document.body.style.overflow).toBe("")
+  })
+})
+
+describe("MobileMenu install button", () => {
+  afterEach(() => {
+    installPromptService.dispose()
+  })
+
+  function offerInstall() {
+    installPromptService.start()
+    const event = installPromptEvent()
+    act(() => {
+      window.dispatchEvent(event)
+    })
+    return event
+  }
+
+  it("is absent while the browser offers no installation", () => {
+    const { dialog } = openMenu()
+    expect(within(dialog).queryByRole("button", { name: "Installera app" })).toBe(null)
+  })
+
+  it("follows the links and becomes the last control for Tab wrapping", () => {
+    offerInstall()
+    const { dialog } = openMenu()
+    const install = within(dialog).getByRole("button", { name: "Installera app" })
+    const first = within(dialog).getByRole("button", { name: "Stäng menyn" })
+    expect(within(dialog).getByRole("list").contains(install)).toBe(false)
+    // The menu keeps the full-size secondary variant, which has no icon.
+    expect(install.querySelector("svg")).toBe(null)
+    install.focus()
+    fireEvent.keyDown(install, { key: "Tab" })
+    expect(document.activeElement).toBe(first)
+  })
+
+  it("prompts, closes the menu and returns focus to the trigger instead of the page heading", () => {
+    const event = offerInstall()
+    const { trigger, dialog } = openMenu()
+    const install = within(dialog).getByRole("button", { name: "Installera app" })
+    install.focus()
+
+    fireEvent.click(install)
+
+    expect(event.prompt).toHaveBeenCalledOnce()
+    expect(screen.queryByRole("dialog")).toBe(null)
+    expect(trigger.getAttribute("aria-expanded")).toBe("false")
+    expect(document.activeElement).toBe(trigger)
   })
 })

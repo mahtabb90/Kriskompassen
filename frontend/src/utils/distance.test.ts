@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { haversineDistanceMeters, nearestN } from "./distance"
+import { formatDistanceMeters, haversineDistanceMeters, nearestN } from "./distance"
 
 const STOCKHOLM = { lat: 59.3293, lon: 18.0686 }
 const GOTHENBURG = { lat: 57.7089, lon: 11.9746 }
@@ -56,5 +56,20 @@ describe("nearestN", () => {
     const a = { id: "a", lat: 59.0, lon: 18.001 }
     const b = { id: "b", lat: 59.0, lon: 18.001 }
     expect(nearestN(origin, [a, b], 2).map((item) => item.id)).toEqual(["a", "b"])
+  })
+})
+
+describe("formatDistanceMeters", () => {
+  it("rounds sub-kilometer distances to whole meters", () => {
+    expect(formatDistanceMeters(350)).toBe("350 m")
+    expect(formatDistanceMeters(999.6)).toBe("1000 m")
+  })
+
+  it("formats kilometer distances with one Swedish decimal", () => {
+    expect(formatDistanceMeters(1500)).toBe("1,5 km")
+  })
+
+  it("omits a trailing decimal when not needed", () => {
+    expect(formatDistanceMeters(12_000)).toBe("12 km")
   })
 })

@@ -1,12 +1,14 @@
 import AddressIndicator from "./AddressIndicator"
 import ConnectionStatus from "./ConnectionStatus"
+import InstallAppButton from "./InstallAppButton"
 import ModeToggle from "./ModeToggle"
 
 /**
  * Renders shared branding, the "Sparad information" mode switch and connectivity status within
  * a ModeProvider.
  *
- * Reserves the top device inset when no VMA notice owns it.
+ * From 48rem the install button sits below the switch; below 48rem the mobile menu offers it
+ * instead. Reserves the top device inset when no VMA notice owns it.
  *
  * @param reserveTopInset Whether the header is the first visible region in the page.
  */
@@ -15,8 +17,16 @@ function Header({ reserveTopInset = true }: { reserveTopInset?: boolean }) {
     <header className={"bg-white " + (reserveTopInset ? "pt-[env(safe-area-inset-top)]" : "")}>
       <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
         {/* Source order is the mobile order (brand, tagline, status, mode) so reading and tab
-            order match what is shown; from md the grid restores the brand and mode in one row. */}
-        <div className="flex flex-col items-start gap-3 md:grid md:grid-cols-[1fr_auto] md:gap-0">
+            order match what is shown; from md the grid restores the brand and mode in one row.
+            The right column spans all rows, so its controls use the space beside the tagline and
+            status instead of pushing them down. A taller right column grows only the trailing
+            flexible row, so the left rows keep their spacing. */}
+        <div
+          className={
+            "flex flex-col items-start gap-3 md:grid md:grid-cols-[1fr_auto] " +
+            "md:grid-rows-[auto_auto_auto_1fr] md:gap-0"
+          }
+        >
           <div className="flex flex-wrap items-center gap-3 md:col-start-1 md:row-start-1 md:self-start">
             <img src="/kriskompassen-logo.png" alt="" className="h-12 w-12 sm:h-14 sm:w-14" />
 
@@ -30,22 +40,29 @@ function Header({ reserveTopInset = true }: { reserveTopInset?: boolean }) {
             </p>
           </div>
 
-          <p className="text-base text-slate-600 md:col-span-2 md:row-start-2 md:mt-3">
+          <p className="text-base text-slate-600 md:col-start-1 md:row-start-2 md:mt-3">
             Din kompass när krisen kommer.
           </p>
 
-          <div className="self-stretch md:col-span-2 md:row-start-3 md:mt-3 md:self-auto">
+          <div className="self-stretch md:col-start-1 md:row-start-3 md:mt-3 md:self-auto">
             <ConnectionStatus />
           </div>
 
           <div
             className={
-              "flex flex-col items-start gap-2 md:col-start-2 md:row-start-1 " +
-              "md:items-end md:self-start md:justify-self-end"
+              "flex flex-col items-start gap-2 md:col-start-2 md:row-span-4 md:row-start-1 " +
+              "md:self-start md:justify-self-end"
             }
           >
             <ModeToggle />
-            <AddressIndicator />
+            {/* The text button's px-2 and this padding match the switch's px-2, so the switch label,
+                help text, button content and address share one left edge. */}
+            <div className="empty:hidden max-md:hidden">
+              <InstallAppButton variant="text" />
+            </div>
+            <div className="empty:hidden md:px-2">
+              <AddressIndicator />
+            </div>
           </div>
         </div>
       </div>
