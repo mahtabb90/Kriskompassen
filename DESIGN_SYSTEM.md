@@ -288,7 +288,7 @@ Used for toggled states or alternate actions (e.g. "Ta bort offlinekopia", "Visa
 
 #### 6.2.3 Text Button (tertiary)
 Used for secondary actions that should not compete with nearby controls (e.g. "Installera app" in
-the header).
+the header and in the mobile menu footer).
 
 - **Classes:**
   `relative inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm
@@ -361,22 +361,26 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 
 ### 6.6 Install App Button
 
-- **Variant:** In the header, the text button (section 6.2.3) with a decorative download icon, so
-  it has less visual weight than the "Sparad information" switch. In the mobile menu, the
-  secondary/outlined button (section 6.2.2) with compact `px-4 py-2` padding, so its 2px border
-  keeps the 48px minimum height (`min-h-12 min-w-12`), without an icon. The visible label
+- **Variant:** The text button (section 6.2.3) with a decorative download icon in both places. In
+  the header it has less visual weight than the "Sparad information" switch; in the mobile menu
+  the underline, blue text and icon distinguish it from the navigation links. The visible label
   **"Installera app"** is the accessible name in both; no `aria-label`.
 - **Placement:** From `48rem`, in the header's right column, 8px below the "Sparad information"
   help text and 8px above the active address. The column is left-aligned, and the switch, help
   text, button and address all use 8px (`px-2`) inline padding, so their content shares one left
   edge. The right column spans the brand, tagline and connection rows plus a trailing flexible row,
   so the button uses the space beside them and a taller right column never spreads the left rows
-  apart. Below `48rem`, last in the `MobileMenu` dialog, after the links in its scrolling region.
-  It is an action, not a page, so it is never part of the navigation links.
+  apart. Below `48rem`, right-aligned in a fixed footer at the bottom of the `MobileMenu` dialog,
+  separated from the links by a 1px top border. The footer sits below the scrolling link region,
+  so the button stays visible while the links scroll above it, and it is the last control in DOM,
+  visual and Tab order. The footer's 12px vertical padding keeps the button's extended 48px hit
+  area clear of the links. It is an action, not a page, so it is never part of the navigation
+  links.
 - **Visibility:** Rendered only while the browser offers installation; no space is reserved
   otherwise. Online without an active address, it fits beside the left column without changing the
   header height. When the switch help text wraps the header grows by 8px, and with an active
-  address by 40px, but it stays lower than the header before this layout.
+  address by 40px, but it stays lower than the header before this layout. The menu footer uses
+  `empty:hidden`, so neither the footer nor its divider is shown while the button is not rendered.
 - **Focus:** Selecting it opens the browser's prompt and removes the button. In the header focus
   moves to `#page-heading`; in the menu the dialog closes and focus returns to the **Meny** button.
 
