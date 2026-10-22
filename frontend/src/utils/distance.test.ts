@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { formatDistanceMeters, haversineDistanceMeters, nearestN } from "./distance"
+import {
+  formatDistanceMeters,
+  formatDistanceMetersForScreenReader,
+  haversineDistanceMeters,
+  nearestN,
+} from "./distance"
 
 const STOCKHOLM = { lat: 59.3293, lon: 18.0686 }
 const GOTHENBURG = { lat: 57.7089, lon: 11.9746 }
@@ -71,5 +76,16 @@ describe("formatDistanceMeters", () => {
 
   it("omits a trailing decimal when not needed", () => {
     expect(formatDistanceMeters(12_000)).toBe("12 km")
+  })
+})
+
+describe("formatDistanceMetersForScreenReader", () => {
+  it("spells out meter below one kilometer", () => {
+    expect(formatDistanceMetersForScreenReader(350)).toBe("350 meter")
+  })
+
+  it("spells out kilometer at or above one kilometer", () => {
+    expect(formatDistanceMetersForScreenReader(1500)).toBe("1,5 kilometer")
+    expect(formatDistanceMetersForScreenReader(12_000)).toBe("12 kilometer")
   })
 })

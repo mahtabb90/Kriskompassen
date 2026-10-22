@@ -80,9 +80,9 @@ describe("ShelterDetailPage with full data", () => {
     expect(screen.getByText("Typ").nextElementSibling?.textContent).toBe("Skyddsrum")
     expect(screen.getByText("Kapacitet").nextElementSibling?.textContent).toContain("1")
     expect(screen.getByText("Kapacitet").nextElementSibling?.textContent).toContain("platser")
-    expect(screen.getByText("Avstånd från din plats").nextElementSibling?.textContent).toMatch(
-      /km|m$/
-    )
+    const distanceField = screen.getByText("Avstånd från din plats").nextElementSibling
+    expect(distanceField?.textContent).toMatch(/\(fågelvägen\)/)
+    expect(distanceField?.textContent).toMatch(/(meter|kilometer) fågelvägen/)
 
     const mapLink = screen.getByRole("link", { name: /Visa skyddsrummet på kartan/ })
     expect(mapLink.getAttribute("href")).toContain("59.352")
