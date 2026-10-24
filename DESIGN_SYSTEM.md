@@ -288,17 +288,18 @@ Used for toggled states or alternate actions (e.g. "Ta bort offlinekopia", "Visa
 
 #### 6.2.3 Text Button (tertiary)
 Used for secondary actions that should not compete with nearby controls (e.g. "Installera app" in
-the header).
+the header and in the mobile menu footer).
 
 - **Classes:**
-  `relative inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm
+  `relative inline-flex min-h-8 cursor-pointer items-baseline gap-2 rounded-xl px-2 py-1.5 text-sm
   font-semibold text-blue-900 underline underline-offset-4 hover:bg-blue-50 active:bg-blue-50
   after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']`
 - **Visual:** No border or fill at rest; the underline and blue text mark it as interactive, like
-  standalone text links (section 6.3). The `px-2` aligns its content with switch and help-text
-  content that uses the same padding. An optional 20×20px inline SVG icon precedes the label,
-  uses `currentColor`, has `aria-hidden="true"` and `focusable="false"`, and never replaces the
-  visible label.
+  standalone text links (section 6.3). The `px-2` keeps the focus outline and hover tint clear of
+  the label. The label sets the baseline (`items-baseline`), so the button aligns with
+  neighbouring text such as the connection status. An optional 20×20px inline SVG icon precedes
+  the label, is vertically centred with `self-center`, uses `currentColor`, has
+  `aria-hidden="true"` and `focusable="false"`, and never replaces the visible label.
 - **Target size:** The visible box is 32px high; the `after` pseudo-element extends the hit area
   by 8px above and below to 48px, keeping the project's 48×48px standard (section 6.1). The
   extended hit area must not overlap other interactive targets, so keep at least 8px between the
@@ -364,10 +365,9 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 
 ### 6.6 Install App Button
 
-- **Variant:** In the header, the text button (section 6.2.3) with a decorative download icon, so
-  it has less visual weight than the "Sparad information" switch. In the mobile menu, the
-  secondary/outlined button (section 6.2.2) with compact `px-4 py-2` padding, so its 2px border
-  keeps the 48px minimum height (`min-h-12 min-w-12`), without an icon. The visible label
+- **Variant:** The text button (section 6.2.3) with a decorative download icon in both places. In
+  the header it has less visual weight than the "Sparad information" switch; in the mobile menu
+  the underline, blue text and icon distinguish it from the navigation links. The visible label
   **"Installera app"** is the accessible name in both; no `aria-label`.
 - **Placement:** From `48rem`, beside connectivity status in the header's left column, with a
   16px horizontal gap. The row wraps with an 8px vertical gap when space is limited. The button
@@ -379,11 +379,17 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
   first text baseline. The status dot and install icon use `self-center`, so the text supplies
   the baseline instead of the decorative shapes. The switch spans the preceding brand, tagline
   and flexible rows, so longer help text does not spread the brand and tagline apart. Below
-  `48rem`, last in the `MobileMenu` dialog, after the links in its scrolling region.
-  It is an action, not a page, so it is never part of the navigation links.
+  `48rem`, right-aligned in a fixed footer at the bottom of the `MobileMenu` dialog, separated
+  from the links by a 1px top border. The footer sits below the scrolling link region, so the
+  button stays visible while the links scroll above it, and it is the last control in DOM,
+  visual and Tab order. The footer's 12px vertical padding keeps the button's extended 48px hit
+  area clear of the links. It is an action, not a page, so it is never part of the navigation
+  links.
 - **Visibility:** Rendered only while the browser offers installation; no space is reserved
   otherwise. Placing it beside status avoids an additional row below the active address. The
   header still grows naturally when text or controls need to wrap, without overlap or clipping.
+  The menu footer uses `empty:hidden`, so neither the footer nor its divider is shown while the
+  button is not rendered.
 - **Focus:** Selecting it opens the browser's prompt and removes the button. In the header focus
   moves to `#page-heading`; in the menu the dialog closes and focus returns to the **Meny** button.
 
@@ -402,8 +408,8 @@ KrisKompassen shows the same primary links, from the shared `navigationItems` li
 
 ### 7.2 Mobile Menu Dialog
 
-- A native modal `<dialog>` named **Meny** covers the whole viewport, including the header and the VMA notice, on a white surface with safe-area padding. The dialog element itself is fullscreen (`.mobile-menu-dialog`: fixed, `inset: 0`, no margin or border, `width: 100%`, `height`/`min-height: 100dvh`, no max-width/max-height), not only its backdrop. A **Stäng menyn** outlined button (48×48px minimum) sits in a fixed top row beside the heading; the link list below scrolls internally (`overscroll-contain`), so short screens and enlarged text remain usable.
-- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Min info). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
+- A native modal `<dialog>` named **Meny** covers the whole viewport, including the header and the VMA notice, on a white surface with safe-area padding. The dialog element itself is fullscreen (`.mobile-menu-dialog`: fixed, `inset: 0`, no margin or border, `width: 100%`, `height`/`min-height: 100dvh`, no max-width/max-height), not only its backdrop. A **Stäng menyn** outlined button (48×48px minimum) sits in a fixed top row beside the heading; the link list below scrolls internally (`overscroll-contain`), so short screens and enlarged text remain usable. When the browser offers installation, a fixed footer below the list holds the **Installera app** button (section 6.6).
+- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Min info). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
 - The modal makes the page inert, locks page scrolling and wraps Tab at its boundaries. Escape and **Stäng menyn** return focus to the Meny button, as does selecting the current route. Selecting another route closes the menu and leaves focus to the layout page-heading focus. Crossing `48rem` while open closes it without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating). There is no animation.
 
 ---

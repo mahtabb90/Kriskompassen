@@ -223,22 +223,56 @@ describe("MobileMenu install button", () => {
     return event
   }
 
-  it("is absent while the browser offers no installation", () => {
+  /** The footer follows the scrolling region that holds the link list. */
+  function footerOf(dialog: HTMLElement) {
+    const scrollRegion = within(dialog).getByRole("list").parentElement
+    return { scrollRegion, footer: scrollRegion?.nextElementSibling ?? null }
+  }
+
+  it("is absent while the browser offers no installation and leaves the footer empty", () => {
     const { dialog } = openMenu()
     expect(within(dialog).queryByRole("button", { name: "Installera app" })).toBe(null)
+    const { footer } = footerOf(dialog)
+    // The empty:hidden utility removes the footer and its divider while it has no content.
+    expect(footer?.matches(":empty")).toBe(true)
+    expect(footer?.classList.contains("empty:hidden")).toBe(true)
   })
 
-  it("follows the links and becomes the last control for Tab wrapping", () => {
+  it("sits in a fixed footer after the scrolling links, outside the link list", () => {
+    offerInstall()
+    const { dialog } = openMenu()
+    const install = within(dialog).getByRole("button", { name: "Installera app" })
+    const { scrollRegion, footer } = footerOf(dialog)
+    expect(within(dialog).getByRole("list").contains(install)).toBe(false)
+    expect(scrollRegion?.contains(install)).toBe(false)
+    expect(footer?.contains(install)).toBe(true)
+    expect(footer?.nextElementSibling).toBe(null)
+  })
+
+  it("uses the text button with a decorative icon, named by its visible label", () => {
+    offerInstall()
+    const { dialog } = openMenu()
+    const install = within(dialog).getByRole("button", { name: "Installera app" })
+    const icon = install.querySelector("svg")
+    expect(icon?.getAttribute("aria-hidden")).toBe("true")
+    expect(icon?.getAttribute("focusable")).toBe("false")
+    expect(install.hasAttribute("aria-label")).toBe(false)
+  })
+
+  it("is the last control in DOM order and for Tab wrapping in both directions", () => {
     offerInstall()
     const { dialog } = openMenu()
     const install = within(dialog).getByRole("button", { name: "Installera app" })
     const first = within(dialog).getByRole("button", { name: "Stäng menyn" })
-    expect(within(dialog).getByRole("list").contains(install)).toBe(false)
-    // The menu keeps the full-size secondary variant, which has no icon.
-    expect(install.querySelector("svg")).toBe(null)
+    const lastLink = within(dialog).getByRole("link", { name: "Min info" })
+    expect(
+      lastLink.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
     install.focus()
     fireEvent.keyDown(install, { key: "Tab" })
     expect(document.activeElement).toBe(first)
+    fireEvent.keyDown(first, { key: "Tab", shiftKey: true })
+    expect(document.activeElement).toBe(install)
   })
 
   it("prompts, closes the menu and returns focus to the trigger instead of the page heading", () => {
