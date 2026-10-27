@@ -14,6 +14,9 @@ investigating this script - a server-side quirk serving large JSON pages, not a 
 Reuses the same property names (inspireid is not present in CSV; "id" and "name" instead,
 additionallocationdescription, numberofoccupants, statustype) the old live WFS mapping already
 handled, plus a WKT "MULTIPOINT ((lon lat))" geometry column instead of GeoJSON coordinates.
+
+Also writes shelters.meta.json alongside the snapshot (fetchedAt, count, sourceUrl) - not read
+by the app, just a durable, inspectable record of the snapshot's age and origin.
 """
 
 import csv
@@ -22,6 +25,7 @@ import json
 import re
 import sys
 import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -30,6 +34,9 @@ COLLECTION_URL = (
 )
 PAGE_SIZE = 10_000
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "src" / "data" / "shelters.json"
+# Sidecar, not read by the app - a durable, inspectable record of when/where this snapshot came
+# from, so its age is traceable without depending on a commit message being written well.
+META_PATH = Path(__file__).resolve().parents[1] / "src" / "data" / "shelters.meta.json"
 USER_AGENT = "KrisKompassen-shelter-sync/0.1 (+https://github.com/mahtabb90/Kriskompassen)"
 TIMEOUT_SECONDS = 90
 _MULTIPOINT_RE = re.compile(r"MULTIPOINT\s*\(\(\s*([-\d.]+)\s+([-\d.]+)\s*\)\)")
@@ -107,6 +114,7 @@ def fetch_all_shelters() -> list[dict]:
 
 def main() -> None:
     print(f"Fetching shelters from {COLLECTION_URL} ...", file=sys.stderr)
+    fetched_at = datetime.now(UTC).isoformat()
     shelters = fetch_all_shelters()
     print(f"Fetched {len(shelters)} shelters total.", file=sys.stderr)
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -114,6 +122,15 @@ def main() -> None:
         json.dumps(shelters, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
     )
     print(f"Wrote {OUTPUT_PATH}", file=sys.stderr)
+    META_PATH.write_text(
+        json.dumps(
+            {"fetchedAt": fetched_at, "count": len(shelters), "sourceUrl": COLLECTION_URL},
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    print(f"Wrote {META_PATH}", file=sys.stderr)
 
 
 if __name__ == "__main__":

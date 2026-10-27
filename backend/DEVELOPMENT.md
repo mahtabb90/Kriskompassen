@@ -13,6 +13,7 @@ the verification record below distinguishes that result from active-warning rend
 | --- | --- | --- |
 | VMA warnings, updates and cancellations | Sveriges Radio VMA API v3 | Implemented through the backend and frontend service |
 | Preparedness articles | Manually maintained summaries attributed to Krisinformation.se | File-backed article API; no automatic source fetching |
+| Civil-defense shelters | Myndigheten för civilt försvar (MCF), open OGC API Features | File-backed snapshot API; refreshed by a manual script, no automatic daily sync yet |
 | General crisis news | Krisinformation.se news API v3 | Chosen source for future work; no news fetching service or route is implemented |
 
 Do not feed news records into the VMA validator or silently fall back to news if VMA fetching fails.
@@ -99,6 +100,48 @@ qualifications that must also survive summarisation.
 The Python runtime includes project files in its function bundle; see
 [Vercel's Python bundling documentation](https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled).
 Do not add runtime writes to this deployment file as a substitute for durable database storage.
+
+## Civil-defense shelters
+
+MVP decision: `src/data/shelters.json` is a single static, committed snapshot of MCF's full
+national shelter register (civil-defense shelters, "skyddsrum") — the same deployment-bundled
+file pattern as `crisis.json` above, not a live call per search. `src/services/shelters.py`
+reads it once per process (`LocalShelterStore`, cached in memory after the first successful
+load - unlike `crisis.py`, which re-reads its small file every request, because this snapshot
+has 60,000+ records, too expensive to re-parse every call) and ranks shelters by Haversine
+distance from the requested position. `GET /api/v1/shelters/nearest?lat=&lon=` returns the five
+closest. Imports and application startup do not read the file, so a data error does not disable
+unrelated API endpoints; a missing or invalid snapshot raises
+`500 {"error":{"code":"shelters_data_unavailable","message":"Skyddsrumsdata kunde inte läsas."}}`
+rather than falling back to a live MCF call. No database or runtime write is involved.
+
+**There is no automatic refresh yet.** The snapshot is refreshed by running
+`backend/scripts/fetch_shelters.py` manually and committing the result — this is a deliberate,
+scoped-down MVP decision, not an oversight; building a scheduled daily sync is separate, planned
+future work (see the team's backlog item "Uppdatering av lokal skyddsrumsfil" for the research
+already done: pagination, CSV format, Vercel Blob vs. a committed file + GitHub Action). The data
+visibly ages between manual runs; `src/data/shelters.meta.json` (also written by the script, not
+read by the app) records `fetchedAt`, `count` and `sourceUrl` for traceability. The team decided
+this staleness does not need to be surfaced to end users for the MVP.
+
+The script pages through MCF's open [OGC API Features collection](https://inspire.mcf.se/skyddsrum/ogc/features/v1/collections/US_civilProtectionSite/items)
+(the modern counterpart to the WFS endpoint the earlier live lookup used) using `startIndex`,
+since the server caps each page at roughly 10,000 features regardless of the requested `limit`.
+It requests the `text/csv` output format rather than JSON/GeoJSON: a 10,000-feature page reliably
+completes as CSV, but the same page size as JSON intermittently aborts mid-response — a
+server-side quirk observed directly against this endpoint, not a client issue. The dataset's
+[Geodataportalen metadata record](https://www.geodata.se/geodataportalen/srv/swe/catalog.search#/metadata/6341813c-bfa3-45df-8234-13cf583bf533)
+states no access or reuse restrictions apply. The script's fetch/mapping logic is written to be
+reused as-is by the future scheduled-sync job, not thrown away.
+
+### Refreshing the shelter snapshot
+
+1. `cd backend && python scripts/fetch_shelters.py` (needs network access to `inspire.mcf.se`;
+   takes roughly 15-30 seconds for the whole national register).
+2. Confirm `src/data/shelters.json` and `src/data/shelters.meta.json` both updated.
+3. Run the backend checks from this guide (tests, Ruff) and spot-check a few coordinates against
+   `GET /api/v1/shelters/nearest` in `/docs`.
+4. Commit both files together, mentioning the new `fetchedAt` date in the commit message.
 
 ## Official VMA API and verification
 
