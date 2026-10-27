@@ -36,11 +36,6 @@ class Settings(BaseSettings):
     # Bounds the worst-case queued wait to roughly max_queue_depth * min_interval_seconds; a
     # request arriving once the queue is already full fails fast instead of piling up.
     geocode_max_queue_depth: int = Field(default=10, gt=0)
-    shelters_api_url: AnyHttpUrl = AnyHttpUrl("https://inspire.mcf.se/skyddsrum/wfs")
-    shelters_timeout_seconds: float = Field(default=8.0, gt=0, allow_inf_nan=False)
-    # Shelter locations change far less often than an address lookup, so this TTL is much
-    # longer than geocode_cache_ttl_seconds.
-    shelters_cache_ttl_seconds: float = Field(default=600.0, gt=0, allow_inf_nan=False)
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
     )

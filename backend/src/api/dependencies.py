@@ -5,7 +5,7 @@ from fastapi import Request
 
 from src.core.config import Settings
 from src.services.geocode_cache import GeocodeCache, GeocodeSearchCache
-from src.services.shelters_cache import ShelterAreaCache
+from src.services.shelters import LocalShelterStore
 from src.services.vma_cache import VmaCache
 
 
@@ -34,6 +34,6 @@ async def get_geocode_search_cache(request: Request) -> GeocodeSearchCache:
     return request.app.state.geocode_search_cache
 
 
-async def get_shelter_cache(request: Request) -> ShelterAreaCache:
-    """Returns the shelter-area cache shared by all requests to this application instance."""
-    return request.app.state.shelter_cache
+async def get_shelter_store(request: Request) -> LocalShelterStore:
+    """Returns the local shelter store shared by all requests to this application instance."""
+    return request.app.state.shelter_store
