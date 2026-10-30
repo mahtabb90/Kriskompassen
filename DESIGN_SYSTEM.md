@@ -415,6 +415,25 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 - **Focus:** Selecting it opens the browser's prompt and removes the button. In the header focus
   moves to `#page-heading`; in the menu the dialog closes and focus returns to the **Meny** button.
 
+### 6.7 Install Instructions (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in `InstallInstructions`.
+> It reuses existing tokens only.
+
+- **Surface:** A section 5.1 card without the hover state or accent bar, `p-4`, named **Installera
+  appen** with `aria-label`. It uses `text-slate-700` body text and no heading, because it precedes
+  the page `h1`.
+- **Placement:** In normal flow in `main`, after the app-update slot and before the page, with a
+  16px bottom margin. It is not fixed, so it covers no content and needs no safe-area or scroll
+  spacing.
+- **Icon:** A 20×20px inline SVG share icon in `text-blue-900` beside the word "Dela". It is
+  `aria-hidden="true"` and `focusable="false"`, because the text names it.
+- **Close:** The text button (section 6.2.3) with the visible label **Stäng** and the accessible
+  name **Stäng installationsinstruktionen**, at least 48×48px including its hit area. It wraps
+  below the text on narrow screens.
+- **Focus:** The card never takes focus on its own and has no live region. Closing moves focus to
+  `#page-heading`.
+
 ---
 
 ## 7. Navigation Patterns

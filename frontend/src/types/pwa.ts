@@ -16,9 +16,17 @@ export interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
 }
 
+/** The one install offer to present: the app's button, a manual instruction, or nothing. */
+export type InstallState = "button" | "ios-instructions" | "macos-instructions" | "none"
+
 declare global {
   interface WindowEventMap {
     beforeinstallprompt: BeforeInstallPromptEvent
     appinstalled: Event
+  }
+
+  interface Navigator {
+    /** True in an app started from the iOS home screen; missing from TypeScript's DOM lib. */
+    readonly standalone?: boolean
   }
 }

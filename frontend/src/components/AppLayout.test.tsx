@@ -90,6 +90,39 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+describe("AppLayout install instructions", () => {
+  it("shows them in main, between the app-update slot and the page, on an iPhone", async () => {
+    vi.stubGlobal("navigator", {
+      onLine: true,
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 " +
+        "(KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
+      maxTouchPoints: 5,
+    })
+    vi.stubGlobal("matchMedia", () => ({ matches: false }))
+    vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {} })
+    fetchMock.mockResolvedValue(Response.json(feed([])))
+
+    const { container } = mountLayout()
+
+    const instructions = await screen.findByRole("region", { name: "Installera appen" })
+    const slot = container.querySelector(".pwa-update-slot")
+    const heading = screen.getByRole("heading", { name: "Hem" })
+    expect(screen.getByRole("main").contains(instructions)).toBe(true)
+    expect(slot?.nextElementSibling).toBe(instructions)
+    expect(instructions.nextElementSibling).toBe(heading)
+  })
+
+  it("does not show them in the default test browser", async () => {
+    fetchMock.mockResolvedValue(Response.json(feed([])))
+
+    mountLayout()
+
+    await screen.findByRole("heading", { name: "Hem" })
+    expect(screen.queryByRole("region", { name: "Installera appen" })).toBe(null)
+  })
+})
+
 describe("AppLayout VMA integration", () => {
   it("opens the banner message without fetching and returns focus to its trigger on repeated use", async () => {
     fetchMock.mockResolvedValue(Response.json(feed()))

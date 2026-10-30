@@ -4,6 +4,7 @@ import { useVmaBanner } from "../hooks/useVmaBanner"
 import { usePwaUpdate } from "../hooks/usePwaUpdate"
 import BottomNavigation from "./BottomNavigation"
 import Header from "./Header"
+import InstallInstructions from "./InstallInstructions"
 import MobileMenu from "./MobileMenu"
 import VmaBanner from "./VmaBanner"
 import PwaUpdateNotice from "./PwaUpdateNotice"
@@ -243,6 +244,7 @@ function AppLayout() {
         <div ref={updateRef} className="pwa-update-slot">
           <PwaUpdateNotice {...update} />
         </div>
+        <InstallInstructions />
         <Outlet />
       </main>
       {openedVma ? (

@@ -1,4 +1,5 @@
 import { useInstallPrompt } from "../hooks/useInstallPrompt"
+import { useInstallState } from "../hooks/useInstallState"
 
 interface InstallAppButtonProps {
   afterPrompt?: () => void
@@ -38,9 +39,10 @@ function InstallAppButton({
   afterPrompt = focusPageHeading,
   variant = "secondary",
 }: InstallAppButtonProps) {
-  const { canInstall, promptInstall } = useInstallPrompt()
+  const { promptInstall } = useInstallPrompt()
+  const installState = useInstallState()
 
-  if (!canInstall) return null
+  if (installState !== "button") return null
 
   function handleClick() {
     void promptInstall()
