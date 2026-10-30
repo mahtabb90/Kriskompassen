@@ -1,18 +1,19 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type RefObject } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 import InstallAppButton from "./InstallAppButton"
+import MobileFooter from "./MobileFooter"
 import { navigationItems } from "./navigationItems"
 
 interface MobileMenuProps {
-  triggerRef: RefObject<HTMLButtonElement | null>
+  footerRef: RefObject<HTMLElement | null>
 }
 
 /** Why the dialog closed, which decides whether focus returns to the trigger. */
 type CloseReason = "manual" | "navigation" | "viewport"
 
 /**
- * Provides the primary links below 48rem: a fixed, centred "Meny" button that opens a full-screen
- * native modal dialog.
+ * Provides the primary links below 48rem: a "Meny" button in a fixed bottom bar that opens a
+ * full-screen native modal dialog. The dialog stays outside the bar's navigation landmark.
  *
  * Native modal behaviour makes the page inert, lets Escape close the dialog and removes it from
  * keyboard and assistive technology while closed. Scroll is locked while open and the link list
@@ -22,11 +23,12 @@ type CloseReason = "manual" | "navigation" | "viewport"
  * installation, an install button sits right-aligned in a fixed footer below the scrolling links,
  * as the last control; selecting it closes the menu manually. The footer is hidden while empty.
  *
- * @param triggerRef Gives the shared layout access to the button to reserve scroll space for it.
+ * @param footerRef Gives the shared layout access to the bottom bar to reserve scroll space for it.
  */
-function MobileMenu({ triggerRef }: MobileMenuProps) {
+function MobileMenu({ footerRef }: MobileMenuProps) {
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const closeReason = useRef<CloseReason>("manual")
@@ -81,7 +83,7 @@ function MobileMenu({ triggerRef }: MobileMenuProps) {
       if (dialog.open) dialog.close()
       restoreScroll()
     }
-  }, [open, triggerRef])
+  }, [open])
 
   useEffect(() => {
     if (previousPathname.current === pathname) return
@@ -96,37 +98,13 @@ function MobileMenu({ triggerRef }: MobileMenuProps) {
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-expanded={open}
-        aria-controls={dialogId}
-        aria-haspopup="dialog"
-        onClick={() => setOpen(true)}
-        className={
-          "fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-20 -translate-x-1/2 " +
-          "inline-flex min-h-12 min-w-12 cursor-pointer items-center justify-center gap-2 " +
-          "rounded-xl border-2 border-blue-900 bg-amber-300 px-5 py-3 font-semibold text-blue-900 " +
-          "shadow-lg hover:bg-amber-200 active:bg-amber-400 md:hidden"
-        }
-      >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path
-            d="M4 7h16M4 12h16M4 17h16"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-        Meny
-      </button>
+      <MobileFooter
+        footerRef={footerRef}
+        triggerRef={triggerRef}
+        menuId={dialogId}
+        expanded={open}
+        onOpen={() => setOpen(true)}
+      />
       <dialog
         ref={dialogRef}
         id={dialogId}
