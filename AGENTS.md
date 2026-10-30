@@ -92,13 +92,14 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   ├── .env.example    # backend variable names only
 │   ├── requirements.txt / requirements-dev.txt  # pinned dependencies
 │   ├── pyproject.toml  # Ruff and pytest configuration
+│   ├── scripts/        # fetch_shelters.py: one-off manual MCF sync, not run by the app or CI
 │   ├── src/
 │   │   ├── app.py      # application factory, lifespan and exported app
 │   │   ├── api/        # routers and dependencies
-│   │   ├── core/       # settings, upstream and article errors
-│   │   ├── data/       # curated articles (crisis.json), published with the backend
+│   │   ├── core/       # settings, upstream and article/shelter-data errors
+│   │   ├── data/       # curated articles (crisis.json) and the shelter snapshot (shelters.json, shelters.meta.json), published with the backend
 │   │   ├── models/     # Pydantic response models
-│   │   └── services/   # article file reading, upstream fetching and the shared VMA cache
+│   │   └── services/   # article and shelter-snapshot file reading, upstream fetching and the shared VMA/geocode caches
 │   └── tests/          # pytest API, CORS and upstream response tests
 └── frontend/            # Vite + React + TypeScript PWA
     ├── .env.example    # frontend variable names only

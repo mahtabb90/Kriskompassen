@@ -70,7 +70,7 @@ sorted closest first. Shelter data comes from Myndigheten för civilt försvar (
 authority responsible for the national shelter register; the dataset's
 [Geodataportalen metadata record](https://www.geodata.se/geodataportalen/srv/swe/catalog.search#/metadata/6341813c-bfa3-45df-8234-13cf583bf533)
 states no access or reuse restrictions apply. The backend serves this from a bundled local
-snapshot of MCF's full register (`backend/src/data/shelters.json`, refreshed manually for now -
+snapshot of MCF's full register (`backend/src/data/shelters.json`, refreshed manually for now —
 see `backend/DEVELOPMENT.md`), not a live call per search, so results stay fast and available
 even if MCF's own service is slow or unreachable; an automatic daily refresh is planned but not
 built yet. Nearest-shelter results fetched this way are also cached on the device so a
