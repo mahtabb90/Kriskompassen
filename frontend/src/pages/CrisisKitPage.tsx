@@ -52,8 +52,12 @@ function CrisisKitPage() {
       } => entry.status === "expired" || entry.status === "soon"
     )
 
-  const expiredItems = itemsToReview.filter((entry) => entry.status === "expired")
-  const soonItems = itemsToReview.filter((entry) => entry.status === "soon")
+  const expiredItems = itemsToReview
+    .filter((entry) => entry.status === "expired")
+    .sort((a, b) => a.item.expirationDate.localeCompare(b.item.expirationDate))
+  const soonItems = itemsToReview
+    .filter((entry) => entry.status === "soon")
+    .sort((a, b) => a.item.expirationDate.localeCompare(b.item.expirationDate))
   const totalItemsToReview = expiredItems.length + soonItems.length
 
   useEffect(() => {
@@ -197,44 +201,44 @@ function CrisisKitPage() {
           <span aria-hidden="true" className="h-16 w-1.5 shrink-0 rounded-full bg-amber-500" />
           <span
             aria-hidden="true"
-            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"
           >
-            <svg viewBox="0 0 48 48" className="h-10 w-10" fill="none">
+            <svg viewBox="0 0 48 48" className="h-8 w-8" fill="none">
               <circle cx="24" cy="24" r="17" stroke="currentColor" strokeWidth="3.5" />
               <path d="M24 14v12" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
               <circle cx="24" cy="33" r="2.2" fill="currentColor" />
             </svg>
           </span>
-          <p className="min-w-0 flex-1 text-xl font-bold text-slate-700 sm:text-2xl">
-            <span className="text-3xl tabular-nums sm:text-4xl">{totalItemsToReview}</span> saker
+          <p className="min-w-0 flex-1 text-lg font-bold text-slate-700 sm:text-xl">
+            <span className="text-2xl tabular-nums sm:text-3xl">{totalItemsToReview}</span> saker
             att se över
           </p>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="flex min-h-28 items-center justify-center gap-4 rounded-2xl border border-red-200 bg-red-50/70 p-4">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="flex min-h-24 items-center justify-center gap-3 rounded-2xl border border-red-200 bg-red-50/70 p-3">
             <span
               aria-hidden="true"
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600"
             >
-              <svg viewBox="0 0 48 48" className="h-10 w-10" fill="none">
+              <svg viewBox="0 0 48 48" className="h-8 w-8" fill="none">
                 <circle cx="24" cy="24" r="17" fill="currentColor" />
                 <path d="M24 14v12" stroke="white" strokeWidth="4" strokeLinecap="round" />
                 <circle cx="24" cy="33" r="2.2" fill="white" />
               </svg>
             </span>
             <div className="text-center">
-              <p className="text-4xl font-bold tabular-nums text-red-600">{expiredItems.length}</p>
+              <p className="text-3xl font-bold tabular-nums text-red-600">{expiredItems.length}</p>
               <p className="font-semibold text-slate-700">varor har gått ut</p>
             </div>
           </div>
 
-          <div className="flex min-h-28 items-center justify-center gap-4 rounded-2xl border border-orange-200 bg-orange-50/70 p-4">
+          <div className="flex min-h-24 items-center justify-center gap-3 rounded-2xl border border-orange-200 bg-orange-50/70 p-3">
             <span
               aria-hidden="true"
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600"
             >
-              <svg viewBox="0 0 48 48" className="h-10 w-10" fill="none">
+              <svg viewBox="0 0 48 48" className="h-8 w-8" fill="none">
                 <circle cx="22" cy="23" r="16" stroke="currentColor" strokeWidth="3.5" />
                 <path
                   d="M22 13v11l8 5"
@@ -243,23 +247,17 @@ function CrisisKitPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                <path
-                  d="m34 34 5 5"
-                  stroke="currentColor"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                />
               </svg>
             </span>
             <div className="text-center">
-              <p className="text-4xl font-bold tabular-nums text-orange-600">{soonItems.length}</p>
+              <p className="text-3xl font-bold tabular-nums text-orange-600">{soonItems.length}</p>
               <p className="font-semibold text-slate-700">varor går snart ut</p>
             </div>
           </div>
         </div>
 
         <details className="expiration-review group mt-4 overflow-hidden rounded-2xl border border-blue-200">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 bg-blue-50 px-4 py-3 font-semibold text-blue-900 marker:hidden [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 bg-blue-50 px-4 py-2 font-semibold text-blue-900 marker:hidden [&::-webkit-details-marker]:hidden">
             <span>Visa varor att se över</span>
             <span
               aria-hidden="true"

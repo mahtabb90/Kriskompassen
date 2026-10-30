@@ -295,7 +295,7 @@ describe("CrisisKitPage expiration summary", () => {
       expect(within(reviewSection).getByText("4", { selector: "span" })).toBeTruthy()
     })
     expect(within(reviewSection).getByText(/saker att se över/)).toBeTruthy()
-    expect(screen.getAllByText("2", { selector: ".text-4xl" })).toHaveLength(2)
+    expect(screen.getAllByText("2", { selector: "p.text-3xl" })).toHaveLength(2)
     expect(screen.getByText("varor har gått ut")).toBeTruthy()
     expect(screen.getByText("varor går snart ut")).toBeTruthy()
 
@@ -350,10 +350,29 @@ describe("CrisisKitPage expiration summary", () => {
 
     expect(reviewContent.getByRole("heading", { name: "Har gått ut (2)" })).toBeTruthy()
     expect(reviewContent.getByRole("heading", { name: "Går snart ut (2)" })).toBeTruthy()
-    expect(reviewContent.getByText("Konserverade tomater")).toBeTruthy()
-    expect(reviewContent.getByText("Havregryn")).toBeTruthy()
-    expect(reviewContent.getByText("Knäckebröd")).toBeTruthy()
-    expect(reviewContent.getByText("Vatten på flaska")).toBeTruthy()
+
+    const expiredSection = reviewContent
+      .getByRole("heading", {
+        name: "Har gått ut (2)",
+      })
+      .closest("section") as HTMLElement
+    const soonSection = reviewContent
+      .getByRole("heading", {
+        name: "Går snart ut (2)",
+      })
+      .closest("section") as HTMLElement
+
+    const expiredItems = within(expiredSection).getAllByRole("listitem")
+    const soonItems = within(soonSection).getAllByRole("listitem")
+
+    expect(expiredItems.map((item) => item.textContent)).toEqual([
+      expect.stringContaining("Konserverade tomater"),
+      expect.stringContaining("Havregryn"),
+    ])
+    expect(soonItems.map((item) => item.textContent)).toEqual([
+      expect.stringContaining("Knäckebröd"),
+      expect.stringContaining("Vatten på flaska"),
+    ])
   })
 
   it("shows an empty message when no owned items need review", async () => {
