@@ -61,6 +61,7 @@ Frontend versions are taken from `frontend/package-lock.json`.
 | Build/dev server | Vite (+ `@vitejs/plugin-react` 6.1.1) | 8.3.0 |
 | Styling | Tailwind CSS (via `@tailwindcss/vite`) | 4.3.3 |
 | Local storage | Dexie (IndexedDB) | 4.4.6 |
+| Maps | MapLibre GL JS (no React wrapper), OpenFreeMap tiles (free, key-less) | 6.16.0 |
 | PWA | vite-plugin-pwa | 1.3.0 |
 | Linting | ESLint + typescript-eslint 8.70.0 | 10.10.0 |
 | Formatting | Prettier (+ `eslint-config-prettier` 10.1.8) | 3.9.9 |
@@ -123,8 +124,8 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs and Cache-Control headers
     ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
-        ├── components/  # shared layout/header/navigation (desktop `BottomNavigation`, mobile `MobileFooter` and `MobileMenu`, shared `navigationItems`), VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice, InstallAppButton and crisis/offline controls
-        ├── config/      # backend address, article/VMA/geocode endpoints and request timeout
+        ├── components/  # shared layout/header/navigation (desktop `BottomNavigation`, mobile `MobileFooter` and `MobileMenu`, shared `navigationItems`), VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice, InstallAppButton, crisis/offline controls, ShelterMap.tsx (nearest-shelters list's map; markers, popups, selection sync, same-coordinate clustering) and ShelterLocationMap.tsx (ShelterDetailPage's simpler single-shelter map, no popups/selection) - both plain maplibre-gl, no React wrapper, mirroring the sister project IntresseKlubben's LocationPickerMap.jsx pattern; both lazy-loaded via `React.lazy` (the only lazy-loaded components in the app) and mocked with `vi.mock` in tests, since the real map is verified manually
+        ├── config/      # backend address, article/VMA/geocode endpoints, request timeout, and mapConfig.ts (OpenFreeMap style URL - free, key-less vector tiles, no quota)
         ├── context/     # ModeProvider.tsx + modeContext.ts and AddressProvider.tsx + addressContext.ts (context object, hook — split to satisfy react-refresh/only-export-components)
         ├── data/        # predefined emergency-kit recommendations (recommendedCrisisKit.ts)
         ├── db/          # browser-local Dexie database (db.ts), schema version 5
@@ -132,7 +133,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
         ├── pages/       # HomePage, CrisisInfoPage, CrisisKitPage, MyInfoPage (/min-info), NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
         ├── services/    # article/VMA/shelter transport and validation, offline storage, shelter caching/bookmarks/prefetch, PWA updates/install prompts, geocoding, geolocation and address storage; adjacent unit tests (addressStorageService has none yet — see §8)
         ├── types/       # shared crisis/VMA/address/PWA types
-        └── utils/       # small pure presentational and validation helpers (e.g. describeAddressLabel, parseCoordinates)
+        └── utils/       # small pure presentational and validation helpers (e.g. describeAddressLabel, parseCoordinates, shelterMapIcons.ts's inline-SVG marker elements for maplibre-gl)
 ```
 
 - New frontend code goes under `frontend/src/` in the matching folder above.

@@ -89,6 +89,21 @@ position on a map, since the location description alone is not enough to actuall
 If no address is active yet, or the active address has no coordinates (a manually typed address
 is never geocoded), the page prompts the user to set one on "Min info" instead.
 
+The nearest-shelters list can also be shown as an interactive map (MapLibre GL JS, OpenFreeMap's
+free, key-less vector tiles - no account, no request quota), switchable from the list via a
+"Lista"/"Karta" toggle. The map plots the user's position and
+every nearby shelter, visually highlights the nearest one, and keeps selection in sync with the
+list in both directions. It is online-only - map tiles need a live network request and are not
+cached for offline use - so the toggle is disabled while offline, and the list (which does work
+offline) stays the default view. The map library is lazy-loaded: it is only fetched the first
+time a user actually opens the map, never on the page's first load.
+
+A shelter's own detail page embeds the same kind of map, centered on just that shelter (and the
+user's position too, when known), replacing an earlier external link to openstreetmap.org. Like
+the list's map, it is online-only, lazy-loaded, and falls back to the "Plats" text field already
+on the page while offline. List cards (both "Skyddsrum i närheten" and "Sparade skyddsrum") still
+link out to openstreetmap.org for now - only the detail page's map was replaced.
+
 Saving a geolocated address also fetches and caches its nearest shelters in the background right
 away, without the user needing to visit "Skyddsrum" first. This runs silently and never blocks or
 fails the address save itself; it exists so that addresses saved ahead of a crisis already have

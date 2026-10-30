@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useAddresses, type AddressContextValue } from "../context/addressContext"
+import { useMode } from "../context/modeContext"
 import {
   getCachedShelterById,
   getSavedShelters,
@@ -17,12 +18,22 @@ vi.mock("../context/addressContext", () => ({
   useAddresses: vi.fn(),
 }))
 
+vi.mock("../context/modeContext", () => ({
+  useMode: vi.fn(),
+}))
+
 vi.mock("../services/shelterStorageService", () => ({
   getCachedShelterById: vi.fn(),
   getSavedShelters: vi.fn(),
   saveShelter: vi.fn(),
   removeSavedShelter: vi.fn(),
   setSavedShelterComment: vi.fn(),
+}))
+
+// The real MapLibre map is verified manually, not here (same reasoning as ShelterPage.test.tsx's
+// ShelterMap mock) - this just confirms the embedded map mounts (or doesn't, offline) correctly.
+vi.mock("../components/ShelterLocationMap", () => ({
+  default: () => <div data-testid="shelter-location-map" />,
 }))
 
 const fullShelter: CachedShelter = {
@@ -58,6 +69,16 @@ function mockActiveAddress(
   } as unknown as AddressContextValue)
 }
 
+function mockMode(mode: "online" | "offline") {
+  vi.mocked(useMode).mockReturnValue({
+    mode,
+    isOnline: mode === "online",
+    autoSwitchNotice: null,
+    setMode: vi.fn(),
+    dismissAutoSwitchNotice: vi.fn(),
+  })
+}
+
 function renderDetail(id = fullShelter.id) {
   return render(
     <MemoryRouter initialEntries={[`/skyddsrum/${id}`]}>
@@ -71,6 +92,7 @@ function renderDetail(id = fullShelter.id) {
 
 beforeEach(() => {
   mockActiveAddress()
+  mockMode("online")
   vi.mocked(getSavedShelters).mockResolvedValue([])
   vi.mocked(saveShelter).mockResolvedValue(undefined)
   vi.mocked(removeSavedShelter).mockResolvedValue(undefined)
@@ -83,7 +105,7 @@ afterEach(() => {
 })
 
 describe("ShelterDetailPage with full data", () => {
-  it("renders every available field with a label, the map link and the general info block", async () => {
+  it("renders every available field with a label, the embedded map and the general info block", async () => {
     vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
     renderDetail()
 
@@ -98,16 +120,25 @@ describe("ShelterDetailPage with full data", () => {
     expect(distanceField?.textContent).toMatch(/\(fågelvägen\)/)
     expect(distanceField?.textContent).toMatch(/(meter|kilometer) fågelvägen/)
 
-    const mapLink = screen.getByRole("link", { name: /Visa skyddsrummet på kartan/ })
-    expect(mapLink.getAttribute("href")).toContain("59.352")
-    expect(mapLink.getAttribute("target")).toBe("_blank")
-    expect(mapLink.getAttribute("rel")).toBe("noopener noreferrer")
+    expect(await screen.findByTestId("shelter-location-map")).toBeTruthy()
 
     expect(screen.getByRole("heading", { name: "Om skyddsrum", level: 2 })).toBeTruthy()
     const sourceLink = screen.getByRole("link", { name: /Krisinformation.se/ })
     expect(sourceLink.getAttribute("href")).toBe(
       "https://www.krisinformation.se/forbered-dig/skyddsrum-utrymning-och-varningssystem/skyddsrum/"
     )
+  })
+})
+
+describe("ShelterDetailPage map", () => {
+  it("shows an offline notice instead of the map when offline, without mounting it", async () => {
+    mockMode("offline")
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    renderDetail()
+
+    await screen.findByRole("heading", { name: "Kantarellen 11, Solna kommun" })
+    expect(screen.getByText(/Kartan kräver internetanslutning/)).toBeTruthy()
+    expect(screen.queryByTestId("shelter-location-map")).toBeNull()
   })
 })
 
@@ -131,7 +162,7 @@ describe("ShelterDetailPage with missing fields", () => {
     expect(screen.queryByText("Typ")).toBeNull()
     expect(screen.queryByText("Kapacitet")).toBeNull()
     expect(screen.getByText("Plats")).toBeTruthy()
-    expect(screen.getByRole("link", { name: /Visa skyddsrummet på kartan/ })).toBeTruthy()
+    expect(await screen.findByTestId("shelter-location-map")).toBeTruthy()
   })
 
   it("hides distance when the user's position is unknown", async () => {

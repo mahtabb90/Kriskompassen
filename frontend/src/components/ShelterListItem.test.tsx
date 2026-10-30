@@ -34,6 +34,9 @@ function renderItem(
     saved?: boolean
     onToggleSave?: () => void
     comment?: string | null
+    isNearest?: boolean
+    selected?: boolean
+    onSelect?: () => void
   } = {}
 ) {
   return render(
@@ -128,6 +131,29 @@ describe("ShelterListItem save toggle", () => {
 
     expect(screen.getByRole("button", { name: "Spara skyddsrum" })).toBeTruthy()
     expect(screen.getByRole("link", { name: "Visa detaljer" })).toBeTruthy()
+  })
+})
+
+describe("ShelterListItem map sync", () => {
+  it("shows a 'Närmast' badge only when isNearest is set", () => {
+    renderItem(fullShelter, { isNearest: true })
+
+    expect(screen.getByText("Närmast")).toBeTruthy()
+  })
+
+  it("shows no badge when isNearest is omitted", () => {
+    renderItem(fullShelter)
+
+    expect(screen.queryByText("Närmast")).toBeNull()
+  })
+
+  it("calls onSelect when the card is clicked", () => {
+    const onSelect = vi.fn()
+    renderItem(fullShelter, { onSelect })
+
+    fireEvent.click(screen.getByText("Kantarellen 11, Solna kommun"))
+
+    expect(onSelect).toHaveBeenCalledOnce()
   })
 })
 
