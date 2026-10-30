@@ -208,6 +208,9 @@ own install feature:
 - **Safari on iPhone and iPad:** Share → **Add to Home Screen**.
 - **Safari on macOS:** File → **Add to Dock**.
 
+On iPhone, iPad and in Safari on macOS, where no install button is possible, the app shows a short
+instruction instead. It can be closed and then stays hidden for 30 days.
+
 The installed app opens as KrisKompassen in its own window, without browser controls. It currently
 uses the KrisKompassen logo as its icon; a maskable icon variant, which lets Android adapt the icon
 to different shapes, is still pending.
