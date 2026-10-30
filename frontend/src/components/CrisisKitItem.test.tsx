@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import CrisisKitItem from "./CrisisKitItem"
 import type { CrisisKitItem as CrisisKitItemType } from "../types/crisisKit"
@@ -79,10 +79,30 @@ describe("CrisisKitItem expiration dates", () => {
     expect(screen.queryByText("Sparat datum:")).toBeNull()
     expect(screen.queryByText("Det är dags att kontrollera saken igen.")).toBeNull()
   })
+
+  it("hides the expiration date and editor for an item marked as missing", () => {
+    renderItem({ ...baseItem, isOwned: false, expirationDate: "2030-06-15" })
+
+    expect(
+      screen.queryByText("Markera varan som Finns för att kunna lägga till ett utgångsdatum.")
+    ).toBeNull()
+    expect(screen.queryByRole("button", { name: /2030-06-15/ })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Lägg till kontrolldatum" })).toBeNull()
+    expect(screen.queryByLabelText("Utgångsdatum / kontrolldatum")).toBeNull()
+  })
+
+  it("does not offer date entry for a missing item without an existing date", () => {
+    renderItem({ ...baseItem, isOwned: false })
+
+    expect(
+      screen.queryByText("Markera varan som Finns för att kunna lägga till ett utgångsdatum.")
+    ).toBeNull()
+    expect(screen.queryByRole("button", { name: /kontrolldatum/i })).toBeNull()
+  })
 })
 
 describe("CrisisKitItem interactions", () => {
-  it("calls the ownership callback when the checkbox changes", async () => {
+  it("calls the ownership callback when an item without a date is marked as missing", async () => {
     renderItem(baseItem)
 
     fireEvent.click(screen.getByRole("checkbox"))
@@ -90,6 +110,51 @@ describe("CrisisKitItem interactions", () => {
     await waitFor(() => {
       expect(onOwnershipChange).toHaveBeenCalledWith(baseItem, false)
     })
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("asks for confirmation before clearing a saved date", () => {
+    const itemWithDate = { ...baseItem, expirationDate: "2030-06-15" }
+    renderItem(itemWithDate)
+
+    fireEvent.click(screen.getByRole("checkbox"))
+
+    const dialog = screen.getByRole("dialog")
+    expect(within(dialog).getByText("Vill du markera varan som saknas?")).toBeTruthy()
+    expect(within(dialog).getByText("Varans kontrolldatum kommer att raderas.")).toBeTruthy()
+    expect(within(dialog).getByRole("button", { name: "Avbryt" })).toBeTruthy()
+    expect(within(dialog).getByRole("button", { name: "Ja, markera som saknas" })).toBeTruthy()
+    expect(onOwnershipChange).not.toHaveBeenCalled()
+  })
+
+  it("preserves ownership and the saved date when the confirmation is canceled", () => {
+    const itemWithDate = { ...baseItem, expirationDate: "2030-06-15" }
+    renderItem(itemWithDate)
+
+    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Avbryt" }))
+
+    expect(onOwnershipChange).not.toHaveBeenCalled()
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.getByRole("button", { name: /2030-06-15/ })).toBeTruthy()
+  })
+
+  it("clears the saved date after the user confirms marking the item as missing", async () => {
+    const itemWithDate = { ...baseItem, expirationDate: "2030-06-15" }
+    renderItem(itemWithDate)
+
+    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Ja, markera som saknas",
+      })
+    )
+
+    await waitFor(() => {
+      expect(onOwnershipChange).toHaveBeenCalledWith(itemWithDate, false)
+    })
+    expect(onExpirationDateSave).not.toHaveBeenCalled()
   })
 
   it("saves a changed expiration date", async () => {
@@ -212,12 +277,16 @@ describe("CrisisKitItem deletion", () => {
 
   it("deletes a custom item after confirmation", async () => {
     const customItem = { ...baseItem, isCustom: true }
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
 
     renderItem(customItem)
     fireEvent.click(screen.getByRole("button", { name: "Ta bort" }))
 
-    expect(confirmSpy).toHaveBeenCalledWith('Vill du ta bort "Konserver" från din krislåda?')
+    const dialog = screen.getByRole("dialog")
+
+    expect(within(dialog).getByText('Vill du ta bort "Konserver" från din krislåda?')).toBeTruthy()
+    expect(within(dialog).getByText("Åtgärden kan inte ångras.")).toBeTruthy()
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ja, ta bort" }))
 
     await waitFor(() => {
       expect(onCustomItemDelete).toHaveBeenCalledWith(customItem)
@@ -225,20 +294,30 @@ describe("CrisisKitItem deletion", () => {
   })
 
   it("does not delete a custom item when confirmation is canceled", () => {
-    vi.spyOn(window, "confirm").mockReturnValue(false)
-
     renderItem({ ...baseItem, isCustom: true })
+
     fireEvent.click(screen.getByRole("button", { name: "Ta bort" }))
 
+    const dialog = screen.getByRole("dialog")
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Avbryt" }))
+
     expect(onCustomItemDelete).not.toHaveBeenCalled()
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.getByRole("heading", { name: "Konserver" })).toBeTruthy()
   })
 
   it("shows an error when deletion fails", async () => {
     onCustomItemDelete.mockRejectedValueOnce(new Error("Storage failed"))
-    vi.spyOn(window, "confirm").mockReturnValue(true)
 
     renderItem({ ...baseItem, isCustom: true })
     fireEvent.click(screen.getByRole("button", { name: "Ta bort" }))
+
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Ja, ta bort",
+      })
+    )
 
     expect((await screen.findByRole("alert")).textContent).toContain("Storage failed")
     expect(screen.getByRole("heading", { name: "Konserver" })).toBeTruthy()

@@ -98,6 +98,62 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+describe("CrisisKitPage ownership changes", () => {
+  it("saves missing status and clears a recommended item's date together", async () => {
+    const itemWithDate = {
+      ...recommendedItem,
+      isOwned: true,
+      expirationDate: "2030-06-15",
+    }
+    vi.mocked(getCrisisKitItems).mockResolvedValue([itemWithDate])
+    mountPage()
+
+    fireEvent.click(await screen.findByRole("checkbox"))
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Ja, markera som saknas",
+      })
+    )
+
+    await waitFor(() => {
+      expect(updateCrisisKitItem).toHaveBeenCalledWith(itemWithDate.id, {
+        isOwned: false,
+        expirationDate: null,
+      })
+    })
+    expect(
+      screen.queryByText("Markera varan som Finns för att kunna lägga till ett utgångsdatum.")
+    ).toBeNull()
+  })
+
+  it("clears a custom item's date when confirming that it is missing", async () => {
+    const customItemWithDate = {
+      ...customItem,
+      isOwned: true,
+      expirationDate: "2030-06-15",
+    }
+    vi.mocked(getCrisisKitItems).mockResolvedValue([customItemWithDate])
+    mountPage()
+
+    fireEvent.click(await screen.findByRole("checkbox"))
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Ja, markera som saknas",
+      })
+    )
+
+    await waitFor(() => {
+      expect(updateCustomCrisisKitItem).toHaveBeenCalledWith(
+        customItemWithDate.id,
+        customItemWithDate.name,
+        customItemWithDate.category,
+        null
+      )
+    })
+    expect(updateCustomCrisisKitItemOwnership).not.toHaveBeenCalled()
+  })
+})
+
 describe("CrisisKitPage custom-item creation", () => {
   it("loads and displays the emergency-kit page", async () => {
     mountPage()
@@ -161,7 +217,6 @@ describe("CrisisKitPage custom-item creation", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("Storage failed")
     expect(screen.queryByRole("heading", { name: "Nödradio" })).toBeNull()
   })
-  expect(screen.queryByText("Saken har lagts till i din krislåda.")).toBeNull()
 
   it("shows an error if the initial load fails", async () => {
     vi.mocked(getCrisisKitItems).mockRejectedValueOnce(new Error("Storage failed"))
@@ -409,13 +464,18 @@ describe("CrisisKitPage custom-item editing", () => {
 describe("CrisisKitPage custom-item deletion", () => {
   it("deletes a custom item through the service and removes it from the page", async () => {
     vi.mocked(getCrisisKitItems).mockResolvedValue([customItem])
-    vi.spyOn(window, "confirm").mockReturnValue(true)
 
     mountPage()
 
     expect(await screen.findByRole("heading", { name: "Ficklampa" })).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Ta bort" }))
+
+    const dialog = screen.getByRole("dialog")
+
+    expect(within(dialog).getByText('Vill du ta bort "Ficklampa" från din krislåda?')).toBeTruthy()
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ja, ta bort" }))
 
     await waitFor(() => {
       expect(deleteCustomCrisisKitItem).toHaveBeenCalledWith(customItem.id)
@@ -429,13 +489,18 @@ describe("CrisisKitPage custom-item deletion", () => {
   it("keeps the item visible when deletion fails", async () => {
     vi.mocked(getCrisisKitItems).mockResolvedValue([customItem])
     vi.mocked(deleteCustomCrisisKitItem).mockRejectedValueOnce(new Error("Storage failed"))
-    vi.spyOn(window, "confirm").mockReturnValue(true)
 
     mountPage()
 
     expect(await screen.findByRole("heading", { name: "Ficklampa" })).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Ta bort" }))
+
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Ja, ta bort",
+      })
+    )
 
     expect((await screen.findByRole("alert")).textContent).toContain("Storage failed")
     expect(screen.getByRole("heading", { name: "Ficklampa" })).toBeTruthy()

@@ -42,17 +42,35 @@ function CrisisKitPage() {
 
   async function handleOwnershipChange(item: CrisisKitItemType, isOwned: boolean) {
     setAddItemMessage(null)
+    const shouldClearExpirationDate = !isOwned && Boolean(item.expirationDate)
 
     if (item.isCustom) {
-      await updateCustomCrisisKitItemOwnership(item.id, isOwned)
+      if (shouldClearExpirationDate) {
+        await updateCustomCrisisKitItem(item.id, item.name, item.category, null)
+      } else {
+        await updateCustomCrisisKitItemOwnership(item.id, isOwned)
+      }
     } else {
-      await updateCrisisKitItem(item.id, { isOwned })
+      await updateCrisisKitItem(
+        item.id,
+        shouldClearExpirationDate ? { isOwned, expirationDate: null } : { isOwned }
+      )
     }
 
     setItems((currentItems) =>
-      currentItems.map((currentItem) =>
-        currentItem.id === item.id ? { ...currentItem, isOwned } : currentItem
-      )
+      currentItems.map((currentItem) => {
+        if (currentItem.id !== item.id) {
+          return currentItem
+        }
+
+        const updatedItem = { ...currentItem, isOwned }
+
+        if (shouldClearExpirationDate) {
+          delete updatedItem.expirationDate
+        }
+
+        return updatedItem
+      })
     )
   }
 
