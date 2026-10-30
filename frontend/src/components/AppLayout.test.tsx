@@ -363,20 +363,20 @@ describe("AppLayout VMA integration", () => {
     expect(screen.getByRole("button", { name: "Försök igen" })).toBeTruthy()
   })
 
-  it("reserves space for the mobile menu button and reveals keyboard focus above it", async () => {
+  it("reserves space for the mobile footer and reveals keyboard focus above it", async () => {
     fetchMock.mockResolvedValue(Response.json(feed()))
     const { unmount } = mountLayout()
     const notice = await screen.findByRole("complementary")
     const slot = notice.parentElement!
-    const trigger = screen.getByRole("button", { name: "Meny" })
+    const footer = screen.getByRole("navigation", { name: "Huvudmeny" })
     vi.stubGlobal("innerHeight", 844)
     vi.spyOn(slot, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 390, 120))
-    vi.spyOn(trigger, "getBoundingClientRect").mockReturnValue(new DOMRect(135, 772, 120, 60))
+    vi.spyOn(footer, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 772, 390, 72))
     for (const measure of measureCallbacks) measure()
     await waitFor(() =>
       expect(document.documentElement.style.getPropertyValue("--vma-banner-height")).toBe("120px")
     )
-    // Distance from the viewport bottom to the button's top edge includes its safe-area offset.
+    // The measured footer height includes its safe-area padding.
     expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("72px")
     const heading = screen.getByRole("heading", { name: "Hem" })
     vi.spyOn(heading, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 50, 100, 40))
@@ -400,11 +400,11 @@ describe("AppLayout VMA integration", () => {
     expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("")
   })
 
-  it("reserves no bottom space when the mobile menu button is hidden at desktop width", async () => {
+  it("reserves no bottom space when the mobile footer is hidden at desktop width", async () => {
     const originalStyle = window.getComputedStyle.bind(window)
     vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
       const style = originalStyle(element)
-      if (element.tagName === "BUTTON" && element.textContent === "Meny") {
+      if (element.getAttribute("aria-label") === "Huvudmeny") {
         style.setProperty("display", "none")
       }
       return style
