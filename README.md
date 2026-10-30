@@ -37,6 +37,11 @@ The project is in an early stage of development.
 
 Our initial focus is to establish the project structure and a working development-to-deployment workflow. Features, including offline support, will be developed incrementally based on priorities and feedback.
 
+A backend database is deferred for now and may be reconsidered in the future. Preparedness
+content is maintained in static files shipped with the backend; shelter information is fetched
+on demand and cached for reuse. Saved information remains local to the user's device in
+IndexedDB.
+
 The current version includes a home page, crisis preparedness summaries and detailed articles
 based on manually maintained preparedness information from Krisinformation.se. Online articles
 are delivered by the project’s server; this is not an automatic news feed. Users can save and
@@ -86,6 +91,10 @@ Saving a geolocated address also fetches and caches its nearest shelters in the 
 away, without the user needing to visit "Skyddsrum" first. This runs silently and never blocks or
 fails the address save itself; it exists so that addresses saved ahead of a crisis already have
 their nearby shelters available offline even if MCF's service later becomes unreachable.
+
+Fetched shelter records are cached on the device with a fetch timestamp and refreshed when the
+same shelter is fetched again. The backend keeps only a temporary in-memory cache of nearby
+search results; it does not maintain a persistent copy of the national shelter register.
 
 ## 🛠️ Tech stack
 

@@ -20,6 +20,13 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - It answers three questions: *What has happened? What should I do? Where should I go?*
 - Planned scope: Swedish public warning messages (VMA) and local information about floods, gas leaks, contaminated drinking water, etc.
 - Users can save important information locally and read it offline.
+- **Current storage decision:** a backend database is deferred for now and may be reconsidered
+  in the future. Curated content is maintained in static files shipped with the backend
+  (`backend/src/data/crisis.json` for articles). Shelter information is fetched from MCF on
+  demand and cached as described in §7; there is no persistent backend shelter register or
+  database setup. Browser-local Dexie/IndexedDB storage remains in use for saved information
+  and offline caches. Do not introduce a backend database as part of routine feature work
+  without an explicit decision to revisit this approach.
 - Installed app versions are checked on startup and visible foreground/connectivity events.
   A completed update offers a Swedish, user-selected reload and retains saved articles. App
   versions and build timestamps are not displayed in the user interface. Physical verification
@@ -30,11 +37,17 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - **Binding product decision: KrisKompassen is intentionally account-free.** End-user accounts, account registration, sign-in/login, account-based profiles and account-based cloud persistence are out of scope and must not be implemented. A development ticket, issue or task description alone never overrides this decision. See §11 for what to do when a task asks for them, and §10 for how this relates to other authentication changes.
 - Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level "Sparad information" switch (`ModeToggle`, backed by `ModeContext`; on = offline mode, off = online mode) controls whether `/crisis` and `/crisis/:id` show articles fetched from the backend API or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
 - A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, a count and expandable list of any other active warnings, and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; curated preparedness articles are served from a backend JSON file through a separate article API. While the app is open, the banner polls our backend (see §7); offline VMA storage is not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
-- Users save one or more addresses on the `/min-info` page, each composed by typing it or by fetching the device's position through the browser's Geolocation API (permission requested only on that button click). The backend reverse-geocodes fetched coordinates through OpenStreetMap Nominatim and returns a normalized `{found, address, municipality, county, lat, lon, source}` shape; `found: false` is a resolvable-but-unknown result, not an upstream error. Each saved address carries a label (`hem`, `arbete`, or `annan` with free text) and is persisted in IndexedDB (`savedAddresses` table; see §9's documented exception for storing this personal data locally). Exactly one saved address is active at a time — the one other features (e.g. future shelter search) use as the starting point; saving the first address activates it automatically, and `AddressIndicator` shows the active one as a discreet link in the header once one exists. **A manually typed address is never forward-geocoded or validated** — composing it only resolves the typed/fetched text, with coordinates present solely for a geolocated result; forward-geocoding/validating manual text is separate future work. **Exception:** typed/pasted text that is shaped like a latitude/longitude pair (decimal degrees, separated by a comma and/or whitespace, e.g. copied from another map service) is range-validated client-side (`frontend/src/utils/coordinates.ts`) and, if within range, reverse-geocoded through the same backend endpoint as a device position, producing `source: "coordinates"` — approximate and re-lookupable like `"geolocated"`, but with no `accuracy`. Out-of-range text shows an inline error before any network call; text not shaped like coordinates falls through to the normal manual path unchanged.
+- Users save one or more addresses on the `/min-info` page, each composed by typing it or by fetching the device's position through the browser's Geolocation API (permission requested only on that button click). The backend reverse-geocodes fetched coordinates through OpenStreetMap Nominatim and returns a normalized `{found, address, municipality, county, lat, lon, source}` shape; `found: false` is a resolvable-but-unknown result, not an upstream error. Each saved address carries a label (`hem`, `arbete`, or `annan` with free text) and is persisted in IndexedDB (`savedAddresses` table; see §9's documented exception for storing this personal data locally). Exactly one saved address is active at a time — the starting point for nearest-shelter searches when it has coordinates; saving the first address activates it automatically, and `AddressIndicator` shows the active one as a discreet link in the header once one exists. **A manually typed address is never forward-geocoded or validated** — composing it only resolves the typed/fetched text, with coordinates present solely for a geolocated result; forward-geocoding/validating manual text is separate future work. **Exception:** typed/pasted text that is shaped like a latitude/longitude pair (decimal degrees, separated by a comma and/or whitespace, e.g. copied from another map service) is range-validated client-side (`frontend/src/utils/coordinates.ts`) and, if within range, reverse-geocoded through the same backend endpoint as a device position, producing `source: "coordinates"` — approximate and re-lookupable like `"geolocated"`, but with no `accuracy`. Out-of-range text shows an inline error before any network call; text not shaped like coordinates falls through to the normal manual path unchanged.
 - The banner title opens the full selected warning in an accessible native dialog with complete
   Swedish text, instructions, source, CAP issue/update time and available affected areas. Closing
   returns to the previous view. Local tests/browser checks do not establish live iPhone or spoken
   VoiceOver verification.
+- The `/skyddsrum` page lists the five nearest shelters for an active address with coordinates
+  and a separate tab of saved shelters. `/skyddsrum/:id` reads the locally cached shelter detail.
+  MCF data is fetched on demand through the backend, validated and cached in IndexedDB with a
+  fetch timestamp; later fetches replace records with the same ID. Saving an address with
+  coordinates also starts a best-effort background shelter fetch. Offline lookups use only
+  previously cached records. Saved shelter bookmarks and their short notes remain device-local.
 
 ## 2. Tech stack
 
@@ -85,8 +98,8 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   └── workflows/
 │       ├── backend-ci.yml   # backend Ruff and pytest when backend/ changes; PRs into dev/main and pushes to dev
 │       └── frontend-ci.yml  # frontend lint, format check, tests and build when frontend/ changes; same triggers
-├── backend/             # FastAPI articles, VMA and geocoding API
-│   ├── DEVELOPMENT.md  # backend and VMA integration development guide
+├── backend/             # FastAPI articles, VMA, geocoding and on-demand shelter API; no database
+│   ├── DEVELOPMENT.md  # backend sources, storage, API contracts and development guide
 │   ├── .python-version # Python 3.13
 │   ├── .env.example    # backend variable names only
 │   ├── requirements.txt / requirements-dev.txt  # pinned dependencies
@@ -97,7 +110,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   │   ├── core/       # settings, upstream and article errors
 │   │   ├── data/       # curated articles (crisis.json), published with the backend
 │   │   ├── models/     # Pydantic response models
-│   │   └── services/   # article file reading, upstream fetching and the shared VMA cache
+│   │   └── services/   # article file reading, upstream fetching and per-instance in-memory caches
 │   └── tests/          # pytest API, CORS and upstream response tests
 └── frontend/            # Vite + React + TypeScript PWA
     ├── .env.example    # frontend variable names only
@@ -113,10 +126,10 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
         ├── config/      # backend address, article/VMA/geocode endpoints and request timeout
         ├── context/     # ModeProvider.tsx + modeContext.ts and AddressProvider.tsx + addressContext.ts (context object, hook — split to satisfy react-refresh/only-export-components)
         ├── data/        # predefined emergency-kit recommendations (recommendedCrisisKit.ts)
-        ├── db/          # Dexie database (db.ts)
+        ├── db/          # browser-local Dexie database (db.ts), schema version 5
         ├── hooks/       # keyed article requests (useCrisisResource), VMA state/validity, address composition (useAddress), saved-addresses list/active state (useSavedAddresses) and shared PWA update and install prompt subscriptions; adjacent tests
         ├── pages/       # HomePage, CrisisInfoPage, CrisisKitPage, MyInfoPage (/min-info), NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
-        ├── services/    # article transport/validation, offline storage, PWA updates and install prompts, VMA, geocoding, geolocation and address storage; adjacent unit tests (addressStorageService has none yet — see §8)
+        ├── services/    # article/VMA/shelter transport and validation, offline storage, shelter caching/bookmarks/prefetch, PWA updates/install prompts, geocoding, geolocation and address storage; adjacent unit tests (addressStorageService has none yet — see §8)
         ├── types/       # shared crisis/VMA/address/PWA types
         └── utils/       # small pure presentational and validation helpers (e.g. describeAddressLabel, parseCoordinates)
 ```
@@ -386,6 +399,17 @@ Documentation (frontend/TypeScript):
 
 Backend conventions:
 
+- Curated content comes from static deployment files; backend database integration is deferred
+  (see §1). Upstream results use per-instance in-memory caches, lost on cold start. Runtime
+  endpoints do not write fetched shelter data into deployment files or a persistent database.
+- `GET /api/v1/shelters/nearest?lat=&lon=` queries MCF's WFS on demand with a widening search
+  area and returns `{shelters, source, bboxRadiusMetersUsed}`. `ShelterAreaCache` shares successful
+  results by a `0.02`-degree grid cell for `KRISKOMPASSEN_SHELTERS_CACHE_TTL_SECONDS` (default
+  600s); errors are not cached. Responses use `Cache-Control: no-store`. The frontend validates
+  the response, writes fetched shelter records to IndexedDB's `shelterCache` with `fetchedAt`
+  and ranks the five nearest. Offline mode ranks previously cached records only. This is an
+  on-demand cache, not a complete or periodically synchronized shelter dataset. Details and
+  bookmark storage are documented in `backend/DEVELOPMENT.md` under "Storage and shelter caching".
 - Type hints on all functions. Docstrings on public functions, classes and modules.
 - Pydantic models for request and response bodies.
 - Ruff decides formatting and lint rules. `ruff check .` and `ruff format --check .` must pass.
@@ -457,7 +481,7 @@ Decided tooling:
 - Never commit secrets. `.env` and `.env.*` are git-ignored (except `.env.example`).
 - Do not read, print or edit `.env` files. Document new variables by name only in `frontend/.env.example` or `backend/.env.example`. Backend settings read process environment variables and do not automatically load `.env` files.
 - Anything in the frontend (including `VITE_*` env vars) ends up in the public bundle. Never put API keys or secrets there.
-- Data in IndexedDB is readable on the user's device. Do not store sensitive personal data there. **Documented exception:** saved addresses (`savedAddresses` table, via `addressStorageService.ts`) are deliberately stored locally — the team approved this because the feature is pointless without persistence, the data is device-local and only ever leaves the device as coordinates sent to the geocode endpoint the user themselves triggered, and nothing else in the app reads or transmits this table. Do not extend this exception to other personal data without the same explicit approval. **Second documented exception:** saved shelters (a device-local bookmark list of shelter ids) are approved on the same basis — the feature is pointless without persistence, the data never leaves the device (no account, no backend sync; KrisKompassen is account-free per §1), and it stores only a shelter id, an address/coordinate fallback, and a short (50-character max) user-authored comment to help relocate the shelter (e.g. "Kommunhuset") — not a category label like "Hemma"/"Jobbet" that would reveal why it was saved. Do not extend this exception further without the same explicit approval.
+- Data in IndexedDB is readable on the user's device. Do not store sensitive personal data there. **Documented exception:** saved addresses (`savedAddresses` table, via `addressStorageService.ts`) are deliberately stored locally — the team approved this because the feature is pointless without persistence. Saved addresses remain device-local; coordinates are sent for user-triggered geocoding and on-demand shelter searches, including the best-effort prefetch after saving an address with coordinates, while address labels remain local. Do not extend this exception to other personal data without the same explicit approval. **Second documented exception:** saved shelters (a device-local bookmark list of shelter ids) are approved on the same basis — the feature is pointless without persistence, the data never leaves the device (no account, no backend sync; KrisKompassen is account-free per §1), and it stores only a shelter id, an address/coordinate fallback, and a short (50-character max) user-authored comment to help relocate the shelter (e.g. "Kommunhuset") — not a category label like "Hemma"/"Jobbet" that would reveal why it was saved. Do not extend this exception further without the same explicit approval.
 - Treat data from external sources (VMA, etc.) as untrusted. Do not render it as raw HTML. Validate the feed envelope with Pydantic and individual records in the frontend before presentation.
 - VMA responses carry provider and API attribution. The banner and full-message dialog link to the provider; technical API metadata stays in the model. The usage review in `backend/DEVELOPMENT.md` supports intended onward publication, but current VMA-specific terms remain unconfirmed. Clarify terms with SR before public release or adding persistent/offline VMA storage; this integration adds no such storage.
 
@@ -465,10 +489,11 @@ Decided tooling:
 
 - Add, remove or upgrade dependencies, or change `package-lock.json` or `requirements*.txt`.
 - Scaffold the backend.
-- Change the Dexie schema in `frontend/src/db/db.ts`. The current schema is `version(3)`: `crisisItems: "id, title, source, fetchedAt, savedOffline"`, `crisisKitItems: "id, category, isOwned, isCustom"`, `savedAddresses: "id, isActive"`. Changes need a new version and a migration plan.
+- Change the Dexie schema in `frontend/src/db/db.ts`. The current browser-local schema is `version(5)`: `crisisItems: "id, title, source, fetchedAt, savedOffline"`, `crisisKitItems: "id, category, isOwned, isCustom"`, `savedAddresses: "id, isActive"`, `shelterCache: "id, fetchedAt"`, `savedShelters: "id"`. Changes need a new version and a migration plan. Deferring the backend database does not remove or replace this local storage.
 - Reintroduce separate online/offline routes (e.g. `/offline`, `/offline/:id`) or otherwise encode the selected mode in the URL. The team decided online/offline is a shared `ModeContext` read by `/crisis` and `/crisis/:id` instead (see §3) specifically so the URL never changes on a mode switch. If a task description points back toward separate routes, stop and ask, and remind them of this decision, rather than silently reintroducing it.
 - Change the PWA or service worker config (`VitePWA` in `vite.config.ts`, manifest, caching).
-- Create or change any backend database schema.
+- Introduce a backend database or create/change its schema. Backend database work is deferred
+  under the current storage decision in §1; it may be reconsidered explicitly in the future.
 - Add or change authentication or authorization that is not an end-user account system (for example protecting an operational or administrative endpoint). End-user accounts, registration and login are not subject to approval: they are out of scope under the account-free decision in §1 and cannot be introduced by a ticket or by approving a plan for one.
 - Touch deploy, hosting or CI config (`frontend/vercel.json`, `.github/workflows/`). The frontend has a Vercel SPA fallback. CI workflows are `backend-ci.yml` and `frontend-ci.yml`. Project creation, environment settings and actual deployment remain account-side work.
 - Delete, move or rename files.
