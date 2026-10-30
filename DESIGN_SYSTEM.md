@@ -250,6 +250,28 @@ The signature top accent bar applies specifically to **crisis-information cards 
   - A warm yellow/amber end block (`w-8 bg-amber-400`) providing a restrained brand accent. It is decorative and does not denote warning level, severity, or urgency.
 - **Accessibility:** Marked with `aria-hidden="true"` as it is a decorative brand motif.
 
+### 5.3 Category Icons
+
+Crisis-information overview cards (`CrisisCard`) and the emergency-kit category accordions (`CrisisKitPage`) show one icon beside the heading to aid scanning. Crisis-detail surfaces do not.
+
+- **Source:** The dependency-free inline SVG component `CrisisIcon`; no icon library or downloaded asset. Names are chosen by `iconForArticleId()` and `iconForKitCategory()` in `utils/crisisIcons.ts`, so the same concept uses the same icon on both surfaces. Unknown or future article IDs use the generic `other` icon.
+- **Style:** One outline style for all icons: 24×24 viewBox, `fill="none"`, 1.8 stroke, round caps and joins, `stroke="currentColor"`.
+- **Colour:** `text-blue-900` only. No per-category colours, and no amber on icons; the amber accent bar stays the only amber element.
+- **Size and layout:** 24px (`size-6`, `shrink-0`), 12px gap (`gap-3`) before the heading. The heading keeps `min-w-0 flex-1` and wraps without truncation, so enlarged text and zoom reflow normally. The icon aligns to the first heading line on cards (`items-start`) and is centred in the accordion summary.
+- **Accessibility:** The icon only repeats the visible heading, so it is `aria-hidden="true"` and `focusable="false"`, has no `<title>` and creates no second accessible name. It sits outside the heading element, is not interactive and does not change the card link or summary focus behaviour.
+
+| Concept | Icon | Article ID | Kit category |
+| --- | --- | --- | --- |
+| Food | utensils | `food-in-crisis` | Mat |
+| Drinking water | water drop | `drinking-water-in-crisis` | Dricksvatten |
+| Hygiene | soap | `hygiene-in-crisis` | Toalett och hygien |
+| Heat | flame | `heating-in-crisis` | Värme |
+| Communication | radio | `communication-in-crisis` | Kommunikation |
+| Medicine | pill | `medication-in-crisis` | Läkemedel |
+| Payments | payment card | none | Betalningar |
+| Pets | paw | none | Husdjur |
+| Other / unknown | generic box | any other ID | Övrigt |
+
 ---
 
 ## 6. Interactive Elements and Controls
