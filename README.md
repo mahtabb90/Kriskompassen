@@ -67,12 +67,14 @@ and are the starting point for finding nearby shelters, below.
 
 On the "Skyddsrum" page, users see the 5 civil-defense shelters nearest to their active address,
 sorted closest first. Shelter data comes from Myndigheten för civilt försvar (MCF), the Swedish
-authority responsible for the national shelter register, through its open WFS / OGC API Features
-service (GeoJSON, delivered directly in WGS84 coordinates); the dataset's
+authority responsible for the national shelter register; the dataset's
 [Geodataportalen metadata record](https://www.geodata.se/geodataportalen/srv/swe/catalog.search#/metadata/6341813c-bfa3-45df-8234-13cf583bf533)
-states no access or reuse restrictions apply. The backend widens its search radius around the
-active address until enough shelters are found, and shelters fetched this way are cached on the
-device so a previously searched area remains available offline. Since MCF's source data has no
+states no access or reuse restrictions apply. The backend serves this from a bundled local
+snapshot of MCF's full register (`backend/src/data/shelters.json`, refreshed manually for now -
+see `backend/DEVELOPMENT.md`), not a live call per search, so results stay fast and available
+even if MCF's own service is slow or unreachable; an automatic daily refresh is planned but not
+built yet. Nearest-shelter results fetched this way are also cached on the device so a
+previously searched area remains available offline. Since MCF's source data has no
 postal address, each shelter is shown by its free-text location description together with the
 active address's municipality, worded as a location description rather than a verified address.
 MCF genuinely registers several separate shelters under one shared property - sometimes with the
@@ -81,6 +83,21 @@ the number physically posted at its entrance) to stay distinguishable, plus a li
 position on a map, since the location description alone is not enough to actually find it.
 If no address is active yet, or the active address has no coordinates (a manually typed address
 is never geocoded), the page prompts the user to set one on "Min info" instead.
+
+The nearest-shelters list can also be shown as an interactive map (MapLibre GL JS, OpenFreeMap's
+free, key-less vector tiles - no account, no request quota), switchable from the list via a
+"Lista"/"Karta" toggle. The map plots the user's position and
+every nearby shelter, visually highlights the nearest one, and keeps selection in sync with the
+list in both directions. It is online-only - map tiles need a live network request and are not
+cached for offline use - so the toggle is disabled while offline, and the list (which does work
+offline) stays the default view. The map library is lazy-loaded: it is only fetched the first
+time a user actually opens the map, never on the page's first load.
+
+A shelter's own detail page embeds the same kind of map, centered on just that shelter (and the
+user's position too, when known), replacing an earlier external link to openstreetmap.org. Like
+the list's map, it is online-only, lazy-loaded, and falls back to the "Plats" text field already
+on the page while offline. List cards (both "Skyddsrum i närheten" and "Sparade skyddsrum") still
+link out to openstreetmap.org for now - only the detail page's map was replaced.
 
 Saving a geolocated address also fetches and caches its nearest shelters in the background right
 away, without the user needing to visit "Skyddsrum" first. This runs silently and never blocks or

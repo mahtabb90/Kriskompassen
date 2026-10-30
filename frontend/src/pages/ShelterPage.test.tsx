@@ -30,6 +30,31 @@ vi.mock("../services/shelterStorageService", () => ({
   getAllCachedShelters: vi.fn(),
 }))
 
+// The real Leaflet map is tested manually, not here (see the ticket's own technical notes) -
+// this mock lets the surrounding view-toggle/selection-sync logic be tested without rendering
+// Leaflet in jsdom. Exposes the props this test cares about through visible, queryable markup.
+vi.mock("../components/ShelterMap", () => ({
+  default: ({
+    shelters,
+    selectedId,
+    onSelect,
+  }: {
+    shelters: NearestShelter[]
+    selectedId: string | null
+    onSelect: (id: string) => void
+  }) => (
+    <div data-testid="shelter-map">
+      <p>Markörer: {shelters.map((shelter) => shelter.id).join(",")}</p>
+      <p>Valt: {selectedId ?? "inget"}</p>
+      {shelters.map((shelter) => (
+        <button key={shelter.id} type="button" onClick={() => onSelect(shelter.id)}>
+          Markera {shelter.id} på kartan
+        </button>
+      ))}
+    </div>
+  ),
+}))
+
 const nearestShelter: NearestShelter = {
   id: "near-1",
   number: "120599-3",
@@ -236,5 +261,86 @@ describe("ShelterPage mode-driven tab", () => {
     expect(
       screen.getByRole("tab", { name: "Sparade skyddsrum" }).getAttribute("aria-selected")
     ).toBe("true")
+  })
+})
+
+describe("ShelterPage list/map view toggle", () => {
+  it("shows the list view selected by default", () => {
+    renderPage()
+
+    expect(screen.getByRole("tab", { name: "Lista" }).getAttribute("aria-selected")).toBe("true")
+    expect(screen.getByRole("tab", { name: "Karta" }).getAttribute("aria-selected")).toBe("false")
+    expect(screen.queryByTestId("shelter-map")).toBeNull()
+  })
+
+  it("switches to the map view when that tab is clicked", async () => {
+    renderPage()
+
+    fireEvent.click(screen.getByRole("tab", { name: "Karta" }))
+
+    expect(await screen.findByTestId("shelter-map")).toBeTruthy()
+    expect(screen.getByText(`Markörer: ${nearestShelter.id}`)).toBeTruthy()
+  })
+
+  it("syncs a list-item selection to the map", async () => {
+    renderPage()
+    fireEvent.click(screen.getByRole("tab", { name: "Karta" }))
+    await screen.findByTestId("shelter-map")
+    expect(screen.getByText("Valt: inget")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("tab", { name: "Lista" }))
+    fireEvent.click(screen.getByText("Kantarellen 11, Solna kommun"))
+    fireEvent.click(screen.getByRole("tab", { name: "Karta" }))
+
+    expect(await screen.findByText(`Valt: ${nearestShelter.id}`)).toBeTruthy()
+  })
+
+  it("syncs a map-marker selection back to the list's highlighted card", async () => {
+    renderPage()
+    fireEvent.click(screen.getByRole("tab", { name: "Karta" }))
+    await screen.findByTestId("shelter-map")
+
+    fireEvent.click(screen.getByRole("button", { name: `Markera ${nearestShelter.id} på kartan` }))
+
+    expect(screen.getByText(`Valt: ${nearestShelter.id}`)).toBeTruthy()
+  })
+
+  it("marks the first shelter as nearest in the list", () => {
+    renderPage()
+
+    expect(screen.getByText("Närmast")).toBeTruthy()
+  })
+
+  it("disables the map tab and shows the offline notice when offline", () => {
+    mockMode("offline")
+    renderPage()
+
+    fireEvent.click(screen.getByRole("tab", { name: "Sparade skyddsrum" }))
+    fireEvent.click(screen.getByRole("tab", { name: "Skyddsrum i närheten" }))
+
+    expect(screen.getByRole("tab", { name: "Karta" }).getAttribute("aria-disabled")).toBe("true")
+    expect(screen.getByText(/Kartan kräver internetanslutning/)).toBeTruthy()
+  })
+
+  it("unmounts the map and returns to the list when the mode switches to offline mid-session", async () => {
+    const { rerender } = renderPage()
+    fireEvent.click(screen.getByRole("tab", { name: "Karta" }))
+    await screen.findByTestId("shelter-map")
+
+    mockMode("offline")
+    rerender(
+      <MemoryRouter>
+        <ShelterPage />
+      </MemoryRouter>
+    )
+    // Going offline switches ShelterPage's own outer tab to "Sparade skyddsrum" (see "ShelterPage
+    // mode-driven tab" above), which unmounts the nearest-shelters panel - and the map with it -
+    // entirely. Navigating back to "Skyddsrum i närheten" (allowed even while offline, reading
+    // from the device cache) remounts it fresh, defaulting to the list again.
+    expect(screen.queryByTestId("shelter-map")).toBeNull()
+    fireEvent.click(screen.getByRole("tab", { name: "Skyddsrum i närheten" }))
+
+    expect(screen.getByRole("tab", { name: "Lista" }).getAttribute("aria-selected")).toBe("true")
+    expect(screen.queryByTestId("shelter-map")).toBeNull()
   })
 })

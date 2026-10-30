@@ -17,6 +17,17 @@ interface ShelterListItemProps {
   onToggleSave?: () => void
   /** The user's own relocation note (e.g. "Kommunhuset"), set from the detail view. */
   comment?: string | null
+  /** Shows a "Närmast" badge, independent of selection - set by the caller for shelters[0]. */
+  isNearest?: boolean
+  /** Highlights this card as the one currently selected on the map (see ShelterMap.tsx). */
+  selected?: boolean
+  /**
+   * Marks this shelter selected on the map when the card is clicked anywhere outside its own
+   * links/buttons. Supplementary visual sync, not this card's primary accessible action - the
+   * same information (and every other control here) is already independently reachable, so
+   * this click target is not made keyboard-operable on its own.
+   */
+  onSelect?: () => void
 }
 
 /**
@@ -35,6 +46,9 @@ function ShelterListItem({
   saved,
   onToggleSave,
   comment,
+  isNearest,
+  selected,
+  onSelect,
 }: ShelterListItemProps) {
   const { activeAddress } = useAddresses()
   const otherDetails = [
@@ -52,12 +66,23 @@ function ShelterListItem({
   )
 
   return (
-    <li className="overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm">
+    <li
+      onClick={onSelect}
+      className={
+        "overflow-hidden rounded-2xl border bg-white shadow-sm " +
+        (selected ? "border-blue-900 ring-2 ring-blue-900/40" : "border-blue-200/80")
+      }
+    >
       <div className="flex h-1.5 w-full" aria-hidden="true">
         <span className="h-full flex-1 bg-blue-900" />
         <span className="h-full w-8 bg-amber-400" />
       </div>
       <div className="p-5 sm:p-6">
+        {isNearest && (
+          <p className="mb-1 inline-flex items-center gap-1 text-sm font-semibold text-blue-900">
+            <span aria-hidden="true">★</span> Närmast
+          </p>
+        )}
         <p className="font-semibold text-blue-900">
           {describeShelterLocation(shelter, activeAddress?.municipality)}
         </p>
