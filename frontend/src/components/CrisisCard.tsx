@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom"
 import type { CrisisItem } from "../types/crisis"
+import { iconForArticleId } from "../utils/crisisIcons"
+import CrisisIcon from "./CrisisIcon"
 import OfflineToggle from "./OfflineToggle"
 
 interface CrisisCardProps {
@@ -29,7 +31,10 @@ function CrisisCard({ item, onToggle }: CrisisCardProps) {
         // The card clips overflow, so the focus outline is drawn inside the link instead.
         className="flex flex-1 flex-col p-6 pb-4 focus-visible:-outline-offset-4 sm:p-7 sm:pb-4"
       >
-        <h2 className="text-xl font-bold text-blue-900">{item.title}</h2>
+        <div className="flex items-start gap-3">
+          <CrisisIcon name={iconForArticleId(item.id)} className="mt-0.5 text-blue-900" />
+          <h2 className="min-w-0 flex-1 text-xl font-bold text-blue-900">{item.title}</h2>
+        </div>
         <p className="mt-3 text-base leading-relaxed text-slate-600">{item.description}</p>
       </Link>
       <div className="px-6 pb-3 sm:px-7 sm:pb-4">

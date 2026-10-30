@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import type { FormEvent } from "react"
 
+import CrisisIcon from "../components/CrisisIcon"
 import CrisisKitItem from "../components/CrisisKitItem"
 import {
   addCustomCrisisKitItem,
@@ -12,6 +13,7 @@ import {
 } from "../services/crisisKitService"
 import { CRISIS_KIT_CATEGORIES } from "../types/crisisKit"
 import type { CrisisKitItem as CrisisKitItemType } from "../types/crisisKit"
+import { iconForKitCategory } from "../utils/crisisIcons"
 
 function CrisisKitPage() {
   const [items, setItems] = useState<CrisisKitItemType[]>([])
@@ -254,7 +256,10 @@ function CrisisKitPage() {
                     <span className="h-full flex-1 bg-blue-900" />
                     <span className="h-full w-8 bg-amber-400" />
                   </span>
-                  <h2 className="text-lg font-semibold">{category}</h2>
+                  <span className="flex min-w-0 flex-1 items-center gap-3">
+                    <CrisisIcon name={iconForKitCategory(category)} className="text-blue-900" />
+                    <h2 className="min-w-0 text-lg font-semibold">{category}</h2>
+                  </span>
                   <span
                     aria-hidden="true"
                     className="text-xl transition-transform group-open:rotate-180"
