@@ -40,3 +40,17 @@ class CrisisError(Exception):
         self.code = code
         self.message = message
         self.status_code = status_code
+
+
+ShelterDataErrorCode = Literal["shelters_data_unavailable"]
+
+
+class ShelterDataError(Exception):
+    """Carries a local shelter-data failure without exposing the bundled file's path."""
+
+    def __init__(self, code: ShelterDataErrorCode, message: str, status_code: int) -> None:
+        """Raised when the bundled shelter snapshot is missing, unreadable, or invalid."""
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.status_code = status_code

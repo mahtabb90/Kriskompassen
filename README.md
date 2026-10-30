@@ -72,12 +72,14 @@ and are the starting point for finding nearby shelters, below.
 
 On the "Skyddsrum" page, users see the 5 civil-defense shelters nearest to their active address,
 sorted closest first. Shelter data comes from Myndigheten för civilt försvar (MCF), the Swedish
-authority responsible for the national shelter register, through its open WFS / OGC API Features
-service (GeoJSON, delivered directly in WGS84 coordinates); the dataset's
+authority responsible for the national shelter register; the dataset's
 [Geodataportalen metadata record](https://www.geodata.se/geodataportalen/srv/swe/catalog.search#/metadata/6341813c-bfa3-45df-8234-13cf583bf533)
-states no access or reuse restrictions apply. The backend widens its search radius around the
-active address until enough shelters are found, and shelters fetched this way are cached on the
-device so a previously searched area remains available offline. Since MCF's source data has no
+states no access or reuse restrictions apply. The backend serves this from a bundled local
+snapshot of MCF's full register (`backend/src/data/shelters.json`, refreshed manually for now —
+see `backend/DEVELOPMENT.md`), not a live call per search, so results stay fast and available
+even if MCF's own service is slow or unreachable; an automatic daily refresh is planned but not
+built yet. Nearest-shelter results fetched this way are also cached on the device so a
+previously searched area remains available offline. Since MCF's source data has no
 postal address, each shelter is shown by its free-text location description together with the
 active address's municipality, worded as a location description rather than a verified address.
 MCF genuinely registers several separate shelters under one shared property - sometimes with the

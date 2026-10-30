@@ -22,9 +22,9 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - Users can save important information locally and read it offline.
 - **Current storage decision:** a backend database is deferred for now and may be reconsidered
   in the future. Curated content is maintained in static files shipped with the backend
-  (`backend/src/data/crisis.json` for articles). Shelter information is fetched from MCF on
-  demand and cached as described in §7; there is no persistent backend shelter register or
-  database setup. Browser-local Dexie/IndexedDB storage remains in use for saved information
+  (`backend/src/data/crisis.json` for articles, `backend/src/data/shelters.json` for a snapshot
+  of MCF's shelter register, refreshed manually as described in §7); there is no database setup
+  and runtime requests never write to these files. Browser-local Dexie/IndexedDB storage remains in use for saved information
   and offline caches. Do not introduce a backend database as part of routine feature work
   without an explicit decision to revisit this approach.
 - Installed app versions are checked on startup and visible foreground/connectivity events.
@@ -44,8 +44,8 @@ The team updates the repo continuously, so this file can fall behind. **The repo
   VoiceOver verification.
 - The `/skyddsrum` page lists the five nearest shelters for an active address with coordinates
   and a separate tab of saved shelters. `/skyddsrum/:id` reads the locally cached shelter detail.
-  MCF data is fetched on demand through the backend, validated and cached in IndexedDB with a
-  fetch timestamp; later fetches replace records with the same ID. Saving an address with
+  The backend serves them from its bundled MCF snapshot; the frontend validates each response and
+  caches it in IndexedDB with a fetch timestamp; later fetches replace records with the same ID. Saving an address with
   coordinates also starts a best-effort background shelter fetch. Offline lookups use only
   previously cached records. Saved shelter bookmarks and their short notes remain device-local.
 
@@ -98,19 +98,20 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   └── workflows/
 │       ├── backend-ci.yml   # backend Ruff and pytest when backend/ changes; PRs into dev/main and pushes to dev
 │       └── frontend-ci.yml  # frontend lint, format check, tests and build when frontend/ changes; same triggers
-├── backend/             # FastAPI articles, VMA, geocoding and on-demand shelter API; no database
+├── backend/             # FastAPI articles, VMA, geocoding and file-backed shelter API; no database
 │   ├── DEVELOPMENT.md  # backend sources, storage, API contracts and development guide
 │   ├── .python-version # Python 3.13
 │   ├── .env.example    # backend variable names only
 │   ├── requirements.txt / requirements-dev.txt  # pinned dependencies
 │   ├── pyproject.toml  # Ruff and pytest configuration
+│   ├── scripts/        # fetch_shelters.py: one-off manual MCF sync, not run by the app or CI
 │   ├── src/
 │   │   ├── app.py      # application factory, lifespan and exported app
 │   │   ├── api/        # routers and dependencies
-│   │   ├── core/       # settings, upstream and article errors
-│   │   ├── data/       # curated articles (crisis.json), published with the backend
+│   │   ├── core/       # settings, upstream and article/shelter-data errors
+│   │   ├── data/       # curated articles (crisis.json) and the shelter snapshot (shelters.json, shelters.meta.json), published with the backend
 │   │   ├── models/     # Pydantic response models
-│   │   └── services/   # article file reading, upstream fetching and per-instance in-memory caches
+│   │   └── services/   # article and shelter-snapshot file reading, upstream fetching and per-instance in-memory caches
 │   └── tests/          # pytest API, CORS and upstream response tests
 └── frontend/            # Vite + React + TypeScript PWA
     ├── .env.example    # frontend variable names only
@@ -401,15 +402,18 @@ Backend conventions:
 
 - Curated content comes from static deployment files; backend database integration is deferred
   (see §1). Upstream results use per-instance in-memory caches, lost on cold start. Runtime
-  endpoints do not write fetched shelter data into deployment files or a persistent database.
-- `GET /api/v1/shelters/nearest?lat=&lon=` queries MCF's WFS on demand with a widening search
-  area and returns `{shelters, source, bboxRadiusMetersUsed}`. `ShelterAreaCache` shares successful
-  results by a `0.02`-degree grid cell for `KRISKOMPASSEN_SHELTERS_CACHE_TTL_SECONDS` (default
-  600s); errors are not cached. Responses use `Cache-Control: no-store`. The frontend validates
-  the response, writes fetched shelter records to IndexedDB's `shelterCache` with `fetchedAt`
-  and ranks the five nearest. Offline mode ranks previously cached records only. This is an
-  on-demand cache, not a complete or periodically synchronized shelter dataset. Details and
-  bookmark storage are documented in `backend/DEVELOPMENT.md` under "Storage and shelter caching".
+  endpoints do not write to deployment files or a persistent database.
+- `GET /api/v1/shelters/nearest?lat=&lon=` returns `{shelters, source, bboxRadiusMetersUsed}`
+  for the five nearest shelters in the bundled `src/data/shelters.json` snapshot:
+  - `LocalShelterStore` loads the snapshot once per process, on first use; a failed load is not
+    cached. A missing or invalid file returns `500 shelters_data_unavailable`, never a live MCF call.
+  - `scripts/fetch_shelters.py` refreshes the snapshot manually; there is no automatic sync yet.
+  - Responses use `Cache-Control: no-store`. `bboxRadiusMetersUsed` is the rounded distance to the
+    farthest returned shelter.
+  - The frontend validates the response, writes the returned records to IndexedDB's `shelterCache`
+    with `fetchedAt` and ranks the five nearest. Offline mode ranks previously cached records only,
+    so the device cache is not a complete shelter dataset.
+  - See `backend/DEVELOPMENT.md`, "Storage and shelter caching" and "Civil-defense shelters".
 - Type hints on all functions. Docstrings on public functions, classes and modules.
 - Pydantic models for request and response bodies.
 - Ruff decides formatting and lint rules. `ruff check .` and `ruff format --check .` must pass.
