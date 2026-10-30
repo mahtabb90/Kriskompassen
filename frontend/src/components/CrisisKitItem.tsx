@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import type { ChangeEvent, FormEvent, SyntheticEvent } from "react"
 import type { CrisisKitItem as CrisisKitItemType } from "../types/crisisKit"
 import { CRISIS_KIT_CATEGORIES } from "../types/crisisKit"
+import { formatExpirationDate, getExpirationStatus } from "../utils/expirationDate"
 
 interface CrisisKitItemProps {
   item: CrisisKitItemType
@@ -57,7 +58,7 @@ function CrisisKitItem({
   const [customItemDeleteError, setCustomItemDeleteError] = useState<string | null>(null)
 
   const todayString = getTodayString()
-  const isExpired = item.expirationDate !== undefined && item.expirationDate < todayString
+  const expirationStatus = getExpirationStatus(item.expirationDate, todayString)
   const hasExpirationChanges = expirationDate !== (item.expirationDate ?? "")
   const expirationEditorId = `expiration-editor-${item.id}`
 
@@ -474,11 +475,23 @@ function CrisisKitItem({
                         Kontrolldatum
                       </span>
                       <span className="block text-sm font-medium text-slate-800">
-                        {item.expirationDate}
+                        {formatExpirationDate(item.expirationDate)}
                       </span>
-                      {isExpired && (
-                        <span className="mt-0.5 block text-sm font-medium text-red-800">
-                          Utgånget
+                      {expirationStatus && (
+                        <span
+                          className={`mt-0.5 block text-sm font-medium ${
+                            expirationStatus === "expired"
+                              ? "text-red-800"
+                              : expirationStatus === "soon"
+                                ? "text-orange-800"
+                                : "text-green-800"
+                          }`}
+                        >
+                          {expirationStatus === "expired"
+                            ? "Utgången"
+                            : expirationStatus === "soon"
+                              ? "Går snart ut"
+                              : "OK"}
                         </span>
                       )}
                     </>
@@ -528,7 +541,7 @@ function CrisisKitItem({
                     className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800   "
                   />
 
-                  {isExpired && !hasExpirationChanges && (
+                  {expirationStatus === "expired" && !hasExpirationChanges && (
                     <p className="mt-2 text-sm font-medium text-red-800">
                       Det är dags att kontrollera saken igen.
                     </p>

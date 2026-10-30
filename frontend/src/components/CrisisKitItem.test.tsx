@@ -19,6 +19,7 @@ const onCustomItemDelete = vi.fn().mockResolvedValue(undefined)
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   vi.restoreAllMocks()
   vi.resetAllMocks()
 })
@@ -55,28 +56,53 @@ describe("CrisisKitItem heading level", () => {
 })
 
 describe("CrisisKitItem expiration dates", () => {
-  it("shows a warning when the expiration date has passed", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-10-30T12:00:00"))
+  })
+
+  it("shows the expired status when the expiration date has passed", () => {
     renderItem({ ...baseItem, expirationDate: "2020-01-01" })
 
-    // The saved date and status remain visible while the editor is collapsed.
-    expect(screen.getByRole("button", { name: /2020-01-01/ })).toBeTruthy()
-    expect(screen.getByText("Utgånget")).toBeTruthy()
+    expect(screen.getByText("Utgången")).toBeTruthy()
+    expect(screen.getByRole("button", { name: /1 januari 2020/i })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole("button", { name: /2020-01-01/ }))
+    fireEvent.click(screen.getByRole("button", { name: /1 januari 2020/i }))
     expect(screen.getByLabelText("Utgångsdatum / kontrolldatum")).toBeTruthy()
   })
 
-  it("does not show a warning for a future expiration date", () => {
-    renderItem({ ...baseItem, expirationDate: "2099-12-31" })
+  it("shows the soon-expiring status for a date within 30 days", () => {
+    renderItem({ ...baseItem, expirationDate: "2026-11-15" })
 
-    expect(screen.queryByText("Utgånget")).toBeNull()
-    expect(screen.getByRole("button", { name: /2099-12-31/ })).toBeTruthy()
+    expect(screen.getByText("Går snart ut")).toBeTruthy()
+    expect(screen.getByRole("button", { name: /15 november 2026/i })).toBeTruthy()
   })
 
-  it("does not show a saved date or warning when the expiration date is missing", () => {
+  it("shows the soon-expiring status when the expiration date is today", () => {
+    renderItem({ ...baseItem, expirationDate: "2026-10-30" })
+
+    expect(screen.getByText("Går snart ut")).toBeTruthy()
+  })
+
+  it("shows the soon-expiring status on the 30-day boundary", () => {
+    renderItem({ ...baseItem, expirationDate: "2026-11-29" })
+
+    expect(screen.getByText("Går snart ut")).toBeTruthy()
+  })
+
+  it("shows the OK status when the expiration date is more than 30 days away", () => {
+    renderItem({ ...baseItem, expirationDate: "2026-11-30" })
+
+    expect(screen.getByText("OK")).toBeTruthy()
+  })
+
+  it("does not show a saved date or status when the expiration date is missing", () => {
     renderItem(baseItem)
 
     expect(screen.queryByText("Sparat datum:")).toBeNull()
+    expect(screen.queryByText("Utgången")).toBeNull()
+    expect(screen.queryByText("Går snart ut")).toBeNull()
+    expect(screen.queryByText("OK")).toBeNull()
     expect(screen.queryByText("Det är dags att kontrollera saken igen.")).toBeNull()
   })
 
@@ -86,7 +112,7 @@ describe("CrisisKitItem expiration dates", () => {
     expect(
       screen.queryByText("Markera varan som Finns för att kunna lägga till ett utgångsdatum.")
     ).toBeNull()
-    expect(screen.queryByRole("button", { name: /2030-06-15/ })).toBeNull()
+    expect(screen.queryByRole("button", { name: /15 juni 2030/i })).toBeNull()
     expect(screen.queryByRole("button", { name: "Lägg till kontrolldatum" })).toBeNull()
     expect(screen.queryByLabelText("Utgångsdatum / kontrolldatum")).toBeNull()
   })
@@ -137,7 +163,7 @@ describe("CrisisKitItem interactions", () => {
 
     expect(onOwnershipChange).not.toHaveBeenCalled()
     expect(screen.queryByRole("dialog")).toBeNull()
-    expect(screen.getByRole("button", { name: /2030-06-15/ })).toBeTruthy()
+    expect(screen.getByRole("button", { name: /15 juni 2030/i })).toBeTruthy()
   })
 
   it("clears the saved date after the user confirms marking the item as missing", async () => {
@@ -177,7 +203,7 @@ describe("CrisisKitItem interactions", () => {
     const itemWithDate = { ...baseItem, expirationDate: "2030-06-15" }
     renderItem(itemWithDate)
 
-    fireEvent.click(screen.getByRole("button", { name: /2030-06-15/ }))
+    fireEvent.click(screen.getByRole("button", { name: /15 juni 2030/i }))
     fireEvent.click(screen.getByRole("button", { name: "Rensa datum" }))
 
     await waitFor(() => {

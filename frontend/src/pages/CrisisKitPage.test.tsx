@@ -80,6 +80,17 @@ const headingTestItems: CrisisKitItem[] = [
   },
 ]
 
+function dateOffsetFromToday(days: number): string {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+
+  return `${year}-${month}-${day}`
+}
+
 function mountPage() {
   return render(<CrisisKitPage />)
 }
@@ -229,6 +240,143 @@ describe("CrisisKitPage custom-item creation", () => {
   })
 })
 
+describe("CrisisKitPage expiration summary", () => {
+  it("shows the expired and soon-to-expire counts while keeping the item list collapsed by default", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      {
+        ...recommendedFoodItem,
+        id: "expired-1",
+        name: "Konserverade tomater",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(-18),
+      },
+      {
+        ...recommendedFoodItem,
+        id: "expired-2",
+        name: "Havregryn",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(-15),
+      },
+      {
+        ...recommendedFoodItem,
+        id: "soon-1",
+        name: "Knäckebröd",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(6),
+      },
+      {
+        ...recommendedItem,
+        id: "soon-2",
+        name: "Vatten på flaska",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(13),
+      },
+      {
+        ...recommendedItem,
+        id: "ok-1",
+        name: "Vattenreserv",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(45),
+      },
+      {
+        ...recommendedItem,
+        id: "missing-1",
+        name: "Saknad vara",
+        isOwned: false,
+        expirationDate: dateOffsetFromToday(-15),
+      },
+      { ...recommendedItem, id: "no-date-1", name: "Filt", isOwned: true },
+    ])
+    mountPage()
+
+    const reviewSection = screen.getByRole("region", { name: "Utgångsdatum att se över" })
+
+    await waitFor(() => {
+      expect(within(reviewSection).getByText("4", { selector: "span" })).toBeTruthy()
+    })
+    expect(within(reviewSection).getByText(/saker att se över/)).toBeTruthy()
+    expect(screen.getAllByText("2", { selector: ".text-4xl" })).toHaveLength(2)
+    expect(screen.getByText("varor har gått ut")).toBeTruthy()
+    expect(screen.getByText("varor går snart ut")).toBeTruthy()
+
+    const reviewDetails = screen.getByText("Visa varor att se över").closest("details")
+    expect(reviewDetails).not.toBeNull()
+    expect((reviewDetails as HTMLDetailsElement).open).toBe(false)
+    expect(
+      within(reviewDetails as HTMLElement).getByRole("heading", {
+        name: "Har gått ut (2)",
+      })
+    ).toBeTruthy()
+  })
+
+  it("shows expired and soon-to-expire items in separate groups when expanded", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      {
+        ...recommendedFoodItem,
+        id: "expired-later",
+        name: "Havregryn",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(-15),
+      },
+      {
+        ...recommendedFoodItem,
+        id: "expired-earlier",
+        name: "Konserverade tomater",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(-18),
+      },
+      {
+        ...recommendedFoodItem,
+        id: "soon-later",
+        name: "Vatten på flaska",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(13),
+      },
+      {
+        ...recommendedFoodItem,
+        id: "soon-earlier",
+        name: "Knäckebröd",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(6),
+      },
+    ])
+    mountPage()
+
+    const summary = await screen.findByText("Visa varor att se över")
+    fireEvent.click(summary)
+
+    const reviewDetails = summary.closest("details") as HTMLDetailsElement
+    const reviewContent = within(reviewDetails)
+
+    expect(reviewContent.getByRole("heading", { name: "Har gått ut (2)" })).toBeTruthy()
+    expect(reviewContent.getByRole("heading", { name: "Går snart ut (2)" })).toBeTruthy()
+    expect(reviewContent.getByText("Konserverade tomater")).toBeTruthy()
+    expect(reviewContent.getByText("Havregryn")).toBeTruthy()
+    expect(reviewContent.getByText("Knäckebröd")).toBeTruthy()
+    expect(reviewContent.getByText("Vatten på flaska")).toBeTruthy()
+  })
+
+  it("shows an empty message when no owned items need review", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      { ...recommendedItem, isOwned: false, expirationDate: dateOffsetFromToday(-15) },
+      { ...recommendedItem, id: "no-date", isOwned: true },
+      { ...recommendedItem, id: "ok", isOwned: true, expirationDate: dateOffsetFromToday(45) },
+    ])
+    mountPage()
+
+    const reviewSection = screen.getByRole("region", { name: "Utgångsdatum att se över" })
+    const totalCount = within(reviewSection).getByText(
+      (_, element) =>
+        element?.tagName === "P" &&
+        element.textContent?.replace(/\\s+/g, " ").trim() === "0 saker att se över"
+    )
+    expect(totalCount).toBeTruthy()
+    const summary = screen.getByText("Visa varor att se över")
+    fireEvent.click(summary)
+    expect(screen.getByText("Det finns inga varor att se över just nu.")).toBeTruthy()
+  })
+})
+
 describe("CrisisKitPage category sections", () => {
   it("renders all categories as native collapsible sections", async () => {
     mountPage()
@@ -242,8 +390,8 @@ describe("CrisisKitPage category sections", () => {
       /^(Mat|Dricksvatten|Toalett och hygien|Värme|Kommunikation|Läkemedel|Betalningar|Husdjur|Övrigt)$/
     )
 
-    expect(document.querySelectorAll("details")).toHaveLength(9)
-    expect(document.querySelectorAll("summary")).toHaveLength(9)
+    expect(document.querySelectorAll("details:not(.expiration-review)")).toHaveLength(9)
+    expect(document.querySelectorAll("details:not(.expiration-review) > summary")).toHaveLength(9)
     expect(categories.length).toBeGreaterThanOrEqual(9)
 
     const waterCategory = screen.getByText("Dricksvatten", { selector: "h2" })
@@ -261,7 +409,7 @@ describe("CrisisKitPage category sections", () => {
     mountPage()
 
     const heading = await screen.findByRole("heading", { name: "Dricksvatten", level: 2 })
-    const summaries = document.querySelectorAll("summary")
+    const summaries = document.querySelectorAll("details:not(.expiration-review) > summary")
 
     expect(heading.textContent).toBe("Dricksvatten")
     expect(heading.querySelector("svg")).toBeNull()
