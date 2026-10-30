@@ -106,6 +106,26 @@ describe("CrisisInfoPage redirect notices", () => {
   })
 })
 
+describe("CrisisInfoPage card icons", () => {
+  it("shows a decorative icon per card without changing heading or link names", async () => {
+    vi.mocked(getOfflineItems).mockResolvedValue(crisisItems.slice(0, 2))
+    vi.mocked(isSavedOffline).mockResolvedValue(true)
+    mountPage("/crisis")
+    fireEvent.click(savedSwitch())
+    await screen.findAllByText("Sparad offline")
+
+    const first = crisisItems[0]
+    const heading = screen.getByRole("heading", { name: first.title, level: 2 })
+
+    expect(heading.textContent).toBe(first.title)
+    expect(heading.querySelector("svg")).toBeNull()
+    expect(
+      heading.parentElement?.querySelector("svg[aria-hidden='true'][focusable='false']")
+    ).not.toBeNull()
+    expect(screen.getByRole("link", { name: `Läs mer om ${first.title}` })).toBeTruthy()
+  })
+})
+
 describe("CrisisInfoPage focus after removing an offline item", () => {
   async function openOfflineList(count: number) {
     const saved = crisisItems.slice(0, count)

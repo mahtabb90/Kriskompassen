@@ -202,6 +202,19 @@ describe("CrisisKitPage category sections", () => {
     expect(waterDetails?.open).toBe(true)
   })
 
+  it("shows a decorative icon beside every category heading without changing its name", async () => {
+    mountPage()
+
+    const heading = await screen.findByRole("heading", { name: "Dricksvatten", level: 2 })
+    const summaries = document.querySelectorAll("summary")
+
+    expect(heading.textContent).toBe("Dricksvatten")
+    expect(heading.querySelector("svg")).toBeNull()
+    summaries.forEach((summary) => {
+      expect(summary.querySelector("svg[aria-hidden='true'][focusable='false']")).not.toBeNull()
+    })
+  })
+
   it("shows a message for categories without items", async () => {
     mountPage()
 
