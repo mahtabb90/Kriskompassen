@@ -21,4 +21,9 @@ declare global {
     beforeinstallprompt: BeforeInstallPromptEvent
     appinstalled: Event
   }
+
+  interface Navigator {
+    /** True in an app started from the iOS home screen; missing from TypeScript's DOM lib. */
+    readonly standalone?: boolean
+  }
 }
