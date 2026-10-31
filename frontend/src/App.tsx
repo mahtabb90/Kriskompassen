@@ -10,6 +10,7 @@ import IndexedDbTest from "./pages/IndexedDbTest"
 import MyInfoPage from "./pages/MyInfoPage"
 import NotFoundPage from "./pages/NotFoundPage"
 import ShelterDetailPage from "./pages/ShelterDetailPage"
+import ShelterMapPage from "./pages/ShelterMapPage"
 import ShelterPage from "./pages/ShelterPage"
 
 /**
@@ -30,6 +31,7 @@ function App() {
               <Route path="/crisis-kit" element={<CrisisKitPage />} />
               <Route path="/crisis/:id" element={<DetailedCrisisCard />} />
               <Route path="/skyddsrum" element={<ShelterPage />} />
+              <Route path="/skyddsrum/karta" element={<ShelterMapPage />} />
               <Route path="/skyddsrum/:id" element={<ShelterDetailPage />} />
               <Route path="/min-info" element={<MyInfoPage />} />
               {import.meta.env.DEV && <Route path="/dev/indexeddb" element={<IndexedDbTest />} />}

@@ -79,25 +79,32 @@ postal address, each shelter is shown by its free-text location description toge
 active address's municipality, worded as a location description rather than a verified address.
 MCF genuinely registers several separate shelters under one shared property - sometimes with the
 same coordinates and capacity too - so each shelter also shows its own official number (matching
-the number physically posted at its entrance) to stay distinguishable, plus a link to its exact
-position on a map, since the location description alone is not enough to actually find it.
-If no address is active yet, or the active address has no coordinates (a manually typed address
-is never geocoded), the page prompts the user to set one on "Min info" instead.
+the number physically posted at its entrance) to stay distinguishable, plus a link to its own
+detail page for more information. If no address is active yet, or the active address has no
+coordinates (a manually typed address is never geocoded), the page prompts the user to set one
+on "Min info" instead.
 
-The nearest-shelters list can also be shown as an interactive map (MapLibre GL JS, OpenFreeMap's
-free, key-less vector tiles - no account, no request quota), switchable from the list via a
-"Lista"/"Karta" toggle. The map plots the user's position and
-every nearby shelter, visually highlights the nearest one, and keeps selection in sync with the
-list in both directions. It is online-only - map tiles need a live network request and are not
-cached for offline use - so the toggle is disabled while offline, and the list (which does work
-offline) stays the default view. The map library is lazy-loaded: it is only fetched the first
-time a user actually opens the map, never on the page's first load.
+"Kartan", reached via a link next to the "Skyddsrum i närheten"/"Sparade skyddsrum" tabs, lets
+users explore every one of Sweden's roughly 63,000 civil-defense shelters on an interactive,
+clustered map (MapLibre GL JS, OpenFreeMap's free, key-less vector tiles - no account, no request
+quota) - not just the nearest 5. Shelters are fetched for the visible area only, debounced as the
+user pans or zooms, against a backend endpoint that filters the already-loaded local snapshot by
+bounding box; MapLibre's own clustering (circles sized/coloured by count) groups them client-side,
+so panning the whole country never pulls in all 63,000 at once. Below a minimum zoom the fetch is
+skipped entirely - a hint asks the user to zoom in instead - since even clustering that many
+shelters at a glance would cost real time and payload for little visual benefit. When an active
+address is known, the map opens tightly framed on it and the same 5 nearest shelters shown
+elsewhere, each marked with its own icon (nearest, saved, or both), on top of the usual sign icon
+used for every other shelter; without one, it opens on a fixed view of the whole country. Clicking
+an individual shelter shows a short popup (distance, type, capacity) with a link to its detail
+page; that link also carries the map's exact position along, so its own "Tillbaka till kartan"
+link returns to the same spot instead of resetting the view. Like every map here, it is
+online-only and its library is lazy-loaded, only fetched the first time a user actually opens it.
 
-A shelter's own detail page embeds the same kind of map, centered on just that shelter (and the
-user's position too, when known), replacing an earlier external link to openstreetmap.org. Like
-the list's map, it is online-only, lazy-loaded, and falls back to the "Plats" text field already
-on the page while offline. List cards (both "Skyddsrum i närheten" and "Sparade skyddsrum") still
-link out to openstreetmap.org for now - only the detail page's map was replaced.
+A shelter's own detail page embeds a simpler map of just that one shelter's exact location (and
+the user's position too, when known), replacing an earlier external link to openstreetmap.org.
+Like "Kartan", it is online-only, lazy-loaded, and falls back to the "Plats" text field already
+on the page while offline.
 
 Saving a geolocated address also fetches and caches its nearest shelters in the background right
 away, without the user needing to visit "Skyddsrum" first. This runs silently and never blocks or

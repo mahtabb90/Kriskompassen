@@ -2,7 +2,6 @@ import { Link } from "react-router-dom"
 import { useAddresses } from "../context/addressContext"
 import type { Shelter } from "../types/shelter"
 import { formatShelterCapacity } from "../utils/formatCapacity"
-import { buildOpenStreetMapUrl } from "../utils/mapLink"
 import { describeShelterLocation } from "../utils/shelterLabel"
 import { describeShelterType } from "../utils/shelterType"
 import ShelterDistance from "./ShelterDistance"
@@ -17,28 +16,19 @@ interface ShelterListItemProps {
   onToggleSave?: () => void
   /** The user's own relocation note (e.g. "Kommunhuset"), set from the detail view. */
   comment?: string | null
-  /** Shows a "Närmast" badge, independent of selection - set by the caller for shelters[0]. */
+  /** Shows a "Närmast" badge - set by the caller for shelters[0]. */
   isNearest?: boolean
-  /** Highlights this card as the one currently selected on the map (see ShelterMap.tsx). */
-  selected?: boolean
-  /**
-   * Marks this shelter selected on the map when the card is clicked anywhere outside its own
-   * links/buttons. Supplementary visual sync, not this card's primary accessible action - the
-   * same information (and every other control here) is already independently reachable, so
-   * this click target is not made keyboard-operable on its own.
-   */
-  onSelect?: () => void
 }
 
 /**
  * Renders one shelter's distance (when known), location description, number, and - when known -
- * its type and capacity, plus a save/unsave control and a link to its exact position on a map.
+ * its type and capacity, plus a save/unsave control and a link to its detail page.
  *
  * MCF genuinely registers several separate shelters under one shared address, sometimes with
  * identical coordinates and capacity too, so the shelter's own number is shown even though the
- * location description alone might otherwise look the same as a neighboring item's. The map
- * link is the only way to actually find a shelter: the location description is a free-text
- * property reference, not a navigable address.
+ * location description alone might otherwise look the same as a neighboring item's. Finding a
+ * shelter's exact position is the detail page's job (ShelterLocationMap.tsx's embedded map) -
+ * the location description here is a free-text property reference, not a navigable address.
  */
 function ShelterListItem({
   shelter,
@@ -47,8 +37,6 @@ function ShelterListItem({
   onToggleSave,
   comment,
   isNearest,
-  selected,
-  onSelect,
 }: ShelterListItemProps) {
   const { activeAddress } = useAddresses()
   const otherDetails = [
@@ -66,13 +54,7 @@ function ShelterListItem({
   )
 
   return (
-    <li
-      onClick={onSelect}
-      className={
-        "overflow-hidden rounded-2xl border bg-white shadow-sm " +
-        (selected ? "border-blue-900 ring-2 ring-blue-900/40" : "border-blue-200/80")
-      }
-    >
+    <li className="overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm">
       <div className="flex h-1.5 w-full" aria-hidden="true">
         <span className="h-full flex-1 bg-blue-900" />
         <span className="h-full w-8 bg-amber-400" />
@@ -99,16 +81,6 @@ function ShelterListItem({
             {otherDetails.join(" · ")}
           </p>
         )}
-
-        <a
-          href={buildOpenStreetMapUrl(shelter)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 inline-flex min-h-12 items-center font-semibold text-blue-900 underline underline-offset-4 hover:text-blue-950"
-        >
-          Visa på karta
-          <span className="sr-only"> (öppnas i ny flik)</span>
-        </a>
 
         {onToggleSave ? (
           <div className="mt-4">

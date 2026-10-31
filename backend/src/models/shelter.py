@@ -61,6 +61,18 @@ class ShelterListResponse(BaseModel):
     bboxRadiusMetersUsed: int
 
 
+class ShelterBoundsResponse(BaseModel):
+    """Reports every shelter from the local snapshot whose coordinates fall within one
+    rectangular map viewport.
+
+    No bboxRadiusMetersUsed field, unlike ShelterListResponse - there is no "distance to the
+    farthest match" concept for a bounding-box query.
+    """
+
+    shelters: list[Shelter]
+    source: ShelterSource
+
+
 class ShelterDataErrorDetail(BaseModel):
     """Describes a local shelter-data failure using a public code and Swedish message."""
 

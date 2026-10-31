@@ -11,8 +11,7 @@ import { originMarkerElement, shelterMarkerElement } from "../utils/shelterMapIc
 interface ShelterLocationMapProps {
   shelter: Pick<Shelter, "lat" | "lon">
   /** The user's own position, when known. Omitted entirely (no marker, no implied claim about
-   * "your position") when there is no active address - unlike ShelterMap.tsx's nearest-shelters
-   * list, this page is reachable without one. */
+   * "your position") when there is no active address - this page is reachable without one. */
   origin: GeoPoint | null
 }
 
@@ -20,10 +19,10 @@ interface ShelterLocationMapProps {
  * Shows one shelter's exact location on an interactive MapLibre GL map - replaces the previous
  * external OpenStreetMap link on ShelterDetailPage.tsx.
  *
- * A simpler sibling of ShelterMap.tsx: no popups, selection sync or coordinate clustering, since
- * there is always exactly one shelter here. See ShelterMap.tsx for the shared reasoning behind
- * the library/tile choice (MapLibre GL + OpenFreeMap: free, key-less, no quota) and why markers
- * are synced in their own effect rather than recreated with the map.
+ * A simpler sibling of AllSheltersMap.tsx: no popups or clustering, since there is always
+ * exactly one shelter here. Shares the library/tile choice (MapLibre GL + OpenFreeMap: free,
+ * key-less, no quota) and the pattern of syncing markers in their own effect rather than
+ * recreating them with the map.
  */
 function ShelterLocationMap({ shelter, origin }: ShelterLocationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -52,9 +51,7 @@ function ShelterLocationMap({ shelter, origin }: ShelterLocationMapProps) {
     const map = mapRef.current
     if (!map) return
 
-    const shelterMarker = new Marker({
-      element: shelterMarkerElement({ isNearest: false, isSelected: false }),
-    })
+    const shelterMarker = new Marker({ element: shelterMarkerElement() })
       .setLngLat([shelter.lon, shelter.lat])
       .addTo(map)
 

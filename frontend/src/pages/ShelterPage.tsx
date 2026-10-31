@@ -1,5 +1,5 @@
-import { lazy, Suspense, useId, useRef, useState, type RefObject } from "react"
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { useId, useRef, useState, type RefObject } from "react"
+import { Link, useLocation } from "react-router-dom"
 import SavedSheltersSection from "../components/SavedSheltersSection"
 import ShelterGeneralInfo from "../components/ShelterGeneralInfo"
 import ShelterListItem from "../components/ShelterListItem"
@@ -10,12 +10,6 @@ import { useNearestShelters } from "../hooks/useNearestShelters"
 import { useSavedShelters } from "../hooks/useSavedShelters"
 import type { SavedShelter, Shelter } from "../types/shelter"
 import type { GeoPoint } from "../utils/distance"
-
-// Lazy-loaded so maplibre-gl is only fetched once a user actually switches to the map view,
-// never on first page load - the first use of code-splitting in this codebase.
-const ShelterMap = lazy(() => import("../components/ShelterMap"))
-
-type ShelterView = "lista" | "karta"
 
 const panelClassName =
   "mt-6 rounded-2xl border border-blue-200/80 bg-white p-6 text-slate-600 shadow-sm sm:p-8"
@@ -29,7 +23,12 @@ interface NearestSheltersProps {
   onRemove: (id: string) => void
 }
 
-/** Loads and renders the nearest shelters for a known position; never mounted without one. */
+/**
+ * Loads and renders the nearest shelters for a known position, as a plain list; never mounted
+ * without one. There is no map here - "Kartan" (see ShelterPage's outer tablist row) covers
+ * every map need, including the nearest shelters (highlighted there), so this component no
+ * longer duplicates that experience with its own list/map toggle.
+ */
 function NearestShelters({
   origin,
   headingRef,
@@ -40,16 +39,6 @@ function NearestShelters({
 }: NearestSheltersProps) {
   const { mode } = useMode()
   const { state, retry } = useNearestShelters(origin)
-  const navigate = useNavigate()
-  // Defaults to the list - the map is online-only (map tiles need a network request and are
-  // not cached for offline use in this MVP). No "force back to list on going offline" logic is
-  // needed here: ShelterPage's own mode-driven tab switch (below) already unmounts this whole
-  // component the instant mode becomes offline, so it only ever (re-)mounts with this default.
-  const [view, setView] = useState<ShelterView>("lista")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const idPrefix = useId()
-  const listViewTabId = `${idPrefix}-view-lista`
-  const mapViewTabId = `${idPrefix}-view-karta`
 
   if (state.status !== "ready") {
     return (
@@ -68,109 +57,30 @@ function NearestShelters({
   }
 
   return (
-    <div className="mt-6">
-      <div
-        role="tablist"
-        aria-label="Visningsläge"
-        className="flex gap-4 border-b border-slate-200"
+    <div className="mt-6 grid gap-6 sm:grid-cols-2">
+      <ol
+        aria-label="Närmaste skyddsrum, sorterat efter avstånd, närmast först"
+        className="contents"
       >
-        <button
-          type="button"
-          role="tab"
-          id={listViewTabId}
-          aria-selected={view === "lista"}
-          aria-controls={`${listViewTabId}-panel`}
-          tabIndex={view === "lista" ? 0 : -1}
-          onClick={() => setView("lista")}
-          className={tabButtonClassName(view === "lista")}
-        >
-          Lista
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id={mapViewTabId}
-          aria-selected={view === "karta"}
-          aria-controls={`${mapViewTabId}-panel`}
-          aria-disabled={mode === "offline"}
-          tabIndex={view === "karta" ? 0 : -1}
-          onClick={() => {
-            if (mode !== "offline") setView("karta")
-          }}
-          className={
-            tabButtonClassName(view === "karta") +
-            (mode === "offline" ? " aria-disabled:cursor-default aria-disabled:opacity-60" : "")
-          }
-        >
-          Karta
-        </button>
-      </div>
+        {state.data.map((shelter, index) => (
+          <ShelterListItem
+            key={shelter.id}
+            shelter={shelter}
+            distanceMeters={shelter.distanceMeters}
+            saved={isSaved(shelter.id)}
+            onToggleSave={() => (isSaved(shelter.id) ? onRemove(shelter.id) : onSave(shelter))}
+            comment={savedShelters.find((saved) => saved.id === shelter.id)?.comment ?? null}
+            isNearest={index === 0}
+          />
+        ))}
+      </ol>
 
-      {mode === "offline" && (
-        <p role="status" className="mt-2 text-sm text-slate-600">
-          Kartan kräver internetanslutning. Listan fungerar offline.
-        </p>
-      )}
-
-      {view === "lista" && (
-        <div
-          role="tabpanel"
-          id={`${listViewTabId}-panel`}
-          aria-labelledby={listViewTabId}
-          className="mt-6 grid gap-6 sm:grid-cols-2"
-        >
-          <ol
-            aria-label="Närmaste skyddsrum, sorterat efter avstånd, närmast först"
-            className="contents"
-          >
-            {state.data.map((shelter, index) => (
-              <ShelterListItem
-                key={shelter.id}
-                shelter={shelter}
-                distanceMeters={shelter.distanceMeters}
-                saved={isSaved(shelter.id)}
-                onToggleSave={() => (isSaved(shelter.id) ? onRemove(shelter.id) : onSave(shelter))}
-                comment={savedShelters.find((saved) => saved.id === shelter.id)?.comment ?? null}
-                isNearest={index === 0}
-                selected={selectedId === shelter.id}
-                onSelect={() => setSelectedId(shelter.id)}
-              />
-            ))}
-          </ol>
-
-          {/* Fills the otherwise-empty second column when the count is odd - a sibling of the
-              list rather than an <li> inside it, so the list's aria-label (which promises only
-              shelters, sorted by distance) stays accurate for screen reader users. */}
-          {state.data.length % 2 === 1 && (
-            <div className="overflow-hidden rounded-2xl border border-blue-200/80 bg-white p-5 shadow-sm sm:p-6">
-              <ShelterGeneralInfo />
-            </div>
-          )}
-        </div>
-      )}
-
-      {view === "karta" && mode === "online" && (
-        <div
-          role="tabpanel"
-          id={`${mapViewTabId}-panel`}
-          aria-labelledby={mapViewTabId}
-          className="mt-6"
-        >
-          <Suspense
-            fallback={
-              <p role="status" className={panelClassName}>
-                Laddar karta…
-              </p>
-            }
-          >
-            <ShelterMap
-              origin={origin}
-              shelters={state.data}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              onNavigate={navigate}
-            />
-          </Suspense>
+      {/* Fills the otherwise-empty second column when the count is odd - a sibling of the
+          list rather than an <li> inside it, so the list's aria-label (which promises only
+          shelters, sorted by distance) stays accurate for screen reader users. */}
+      {state.data.length % 2 === 1 && (
+        <div className="overflow-hidden rounded-2xl border border-blue-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <ShelterGeneralInfo />
         </div>
       )}
     </div>
@@ -246,35 +156,42 @@ function ShelterPage() {
         </div>
       )}
 
-      <div
-        role="tablist"
-        aria-label="Skyddsrumsvyer"
-        className="mt-6 flex gap-6 border-b border-slate-200"
-      >
-        <button
-          type="button"
-          role="tab"
-          id={nearestTabId}
-          aria-selected={activeTab === "nearest"}
-          aria-controls={`${nearestTabId}-panel`}
-          tabIndex={activeTab === "nearest" ? 0 : -1}
-          onClick={() => setActiveTab("nearest")}
-          className={tabButtonClassName(activeTab === "nearest")}
-        >
-          Skyddsrum i närheten
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id={savedTabId}
-          aria-selected={activeTab === "saved"}
-          aria-controls={`${savedTabId}-panel`}
-          tabIndex={activeTab === "saved" ? 0 : -1}
-          onClick={() => setActiveTab("saved")}
-          className={tabButtonClassName(activeTab === "saved")}
-        >
-          Sparade skyddsrum
-        </button>
+      <div className="mt-6 flex items-center justify-between gap-6 border-b border-slate-200">
+        <div role="tablist" aria-label="Skyddsrumsvyer" className="flex gap-6">
+          <button
+            type="button"
+            role="tab"
+            id={nearestTabId}
+            aria-selected={activeTab === "nearest"}
+            aria-controls={`${nearestTabId}-panel`}
+            tabIndex={activeTab === "nearest" ? 0 : -1}
+            onClick={() => setActiveTab("nearest")}
+            className={tabButtonClassName(activeTab === "nearest")}
+          >
+            Skyddsrum i närheten
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id={savedTabId}
+            aria-selected={activeTab === "saved"}
+            aria-controls={`${savedTabId}-panel`}
+            tabIndex={activeTab === "saved" ? 0 : -1}
+            onClick={() => setActiveTab("saved")}
+            className={tabButtonClassName(activeTab === "saved")}
+          >
+            Sparade skyddsrum
+          </button>
+        </div>
+
+        {/* A real navigation link to its own page, not a third role="tab" - it leaves this
+            tablist's panels entirely rather than switching between them, so it's styled like a
+            tab for visual consistency without claiming tab semantics it doesn't have. The only
+            map in the whole Skyddsrum section - it highlights the user's nearest/saved shelters
+            itself, so neither tab below needs its own separate map anymore. */}
+        <Link to="/skyddsrum/karta" className={tabButtonClassName(false)}>
+          Kartan
+        </Link>
       </div>
 
       {activeTab === "nearest" && (

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
+import type { StoredMapView } from "../components/AllSheltersMap"
 import ShelterDistance from "../components/ShelterDistance"
 import ShelterGeneralInfo from "../components/ShelterGeneralInfo"
 import ShelterSaveToggle from "../components/ShelterSaveToggle"
@@ -36,19 +37,29 @@ function Field({ label, children }: FieldProps) {
  * an embedded map of its exact location and general shelter guidance that works fully offline.
  *
  * Shelters have no single-shelter backend endpoint, so the lookup always reads the local cache
- * that the nearest-shelters list already wrote through - the same data online and offline alike.
- * Redirects to the shelter list if the id was never cached, matching DetailedCrisisCard's
- * not-found pattern. Fields missing from the source data are omitted rather than shown empty.
- * The map itself is online-only (see ShelterLocationMap.tsx) - offline, this page falls back to
- * the "Plats" field above it instead of attempting a broken/blank map.
+ * that the nearest-shelters list or the all-shelters map already wrote through - the same data
+ * online and offline alike. Redirects to the shelter list if the id was never cached, matching
+ * DetailedCrisisCard's not-found pattern. Fields missing from the source data are omitted rather
+ * than shown empty. The map itself is online-only (see ShelterLocationMap.tsx) - offline, this
+ * page falls back to the "Plats" field above it instead of attempting a broken/blank map.
+ *
+ * Arriving from AllSheltersMap.tsx's popup carries the map's camera as navigation state
+ * (mapView) - when present, the back link returns to "Kartan" with that exact view instead of
+ * the nearest-shelters list, so panning/zooming around the map to find a shelter isn't lost by
+ * looking at its details.
  */
 function ShelterDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { activeAddress } = useAddresses()
   const { mode } = useMode()
   const { shelters: savedShelters, isSaved, save, remove, updateComment } = useSavedShelters()
   const headingRef = useRef<HTMLHeadingElement>(null)
+
+  const mapView = (location.state as { mapView?: StoredMapView } | null)?.mapView
+  const backTo = mapView ? "/skyddsrum/karta" : "/skyddsrum"
+  const backLabel = mapView ? "Tillbaka till kartan" : "Tillbaka till skyddsrum i närheten"
 
   const load = useCallback(() => (id ? getCachedShelterById(id) : Promise.resolve(undefined)), [id])
   const { state, retry } = useCrisisResource(id ?? "", load)
@@ -57,13 +68,14 @@ function ShelterDetailPage() {
 
   useEffect(() => {
     if (status !== "ready" || shelter) return
-    navigate("/skyddsrum", {
+    navigate(backTo, {
       replace: true,
       state: {
+        ...(mapView ? { mapView } : {}),
         notice: "Det skyddsrummet är inte sparat lokalt. Sök i närheten igen för att hämta det.",
       },
     })
-  }, [status, shelter, navigate])
+  }, [status, shelter, navigate, backTo, mapView])
 
   const origin: GeoPoint | null =
     typeof activeAddress?.lat === "number" && typeof activeAddress?.lon === "number"
@@ -103,10 +115,12 @@ function ShelterDetailPage() {
 
       <div className="p-6 sm:p-8">
         <Link
-          to="/skyddsrum"
+          to={backTo}
+          state={mapView ? { mapView } : undefined}
           className="mb-6 inline-flex min-h-12 items-center gap-1 font-medium text-blue-900 underline underline-offset-4"
         >
-          <span aria-hidden="true">←</span>Tillbaka till skyddsrum i närheten
+          <span aria-hidden="true">←</span>
+          {backLabel}
         </Link>
 
         <h1

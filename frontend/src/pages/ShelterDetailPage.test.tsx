@@ -30,8 +30,8 @@ vi.mock("../services/shelterStorageService", () => ({
   setSavedShelterComment: vi.fn(),
 }))
 
-// The real MapLibre map is verified manually, not here (same reasoning as ShelterPage.test.tsx's
-// ShelterMap mock) - this just confirms the embedded map mounts (or doesn't, offline) correctly.
+// The real MapLibre map is verified manually, not here - this just confirms the embedded map
+// mounts (or doesn't, offline) correctly.
 vi.mock("../components/ShelterLocationMap", () => ({
   default: () => <div data-testid="shelter-location-map" />,
 }))
@@ -79,12 +79,13 @@ function mockMode(mode: "online" | "offline") {
   })
 }
 
-function renderDetail(id = fullShelter.id) {
+function renderDetail(id = fullShelter.id, state?: Record<string, unknown>) {
   return render(
-    <MemoryRouter initialEntries={[`/skyddsrum/${id}`]}>
+    <MemoryRouter initialEntries={[{ pathname: `/skyddsrum/${id}`, state }]}>
       <Routes>
         <Route path="/skyddsrum/:id" element={<ShelterDetailPage />} />
         <Route path="/skyddsrum" element={<p>Listvy efter omdirigering</p>} />
+        <Route path="/skyddsrum/karta" element={<p>Kartan efter omdirigering</p>} />
       </Routes>
     </MemoryRouter>
   )
@@ -306,5 +307,30 @@ describe("ShelterDetailPage not found", () => {
     renderDetail("never-cached")
 
     expect(await screen.findByText("Listvy efter omdirigering")).toBeTruthy()
+  })
+
+  it("redirects to the map, not the list, when it carries the map's view", async () => {
+    vi.mocked(getCachedShelterById).mockResolvedValue(undefined)
+    renderDetail("never-cached", { mapView: { center: { lat: 59.3, lon: 18.0 }, zoom: 10 } })
+
+    expect(await screen.findByText("Kartan efter omdirigering")).toBeTruthy()
+  })
+})
+
+describe("ShelterDetailPage back link", () => {
+  it("links back to the nearest-shelters list by default", async () => {
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    renderDetail()
+
+    const backLink = await screen.findByRole("link", { name: /Tillbaka till skyddsrum i närheten/ })
+    expect(backLink.getAttribute("href")).toBe("/skyddsrum")
+  })
+
+  it("links back to the map, carrying the same view, when arriving from there", async () => {
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    renderDetail(fullShelter.id, { mapView: { center: { lat: 59.3, lon: 18.0 }, zoom: 10 } })
+
+    const backLink = await screen.findByRole("link", { name: /Tillbaka till kartan/ })
+    expect(backLink.getAttribute("href")).toBe("/skyddsrum/karta")
   })
 })

@@ -35,8 +35,6 @@ function renderItem(
     onToggleSave?: () => void
     comment?: string | null
     isNearest?: boolean
-    selected?: boolean
-    onSelect?: () => void
   } = {}
 ) {
   return render(
@@ -58,7 +56,7 @@ afterEach(() => {
 })
 
 describe("ShelterListItem with full data", () => {
-  it("renders distance, number, type, capacity and the map link", () => {
+  it("renders distance, number, type, capacity and the detail link", () => {
     renderItem(fullShelter, { distanceMeters: 350 })
 
     expect(screen.getByText("Kantarellen 11, Solna kommun")).toBeTruthy()
@@ -70,9 +68,12 @@ describe("ShelterListItem with full data", () => {
 
     const detailLink = screen.getByRole("link", { name: "Visa detaljer" })
     expect(detailLink.getAttribute("href")).toBe(`/skyddsrum/${fullShelter.id}`)
+  })
 
-    const mapLink = screen.getByRole("link", { name: /Visa på karta/ })
-    expect(mapLink.getAttribute("target")).toBe("_blank")
+  it("has no link to an external map - the detail page's own embedded map covers that", () => {
+    renderItem(fullShelter, { distanceMeters: 350 })
+
+    expect(screen.queryByText(/Visa på karta/)).toBeNull()
   })
 
   it("omits the distance line entirely when no position is known", () => {
@@ -134,7 +135,7 @@ describe("ShelterListItem save toggle", () => {
   })
 })
 
-describe("ShelterListItem map sync", () => {
+describe("ShelterListItem nearest badge", () => {
   it("shows a 'Närmast' badge only when isNearest is set", () => {
     renderItem(fullShelter, { isNearest: true })
 
@@ -145,15 +146,6 @@ describe("ShelterListItem map sync", () => {
     renderItem(fullShelter)
 
     expect(screen.queryByText("Närmast")).toBeNull()
-  })
-
-  it("calls onSelect when the card is clicked", () => {
-    const onSelect = vi.fn()
-    renderItem(fullShelter, { onSelect })
-
-    fireEvent.click(screen.getByText("Kantarellen 11, Solna kommun"))
-
-    expect(onSelect).toHaveBeenCalledOnce()
   })
 })
 

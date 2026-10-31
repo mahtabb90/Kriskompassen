@@ -5,8 +5,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response
 
 from src.api.dependencies import get_shelter_store
-from src.models.shelter import ShelterDataErrorResponse, ShelterListResponse
-from src.services.shelters import LocalShelterStore, build_shelters_response
+from src.models.shelter import ShelterBoundsResponse, ShelterDataErrorResponse, ShelterListResponse
+from src.services.shelters import (
+    LocalShelterStore,
+    build_shelters_bounds_response,
+    build_shelters_response,
+)
 
 router = APIRouter(prefix="/shelters", tags=["shelters"])
 
@@ -31,5 +35,33 @@ def get_nearest_shelters(
     """
     shelters = store.get_shelters()
     result = build_shelters_response(shelters, lat, lon)
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
+@router.get(
+    "/within-bounds",
+    response_model=ShelterBoundsResponse,
+    responses={500: {"model": ShelterDataErrorResponse, "description": "Local data failure."}},
+)
+def get_shelters_within_bounds(
+    response: Response,
+    north: Annotated[float, Query(ge=-90, le=90)],
+    south: Annotated[float, Query(ge=-90, le=90)],
+    east: Annotated[float, Query(ge=-180, le=180)],
+    west: Annotated[float, Query(ge=-180, le=180)],
+    store: Annotated[LocalShelterStore, Depends(get_shelter_store)],
+) -> ShelterBoundsResponse:
+    """Returns every shelter from the bundled local snapshot inside one map viewport.
+
+    Synchronous like get_nearest_shelters, for the same thread-pool reason. An inverted
+    rectangle (north < south or east < west) is accepted and simply yields an empty result
+    rather than a 422 - a transient client-side bounds glitch during a fast pan should not
+    surface as an error.
+    """
+    shelters = store.get_shelters()
+    result = build_shelters_bounds_response(
+        shelters, north=north, south=south, east=east, west=west
+    )
     response.headers["Cache-Control"] = "no-store"
     return result

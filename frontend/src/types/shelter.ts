@@ -34,6 +34,12 @@ export interface ShelterListResponse {
   bboxRadiusMetersUsed: number
 }
 
+/** Reports every shelter from the local snapshot inside one map viewport. */
+export interface ShelterBoundsResponse {
+  shelters: Shelter[]
+  source: ShelterSource
+}
+
 /**
  * Extends a shelter with when it was cached locally, for offline reuse.
  *

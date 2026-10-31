@@ -110,8 +110,15 @@ reads it once per process (`LocalShelterStore`, cached in memory after the first
 load - unlike `crisis.py`, which re-reads its small file every request, because this snapshot
 has 60,000+ records, too expensive to re-parse every call) and ranks shelters by Haversine
 distance from the requested position. `GET /api/v1/shelters/nearest?lat=&lon=` returns the five
-closest. Imports and application startup do not read the file, so a data error does not disable
-unrelated API endpoints; a missing or invalid snapshot raises
+closest. `GET /api/v1/shelters/within-bounds?north=&south=&east=&west=` backs the frontend's
+"Kartan" page instead - a plain per-axis range filter (`shelters_within_bounds`) over the same
+in-memory list, returning every shelter inside one rectangular map viewport rather than a fixed
+count. Deliberately no server-side clustering or result cap: the frontend fetches only the
+current viewport (debounced as the user pans/zooms, and skipped entirely below a minimum zoom -
+see `MIN_ZOOM_FOR_SHELTERS` in `frontend/src/components/AllSheltersMap.tsx`) and clusters
+client-side via MapLibre's own `GeoJSONSource`, so this endpoint never needs to reason about
+clustering or payload size itself. Imports and application startup do not read the file, so a
+data error does not disable unrelated API endpoints; a missing or invalid snapshot raises
 `500 {"error":{"code":"shelters_data_unavailable","message":"Skyddsrumsdata kunde inte läsas."}}`
 rather than falling back to a live MCF call. No database or runtime write is involved.
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   ShelterResponseValidationError,
+  validateShelterBoundsResponse,
   validateShelterListResponse,
 } from "./shelterResponseValidator"
 
@@ -87,5 +88,49 @@ describe("validateShelterListResponse", () => {
     },
   ])("rejects a malformed payload: %j", (payload) => {
     expect(() => validateShelterListResponse(payload)).toThrow(ShelterResponseValidationError)
+  })
+})
+
+function validBoundsResponse(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    shelters: [validShelter],
+    source: validSource,
+    ...overrides,
+  }
+}
+
+describe("validateShelterBoundsResponse", () => {
+  it("accepts a complete response", () => {
+    expect(validateShelterBoundsResponse(validBoundsResponse())).toEqual({
+      shelters: [validShelter],
+      source: validSource,
+    })
+  })
+
+  it("accepts an empty shelter list", () => {
+    expect(validateShelterBoundsResponse(validBoundsResponse({ shelters: [] }))).toEqual({
+      shelters: [],
+      source: validSource,
+    })
+  })
+
+  it("does not require a bboxRadiusMetersUsed field", () => {
+    const payload = validBoundsResponse()
+    expect("bboxRadiusMetersUsed" in payload).toBe(false)
+    expect(() => validateShelterBoundsResponse(payload)).not.toThrow()
+  })
+
+  it.each([
+    "not an object",
+    [],
+    null,
+    { source: validSource },
+    { shelters: "not an array", source: validSource },
+    { shelters: [validShelter] },
+    { shelters: [validShelter], source: { ...validSource, apiUrl: "" } },
+    { shelters: [{ ...validShelter, id: "" }], source: validSource },
+    { shelters: [{ ...validShelter, lat: "59" }], source: validSource },
+  ])("rejects a malformed payload: %j", (payload) => {
+    expect(() => validateShelterBoundsResponse(payload)).toThrow(ShelterResponseValidationError)
   })
 })
