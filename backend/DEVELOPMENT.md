@@ -38,9 +38,12 @@ storage or the account-free product decision.
   write to this file.
 - **Shelter lookups:** `GET /api/v1/shelters/nearest?lat=&lon=` ranks the bundled
   `src/data/shelters.json` snapshot by distance and returns the five nearest as
-  `{shelters, source, bboxRadiusMetersUsed}`, without contacting MCF. `scripts/fetch_shelters.py`
-  refreshes the file manually; there is no scheduled synchronization and the register is not
-  imported into a database. See [Civil-defense shelters](#civil-defense-shelters).
+  `{shelters, source, bboxRadiusMetersUsed}`, without contacting MCF. `GET
+  /api/v1/shelters/within-bounds?north=&south=&east=&west=` instead returns every shelter inside
+  one map viewport, backing the frontend's "Kartan" page. Both read the same in-memory snapshot;
+  neither contacts MCF. `scripts/fetch_shelters.py` refreshes the file manually; there is no
+  scheduled synchronization and the register is not imported into a database. See
+  [Civil-defense shelters](#civil-defense-shelters).
 - **In-memory snapshot:** `LocalShelterStore` keeps the parsed snapshot in memory after its first
   successful load. State is per instance and is lost on cold start, when the unchanged file is
   loaded again. Browser responses use `Cache-Control: no-store`; this is separate from the app's
