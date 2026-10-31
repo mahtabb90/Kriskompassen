@@ -198,10 +198,9 @@ function CrisisKitPage() {
         className="mt-6 rounded-2xl border border-blue-200/80 bg-white p-5 shadow-sm sm:p-6"
       >
         <div className="flex items-center gap-4">
-          <span aria-hidden="true" className="h-16 w-1.5 shrink-0 rounded-full bg-amber-500" />
           <span
             aria-hidden="true"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-900"
           >
             <svg viewBox="0 0 48 48" className="h-8 w-8" fill="none">
               <circle cx="24" cy="24" r="17" stroke="currentColor" strokeWidth="3.5" />
@@ -216,24 +215,62 @@ function CrisisKitPage() {
         </div>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div className="flex min-h-24 items-center justify-center gap-3 rounded-2xl border border-red-200 bg-red-50/70 p-3">
+          <div className="flex min-h-20 items-center justify-center gap-3 rounded-2xl border border-red-200 bg-red-50/70 px-3 py-2">
             <span
               aria-hidden="true"
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600"
             >
               <svg viewBox="0 0 48 48" className="h-8 w-8" fill="none">
-                <circle cx="24" cy="24" r="17" fill="currentColor" />
-                <path d="M24 14v12" stroke="white" strokeWidth="4" strokeLinecap="round" />
-                <circle cx="24" cy="33" r="2.2" fill="white" />
+                {/* Bell body */}
+                <path
+                  d="M24 8
+                    C17 8 13 14 13 22
+                    V29
+                    C13 33 11 36 8 39
+                    H40
+                    C37 36 35 33 35 29
+                    V22
+                    C35 14 31 8 24 8Z"
+                  fill="currentColor"
+                />
+
+                {/* Top knob */}
+                <circle cx="24" cy="7" r="2.5" fill="currentColor" />
+
+                {/* Clapper */}
+                <path
+                  d="M19 41
+                    C20 44 22 45 24 45
+                    C26 45 28 44 29 41Z"
+                  fill="currentColor"
+                />
+
+                {/* Ringing lines */}
+                <path
+                  d="M7 13 C2 21 2 29 7 36
+                    M41 13 C46 21 46 29 41 36"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M11 18 C8 23 8 27 11 32
+                    M37 18 C40 23 40 27 37 32"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
               </svg>
             </span>
-            <div className="text-center">
-              <p className="text-3xl font-bold tabular-nums text-red-600">{expiredItems.length}</p>
-              <p className="font-semibold text-slate-700">varor har gått ut</p>
+            <div className="flex flex-wrap items-baseline justify-center gap-x-2">
+              <p className="text-3xl font-bold tabular-nums text-slate-900">
+                {expiredItems.length}
+              </p>
+              <p className="font-semibold text-slate-700">utgångna varor</p>
             </div>
           </div>
 
-          <div className="flex min-h-24 items-center justify-center gap-3 rounded-2xl border border-orange-200 bg-orange-50/70 p-3">
+          <div className="flex min-h-20 items-center justify-center gap-3 rounded-2xl border border-orange-200 bg-orange-50/70 px-3 py-2">
             <span
               aria-hidden="true"
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600"
@@ -249,15 +286,15 @@ function CrisisKitPage() {
                 />
               </svg>
             </span>
-            <div className="text-center">
-              <p className="text-3xl font-bold tabular-nums text-orange-600">{soonItems.length}</p>
+            <div className="flex flex-wrap items-baseline justify-center gap-x-2">
+              <p className="text-3xl font-bold tabular-nums text-slate-900">{soonItems.length}</p>
               <p className="font-semibold text-slate-700">varor går snart ut</p>
             </div>
           </div>
         </div>
 
-        <details className="expiration-review group mt-4 overflow-hidden rounded-2xl border border-blue-200">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 bg-blue-50 px-4 py-2 font-semibold text-blue-900 marker:hidden [&::-webkit-details-marker]:hidden">
+        <details className="expiration-review group mt-4 rounded-2xl border border-blue-200">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-blue-50 px-4 py-2 font-semibold text-blue-900 marker:hidden [&::-webkit-details-marker]:hidden focus-visible:outline-3 focus-visible:outline-blue-900 focus-visible:outline-offset-4">
             <span>Visa varor att se över</span>
             <span
               aria-hidden="true"
@@ -278,7 +315,7 @@ function CrisisKitPage() {
                   id="expired-items-heading"
                   className="mb-3 text-lg font-semibold text-slate-900"
                 >
-                  Har gått ut ({expiredItems.length})
+                  Utgången ({expiredItems.length})
                 </h3>
                 <ul className="overflow-hidden rounded-xl border border-slate-200">
                   {expiredItems.map(({ item }, index) => (
@@ -294,14 +331,45 @@ function CrisisKitPage() {
                           className="flex h-10 w-10 shrink-0 items-center justify-center text-red-600"
                         >
                           <svg viewBox="0 0 48 48" className="h-8 w-8" fill="none">
-                            <circle cx="24" cy="24" r="17" fill="currentColor" />
+                            {/* Bell body */}
                             <path
-                              d="M24 14v12"
-                              stroke="white"
-                              strokeWidth="4"
+                              d="M24 8
+                                C17 8 13 14 13 22
+                                V29
+                                C13 33 11 36 8 39
+                                H40
+                                C37 36 35 33 35 29
+                                V22
+                                C35 14 31 8 24 8Z"
+                              fill="currentColor"
+                            />
+
+                            {/* Top knob */}
+                            <circle cx="24" cy="7" r="2.5" fill="currentColor" />
+
+                            {/* Clapper */}
+                            <path
+                              d="M19 41
+                                C20 44 22 45 24 45
+                                C26 45 28 44 29 41Z"
+                              fill="currentColor"
+                            />
+
+                            {/* Ringing lines */}
+                            <path
+                              d="M7 13 C2 21 2 29 7 36
+                                M41 13 C46 21 46 29 41 36"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
                               strokeLinecap="round"
                             />
-                            <circle cx="24" cy="33" r="2.2" fill="white" />
+                            <path
+                              d="M11 18 C8 23 8 27 11 32
+                                M37 18 C40 23 40 27 37 32"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                            />
                           </svg>
                         </span>
                         <span
@@ -322,7 +390,7 @@ function CrisisKitPage() {
                         <span className="block text-sm font-semibold text-red-600 sm:text-base">
                           {formatExpirationDate(item.expirationDate)}
                         </span>
-                        <span className="block text-sm text-slate-600">Har gått ut</span>
+                        <span className="block text-sm text-slate-600">Utgången</span>
                       </span>
                     </li>
                   ))}
@@ -380,7 +448,7 @@ function CrisisKitPage() {
                         </span>
                       </div>
                       <span className="pl-[4.0625rem] text-left sm:ml-auto sm:shrink-0 sm:pl-0 sm:text-right">
-                        <span className="block text-sm font-semibold text-orange-600 sm:text-base">
+                        <span className="block text-sm font-semibold text-orange-700 sm:text-base">
                           {formatExpirationDate(item.expirationDate)}
                         </span>
                         <span className="block text-sm text-slate-600">Går snart ut</span>
@@ -463,7 +531,7 @@ function CrisisKitPage() {
         <button
           type="submit"
           disabled={isAddingItem || !newItemName.trim()}
-          className="mt-4 min-h-11 rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-4 min-h-11 rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed"
         >
           {isAddingItem ? "Lägger till..." : "Lägg till sak"}
         </button>
@@ -499,13 +567,13 @@ function CrisisKitPage() {
             return (
               <details
                 key={category}
-                className="group overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm"
+                className="group rounded-2xl border border-blue-200/80 bg-white shadow-sm"
               >
-                <summary
-                  // The card clips overflow, so the focus outline is drawn inside the summary instead.
-                  className="relative flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl p-4 pt-5 font-semibold text-blue-900 focus-visible:-outline-offset-4 sm:p-5 sm:pt-6"
-                >
-                  <span aria-hidden="true" className="absolute inset-x-0 top-0 flex h-1.5">
+                <summary className="relative flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl p-4 pt-5 font-semibold text-blue-900 focus-visible:outline-3 focus-visible:outline-blue-900 focus-visible:outline-offset-4 sm:p-5 sm:pt-6">
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-x-0 top-0 flex h-1.5 overflow-hidden rounded-t-2xl"
+                  >
                     <span className="h-full flex-1 bg-blue-900" />
                     <span className="h-full w-8 bg-amber-400" />
                   </span>

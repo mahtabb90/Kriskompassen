@@ -575,7 +575,7 @@ function CrisisKitItem({
                       type="button"
                       onClick={() => handleExpirationSave()}
                       disabled={isSavingExpiration || !hasExpirationChanges}
-                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 text-base font-semibold text-white hover:bg-blue-950 active:bg-blue-950 disabled:opacity-60"
+                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 text-base font-semibold text-white hover:bg-blue-950 active:bg-blue-950 disabled:cursor-not-allowed"
                     >
                       {isSavingExpiration ? "Sparar..." : "Spara datum"}
                     </button>
@@ -585,7 +585,7 @@ function CrisisKitItem({
                         type="button"
                         onClick={() => handleExpirationSave("")}
                         disabled={isSavingExpiration}
-                        className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-base font-semibold text-blue-900 hover:bg-blue-50 active:bg-blue-50 disabled:opacity-60"
+                        className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-base font-semibold text-blue-900 hover:bg-blue-50 active:bg-blue-50 disabled:cursor-not-allowed"
                       >
                         {isSavingExpiration ? "Sparar..." : "Rensa datum"}
                       </button>

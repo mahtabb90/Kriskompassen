@@ -241,6 +241,15 @@ describe("CrisisKitPage custom-item creation", () => {
 })
 
 describe("CrisisKitPage expiration summary", () => {
+  it("keeps the review disclosure keyboard-focusable with an external focus indicator", async () => {
+    mountPage()
+    const summary = await screen.findByText("Visa varor att se över")
+    expect(summary.tagName).toBe("SPAN")
+    expect(summary.closest("summary")).not.toBeNull()
+    expect(summary.closest("summary")?.className).toContain("focus-visible:outline-blue-900")
+    expect(summary.closest("summary")?.className).toContain("focus-visible:outline-offset-4")
+  })
+
   it("shows the expired and soon-to-expire counts while keeping the item list collapsed by default", async () => {
     vi.mocked(getCrisisKitItems).mockResolvedValue([
       {
@@ -296,7 +305,7 @@ describe("CrisisKitPage expiration summary", () => {
     })
     expect(within(reviewSection).getByText(/saker att se över/)).toBeTruthy()
     expect(screen.getAllByText("2", { selector: "p.text-3xl" })).toHaveLength(2)
-    expect(screen.getByText("varor har gått ut")).toBeTruthy()
+    expect(screen.getByText("utgångna varor")).toBeTruthy()
     expect(screen.getByText("varor går snart ut")).toBeTruthy()
 
     const reviewDetails = screen.getByText("Visa varor att se över").closest("details")
@@ -304,7 +313,7 @@ describe("CrisisKitPage expiration summary", () => {
     expect((reviewDetails as HTMLDetailsElement).open).toBe(false)
     expect(
       within(reviewDetails as HTMLElement).getByRole("heading", {
-        name: "Har gått ut (2)",
+        name: "Utgången (2)",
       })
     ).toBeTruthy()
   })
@@ -348,12 +357,12 @@ describe("CrisisKitPage expiration summary", () => {
     const reviewDetails = summary.closest("details") as HTMLDetailsElement
     const reviewContent = within(reviewDetails)
 
-    expect(reviewContent.getByRole("heading", { name: "Har gått ut (2)" })).toBeTruthy()
+    expect(reviewContent.getByRole("heading", { name: "Utgången (2)" })).toBeTruthy()
     expect(reviewContent.getByRole("heading", { name: "Går snart ut (2)" })).toBeTruthy()
 
     const expiredSection = reviewContent
       .getByRole("heading", {
-        name: "Har gått ut (2)",
+        name: "Utgången (2)",
       })
       .closest("section") as HTMLElement
     const soonSection = reviewContent
