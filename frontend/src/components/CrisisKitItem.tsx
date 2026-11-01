@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import type { ChangeEvent, FormEvent, SyntheticEvent } from "react"
 import type { CrisisKitItem as CrisisKitItemType } from "../types/crisisKit"
-import { CRISIS_KIT_CATEGORIES } from "../types/crisisKit"
 import { formatExpirationDate, getExpirationStatus } from "../utils/expirationDate"
 
 interface CrisisKitItemProps {
@@ -59,7 +58,6 @@ function CrisisKitItem({
 
   const [isEditing, setIsEditing] = useState(false)
   const [editedName, setEditedName] = useState(item.name)
-  const [editedCategory, setEditedCategory] = useState<CrisisKitItemType["category"]>(item.category)
   const [isSavingCustomItem, setIsSavingCustomItem] = useState(false)
   const [customItemError, setCustomItemError] = useState<string | null>(null)
   const [isDeletingCustomItem, setIsDeletingCustomItem] = useState(false)
@@ -236,14 +234,12 @@ function CrisisKitItem({
 
   function handleEditStart() {
     setEditedName(item.name)
-    setEditedCategory(item.category)
     setCustomItemError(null)
     setIsEditing(true)
   }
 
   function handleEditCancel() {
     setEditedName(item.name)
-    setEditedCategory(item.category)
     setCustomItemError(null)
     setIsEditing(false)
   }
@@ -254,7 +250,7 @@ function CrisisKitItem({
     setCustomItemError(null)
 
     try {
-      await onCustomItemSave(item, editedName, editedCategory)
+      await onCustomItemSave(item, editedName, item.category)
       setIsEditing(false)
     } catch (error) {
       setCustomItemError(
@@ -317,30 +313,6 @@ function CrisisKitItem({
             />
           </div>
 
-          <div className="mt-4">
-            <label
-              htmlFor={`edit-category-${item.id}`}
-              className="block text-sm font-medium text-slate-700"
-            >
-              Kategori
-            </label>
-            <select
-              id={`edit-category-${item.id}`}
-              value={editedCategory}
-              onChange={(event) =>
-                setEditedCategory(event.target.value as CrisisKitItemType["category"])
-              }
-              disabled={isSavingCustomItem}
-              className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800"
-            >
-              {CRISIS_KIT_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {customItemError && (
             <p className="mt-3 text-sm font-medium text-red-800" role="alert">
               {customItemError}
@@ -371,6 +343,25 @@ function CrisisKitItem({
             <div className="min-w-0">
               <Heading className="font-semibold text-blue-900">{item.name}</Heading>
               <p className="mt-1 text-sm text-slate-600">{item.category}</p>
+              {item.isCustom && (
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 20 20"
+                    className="h-4 w-4 shrink-0"
+                    fill="none"
+                  >
+                    <circle cx="10" cy="6" r="3" stroke="currentColor" strokeWidth="1.5" />
+                    <path
+                      d="M4 17c.5-3.2 2.5-5 6-5s5.5 1.8 6 5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  Tillagd av användaren
+                </p>
+              )}
             </div>
 
             <span

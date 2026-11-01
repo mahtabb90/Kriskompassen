@@ -12,6 +12,7 @@ import {
   updateCustomCrisisKitItemOwnership,
 } from "../services/crisisKitService"
 import { CRISIS_KIT_CATEGORIES } from "../types/crisisKit"
+import { RECOMMENDED_CRISIS_KIT } from "../data/recommendedCrisisKit"
 import type { CrisisKitItem as CrisisKitItemType } from "../types/crisisKit"
 import { iconForKitCategory } from "../utils/crisisIcons"
 import { formatExpirationDate, getExpirationStatus } from "../utils/expirationDate"
@@ -32,6 +33,14 @@ function CrisisKitPage() {
   const [newItemName, setNewItemName] = useState("")
   const [newItemCategory, setNewItemCategory] =
     useState<(typeof CRISIS_KIT_CATEGORIES)[number]>("Övrigt")
+  const [newItemSubcategory, setNewItemSubcategory] = useState("Övrigt")
+  const availableSubcategories = Array.from(
+    new Set(
+      RECOMMENDED_CRISIS_KIT.filter((item) => item.category === newItemCategory)
+        .map((item) => item.subcategory)
+        .filter((subcategory): subcategory is string => Boolean(subcategory))
+    )
+  ).sort((a, b) => a.localeCompare(b, "sv"))
   const [isAddingItem, setIsAddingItem] = useState(false)
   const [addItemError, setAddItemError] = useState<string | null>(null)
   const [addItemMessage, setAddItemMessage] = useState<string | null>(null)
@@ -184,11 +193,16 @@ function CrisisKitPage() {
     setAddItemMessage(null)
 
     try {
-      const newItem = await addCustomCrisisKitItem(newItemName, newItemCategory)
+      const newItem = await addCustomCrisisKitItem(
+        newItemName,
+        newItemCategory,
+        newItemSubcategory === "Övrigt" ? undefined : newItemSubcategory
+      )
       setItems((currentItems) => [...currentItems, newItem])
       setAddItemMessage("Saken har lagts till i din krislåda.")
       setNewItemName("")
       setNewItemCategory("Övrigt")
+      setNewItemSubcategory("Övrigt")
     } catch (error) {
       setAddItemError(
         error instanceof Error ? error.message : "Det gick inte att lägga till saken. Försök igen."
@@ -205,7 +219,8 @@ function CrisisKitPage() {
       </h1>
 
       <p className="mt-4 max-w-prose text-lg leading-relaxed text-slate-700">
-        Håll koll på vad du har hemma inför en kris. Markera vad du har, vad du inte behöver och lägg till egna saker.
+        Håll koll på vad du har hemma inför en kris. Markera vad du har, vad du inte behöver och
+        lägg till egna saker.
       </p>
       <p className="mt-2 max-w-prose text-lg leading-relaxed text-slate-700">
         Ange utgångsdatum för att hålla koll på när saker behöver kontrolleras eller bytas ut.
@@ -518,6 +533,7 @@ function CrisisKitPage() {
             value={newItemCategory}
             onChange={(event) => {
               setNewItemCategory(event.target.value as (typeof CRISIS_KIT_CATEGORIES)[number])
+              setNewItemSubcategory("Övrigt")
               setAddItemMessage(null)
             }}
             disabled={isAddingItem}
@@ -526,6 +542,32 @@ function CrisisKitPage() {
             {CRISIS_KIT_CATEGORIES.map((category) => (
               <option key={category} value={category}>
                 {category}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="mt-4">
+          <label
+            htmlFor="new-item-subcategory"
+            className="block text-sm font-medium text-slate-700"
+          >
+            Underkategori
+          </label>
+          <select
+            id="new-item-subcategory"
+            value={newItemSubcategory}
+            onChange={(event) => {
+              setNewItemSubcategory(event.target.value)
+              setAddItemMessage(null)
+            }}
+            disabled={isAddingItem}
+            className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          >
+            <option value="Övrigt">Övrigt</option>
+            {availableSubcategories.map((subcategory) => (
+              <option key={subcategory} value={subcategory}>
+                {subcategory}
               </option>
             ))}
           </select>
@@ -571,16 +613,9 @@ function CrisisKitPage() {
         <div className="mt-6 space-y-4">
           {CRISIS_KIT_CATEGORIES.map((category) => {
             const categoryItems = items.filter((item) => item.category === category)
-            const recommendedItems = categoryItems.filter((item) => !item.isCustom)
-            const customItems = categoryItems.filter((item) => item.isCustom)
-
-            const subcategories = [
-              ...new Set(
-                recommendedItems
-                  .map((item) => item.subcategory)
-                  .filter((subcategory): subcategory is string => Boolean(subcategory))
-              ),
-            ]
+            const subcategories = Array.from(
+              new Set(categoryItems.map((item) => item.subcategory || "Övrigt"))
+            ).sort((a, b) => a.localeCompare(b, "sv"))
 
             return (
               <details
@@ -611,93 +646,44 @@ function CrisisKitPage() {
                   {categoryItems.length === 0 && (
                     <p className="text-sm text-slate-600">Inga saker i den här kategorin ännu.</p>
                   )}
+                  <div className="space-y-3">
+                    {subcategories.map((subcategory) => {
+                      const subcategoryItems = categoryItems
+                        .filter((item) => (item.subcategory || "Övrigt") === subcategory)
+                        .sort((a, b) => a.name.localeCompare(b.name, "sv"))
 
-                  {recommendedItems.length > 0 && (
-                    <section>
-                      <h3 className="mb-4 text-lg font-semibold text-blue-900">
-                        Rekommenderade saker
-                      </h3>
-
-                      <div className="space-y-3">
-                        {subcategories.map((subcategory) => {
-                          const subcategoryItems = recommendedItems.filter(
-                            (item) => item.subcategory === subcategory
-                          )
-
-                          return (
-                            <details
-                              key={subcategory}
-                              className="subcategory-group rounded-xl border border-blue-100 bg-slate-50"
+                      return (
+                        <details
+                          key={subcategory}
+                          className="subcategory-group rounded-xl border border-blue-100 bg-slate-50"
+                        >
+                          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-xl p-4 font-semibold text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
+                            <h3 className="text-base font-semibold">{subcategory}</h3>
+                            <span
+                              aria-hidden="true"
+                              className="shrink-0 text-lg transition-transform [details.subcategory-group[open]_&]:rotate-180"
                             >
-                              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-xl p-4 font-semibold text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
-                                <h4 className="text-base font-semibold">{subcategory}</h4>
-                                <span
-                                  aria-hidden="true"
-                                  className="shrink-0 text-lg transition-transform [details.subcategory-group[open]_&]:rotate-180"
-                                >
-                                  ▾
-                                </span>
-                              </summary>
-
-                              <div className="grid gap-4 border-t border-blue-100 p-4 sm:grid-cols-2">
-                                {subcategoryItems.map((item) => (
-                                  <CrisisKitItem
-                                    key={item.id}
-                                    item={item}
-                                    headingLevel={4}
-                                    onOwnershipChange={handleOwnershipChange}
-                                    onNotNeededChange={handleNotNeededChange}
-                                    onExpirationDateSave={handleExpirationDateSave}
-                                    onCustomItemSave={handleCustomItemSave}
-                                    onCustomItemDelete={handleCustomItemDelete}
-                                  />
-                                ))}
-                              </div>
-                            </details>
-                          )
-                        })}
-
-                        {recommendedItems.some((item) => !item.subcategory) && (
-                          <div className="grid gap-4 sm:grid-cols-2">
-                            {recommendedItems
-                              .filter((item) => !item.subcategory)
-                              .map((item) => (
-                                <CrisisKitItem
-                                  key={item.id}
-                                  item={item}
-                                  onOwnershipChange={handleOwnershipChange}
-                                  onNotNeededChange={handleNotNeededChange}
-                                  onExpirationDateSave={handleExpirationDateSave}
-                                  onCustomItemSave={handleCustomItemSave}
-                                  onCustomItemDelete={handleCustomItemDelete}
-                                />
-                              ))}
+                              ▾
+                            </span>
+                          </summary>
+                          <div className="grid gap-4 border-t border-blue-100 p-4 sm:grid-cols-2">
+                            {subcategoryItems.map((item) => (
+                              <CrisisKitItem
+                                key={item.id}
+                                item={item}
+                                headingLevel={4}
+                                onOwnershipChange={handleOwnershipChange}
+                                onNotNeededChange={handleNotNeededChange}
+                                onExpirationDateSave={handleExpirationDateSave}
+                                onCustomItemSave={handleCustomItemSave}
+                                onCustomItemDelete={handleCustomItemDelete}
+                              />
+                            ))}
                           </div>
-                        )}
-                      </div>
-                    </section>
-                  )}
-
-                  {customItems.length > 0 && (
-                    <section>
-                      <h3 className="mb-4 text-lg font-semibold text-blue-900">Egna saker</h3>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        {customItems.map((item) => (
-                          <CrisisKitItem
-                            key={item.id}
-                            item={item}
-                            headingLevel={4}
-                            onOwnershipChange={handleOwnershipChange}
-                            onNotNeededChange={handleNotNeededChange}
-                            onExpirationDateSave={handleExpirationDateSave}
-                            onCustomItemSave={handleCustomItemSave}
-                            onCustomItemDelete={handleCustomItemDelete}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  )}
+                        </details>
+                      )
+                    })}
+                  </div>
                 </div>
               </details>
             )

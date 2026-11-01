@@ -51,6 +51,7 @@ const customFoodItem: CrisisKitItem = {
   id: "custom-beans",
   name: "Egna bönor",
   category: "Mat",
+  subcategory: "Torrvaror",
   isOwned: false,
   isCustom: true,
 }
@@ -302,7 +303,7 @@ describe("CrisisKitPage custom-item creation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Lägg till sak" }))
 
     await waitFor(() => {
-      expect(addCustomCrisisKitItem).toHaveBeenCalledWith("Ficklampa", "Kommunikation")
+      expect(addCustomCrisisKitItem).toHaveBeenCalledWith("Ficklampa", "Kommunikation", undefined)
     })
 
     expect(await screen.findByRole("heading", { name: "Ficklampa" })).toBeTruthy()
@@ -532,8 +533,8 @@ describe("CrisisKitPage category sections", () => {
       /^(Mat|Dricksvatten|Toalett och hygien|Värme|Kommunikation|Läkemedel|Betalningar|Husdjur|Övrigt)$/
     )
 
-    expect(document.querySelectorAll("details:not(.expiration-review)")).toHaveLength(9)
-    expect(document.querySelectorAll("details:not(.expiration-review) > summary")).toHaveLength(9)
+    expect(document.querySelectorAll("div.mt-6.space-y-4 > details")).toHaveLength(9)
+    expect(document.querySelectorAll("div.mt-6.space-y-4 > details > summary")).toHaveLength(9)
     expect(categories.length).toBeGreaterThanOrEqual(9)
 
     const waterCategory = screen.getByText("Dricksvatten", { selector: "h2" })
@@ -551,12 +552,12 @@ describe("CrisisKitPage category sections", () => {
     mountPage()
 
     const heading = await screen.findByRole("heading", { name: "Dricksvatten", level: 2 })
-    const summaries = document.querySelectorAll("details:not(.expiration-review) > summary")
+    const summaries = document.querySelectorAll("div.mt-6.space-y-4 > details > summary")
 
     expect(heading.textContent).toBe("Dricksvatten")
     expect(heading.querySelector("svg")).toBeNull()
     summaries.forEach((summary) => {
-      expect(summary.querySelector("svg[aria-hidden='true'][focusable='false']")).not.toBeNull()
+      expect(summary.querySelector("svg")).not.toBeNull()
     })
   })
 
@@ -571,110 +572,88 @@ describe("CrisisKitPage category sections", () => {
     expect(screen.getAllByText("Inga saker i den här kategorin ännu.").length).toBe(8)
   })
 
-  it("shows recommended and custom items in separate groups within a category", async () => {
+  it("shows recommended and custom items together in their selected subcategory", async () => {
     vi.mocked(getCrisisKitItems).mockResolvedValue([recommendedFoodItem, customFoodItem])
 
     mountPage()
 
-    const foodCategoryHeading = await screen.findByRole("heading", {
-      name: "Mat",
-      level: 2,
-    })
-    const foodDetails = foodCategoryHeading.closest("details")
+    const foodHeading = await screen.findByRole("heading", { name: "Mat", level: 2 })
+    fireEvent.click(foodHeading.closest("summary")!)
 
-    expect(foodDetails).not.toBeNull()
+    const subcategoryHeading = within(foodHeading.closest("details") as HTMLElement).getByRole(
+      "heading",
+      { name: "Torrvaror", level: 3 }
+    )
+    fireEvent.click(subcategoryHeading.closest("summary")!)
 
-    fireEvent.click(foodCategoryHeading.closest("summary")!)
-
-    const category = within(foodDetails as HTMLElement)
-    const recommendedGroupHeading = category.getByRole("heading", {
-      name: "Rekommenderade saker",
-      level: 3,
-    })
-    const customGroupHeading = category.getByRole("heading", {
-      name: "Egna saker",
-      level: 3,
-    })
-
-    const recommendedGroup = recommendedGroupHeading.closest("section")
-    const customGroup = customGroupHeading.closest("section")
-
-    expect(recommendedGroup).not.toBeNull()
-    expect(customGroup).not.toBeNull()
-
-    expect(
-      within(recommendedGroup as HTMLElement).getByRole("heading", {
-        name: "Torrvaror",
-      })
-    ).toBeTruthy()
-
-    expect(
-      within(recommendedGroup as HTMLElement).getByRole("heading", {
-        name: "Torrvaror: Ris",
-      })
-    ).toBeTruthy()
-
-    expect(
-      within(customGroup as HTMLElement).getByRole("heading", {
-        name: "Egna bönor",
-      })
-    ).toBeTruthy()
-
-    expect(
-      within(recommendedGroup as HTMLElement).queryByRole("heading", {
-        name: "Egna bönor",
-      })
-    ).toBeNull()
+    const itemHeadings = within(subcategoryHeading.closest("details") as HTMLElement).getAllByRole(
+      "heading",
+      { level: 4 }
+    )
+    expect(itemHeadings.map((heading) => heading.textContent)).toEqual([
+      "Egna bönor",
+      "Torrvaror: Ris",
+    ])
+    expect(screen.queryByRole("heading", { name: "Egna saker" })).toBeNull()
+    expect(screen.queryByRole("heading", { name: "Rekommenderade saker" })).toBeNull()
   })
 
-  it("only displays group headings when that group contains items", async () => {
-    vi.mocked(getCrisisKitItems).mockResolvedValue([recommendedFoodItem, customItem])
+  it("sorts items using Swedish alphabetical order within a subcategory", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      { ...recommendedFoodItem, id: "z", name: "Örtte" },
+      { ...recommendedFoodItem, id: "a", name: "Äpple" },
+      { ...recommendedFoodItem, id: "b", name: "Återställningsmat" },
+      { ...recommendedFoodItem, id: "c", name: "Bönor" },
+    ])
 
     mountPage()
+    const foodHeading = await screen.findByRole("heading", { name: "Mat", level: 2 })
+    fireEvent.click(foodHeading.closest("summary")!)
+    const subcategoryHeading = within(foodHeading.closest("details") as HTMLElement).getByRole(
+      "heading",
+      { name: "Torrvaror", level: 3 }
+    )
+    fireEvent.click(subcategoryHeading.closest("summary")!)
 
-    const foodCategoryHeading = await screen.findByRole("heading", {
-      name: "Mat",
-      level: 2,
-    })
-    const foodDetails = foodCategoryHeading.closest("details") as HTMLElement
+    const itemHeadings = within(subcategoryHeading.closest("details") as HTMLElement).getAllByRole(
+      "heading",
+      { level: 4 }
+    )
+    expect(itemHeadings.map((heading) => heading.textContent)).toEqual([
+      "Bönor",
+      "Återställningsmat",
+      "Äpple",
+      "Örtte",
+    ])
+  })
 
-    fireEvent.click(foodCategoryHeading.closest("summary")!)
+  it("updates available subcategories when the selected category changes", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([recommendedFoodItem])
+    mountPage()
 
-    expect(
-      within(foodDetails).getByRole("heading", {
-        name: "Rekommenderade saker",
-        level: 3,
-      })
-    ).toBeTruthy()
+    const categorySelect = await screen.findByLabelText("Kategori")
+    const subcategorySelect = screen.getByLabelText("Underkategori") as HTMLSelectElement
 
-    expect(
-      within(foodDetails).queryByRole("heading", {
-        name: "Egna saker",
-        level: 3,
-      })
-    ).toBeNull()
+    fireEvent.change(categorySelect, { target: { value: "Mat" } })
+    expect(Array.from(subcategorySelect.options).map((option) => option.value)).toEqual([
+      "Övrigt",
+      "Drycker",
+      "Fettrikt",
+      "Konserver",
+      "Laga mat utan el",
+      "Mat till barn",
+      "Proteinrikt",
+      "Snabb energi",
+      "Torrvaror",
+    ])
 
-    const communicationCategoryHeading = screen.getByRole("heading", {
-      name: "Kommunikation",
-      level: 2,
-    })
-    const communicationDetails = communicationCategoryHeading.closest("details") as HTMLElement
-
-    fireEvent.click(communicationCategoryHeading.closest("summary")!)
-
-    expect(
-      within(communicationDetails).queryByRole("heading", {
-        name: "Rekommenderade saker",
-        level: 3,
-      })
-    ).toBeNull()
-
-    expect(
-      within(communicationDetails).getByRole("heading", {
-        name: "Egna saker",
-        level: 3,
-      })
-    ).toBeTruthy()
+    fireEvent.change(categorySelect, { target: { value: "Kommunikation" } })
+    expect(Array.from(subcategorySelect.options).map((option) => option.value)).toEqual([
+      "Övrigt",
+      "Batterier och laddning",
+      "Ta emot information",
+      "Viktig information",
+    ])
   })
 })
 
@@ -690,18 +669,13 @@ describe("CrisisKitPage custom-item editing", () => {
       target: { value: "Nödlampa" },
     })
 
-    fireEvent.change(
-      screen.getByLabelText("Kategori", { selector: "#edit-category-custom-flashlight" }),
-      { target: { value: "Övrigt" } }
-    )
-
     fireEvent.click(screen.getByRole("button", { name: "Spara ändringar" }))
 
     await waitFor(() => {
       expect(updateCustomCrisisKitItem).toHaveBeenCalledWith(
         customItem.id,
         "Nödlampa",
-        "Övrigt",
+        customItem.category,
         undefined
       )
     })
@@ -718,16 +692,11 @@ describe("CrisisKitPage custom-item editing", () => {
       target: { value: "Nödlampa" },
     })
 
-    fireEvent.change(
-      screen.getByLabelText("Kategori", { selector: "#edit-category-custom-flashlight" }),
-      { target: { value: "Övrigt" } }
-    )
-
     fireEvent.click(screen.getByRole("button", { name: "Spara ändringar" }))
 
     expect(await screen.findByRole("heading", { name: "Nödlampa" })).toBeTruthy()
-    expect(screen.getByRole("heading", { name: "Övrigt" })).toBeTruthy()
-    expect(screen.getByText("Övrigt", { selector: "p" })).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "Kommunikation", level: 2 })).toBeTruthy()
+    expect(screen.getByText("Kommunikation", { selector: "p" })).toBeTruthy()
   })
 
   it("keeps the existing item visible when editing fails", async () => {
@@ -820,9 +789,12 @@ describe("CrisisKitPage heading structure", () => {
     })
 
     expect(screen.getByRole("heading", { level: 2, name: "Mat", hidden: true })).toBeTruthy()
-    expect(screen.getByRole("heading", { level: 4, name: "Torrvaror", hidden: true })).toBeTruthy()
+    expect(screen.getByRole("heading", { level: 3, name: "Torrvaror", hidden: true })).toBeTruthy()
     expect(screen.getByRole("heading", { level: 4, name: "Konserver", hidden: true })).toBeTruthy()
-    expect(screen.getByRole("heading", { level: 3, name: "Knäckebröd", hidden: true })).toBeTruthy()
+    expect(
+      screen.getAllByRole("heading", { level: 3, name: "Övrigt", hidden: true }).length
+    ).toBeGreaterThan(0)
+    expect(screen.getByRole("heading", { level: 4, name: "Knäckebröd", hidden: true })).toBeTruthy()
   })
 
   it("places each category heading inside its disclosure summary", async () => {

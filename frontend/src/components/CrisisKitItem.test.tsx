@@ -58,6 +58,21 @@ describe("CrisisKitItem heading level", () => {
   })
 })
 
+describe("CrisisKitItem custom item label", () => {
+  it("shows the user-added icon and label for custom items", () => {
+    const { container } = renderItem({ ...baseItem, isCustom: true })
+
+    expect(screen.getByText("Tillagd av användaren")).toBeTruthy()
+    expect(container.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
+  })
+
+  it("does not show the user-added label for recommended items", () => {
+    renderItem(baseItem)
+
+    expect(screen.queryByText("Tillagd av användaren")).toBeNull()
+  })
+})
+
 describe("CrisisKitItem expiration dates", () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -289,13 +304,14 @@ describe("CrisisKitItem interactions", () => {
     ).toBeTruthy()
   })
 
-  it("opens the editor with the current name and category", () => {
+  it("opens the editor with the current name", () => {
     renderItem({ ...baseItem, isCustom: true })
 
     fireEvent.click(screen.getByRole("button", { name: "Redigera" }))
 
     expect((screen.getByLabelText("Namn") as HTMLInputElement).value).toBe("Konserver")
-    expect((screen.getByLabelText("Kategori") as HTMLSelectElement).value).toBe("Mat")
+    expect(screen.queryByLabelText("Kategori")).toBeNull()
+    expect(screen.queryByLabelText("Underkategori")).toBeNull()
   })
 
   it("saves changes to a custom item", async () => {
@@ -306,13 +322,10 @@ describe("CrisisKitItem interactions", () => {
     fireEvent.change(screen.getByLabelText("Namn"), {
       target: { value: "Ris" },
     })
-    fireEvent.change(screen.getByLabelText("Kategori"), {
-      target: { value: "Övrigt" },
-    })
     fireEvent.click(screen.getByRole("button", { name: "Spara ändringar" }))
 
     await waitFor(() => {
-      expect(onCustomItemSave).toHaveBeenCalledWith(customItem, "Ris", "Övrigt")
+      expect(onCustomItemSave).toHaveBeenCalledWith(customItem, "Ris", "Mat")
     })
 
     expect(screen.queryByRole("button", { name: "Spara ändringar" })).toBeNull()
