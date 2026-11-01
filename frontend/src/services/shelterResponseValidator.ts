@@ -1,4 +1,9 @@
-import type { Shelter, ShelterListResponse, ShelterSource } from "../types/shelter"
+import type {
+  Shelter,
+  ShelterBoundsResponse,
+  ShelterListResponse,
+  ShelterSource,
+} from "../types/shelter"
 
 /** Identifies shelter data that cannot be displayed or cached safely. */
 export class ShelterResponseValidationError extends Error {
@@ -18,7 +23,7 @@ function isNullableFiniteNumber(value: unknown): value is number | null | undefi
   )
 }
 
-function validateShelter(payload: unknown): Shelter {
+export function validateShelter(payload: unknown): Shelter {
   if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
     throw new ShelterResponseValidationError("A shelter is not an object.")
   }
@@ -49,7 +54,7 @@ function validateShelter(payload: unknown): Shelter {
   }
 }
 
-function validateSource(payload: unknown): ShelterSource {
+export function validateSource(payload: unknown): ShelterSource {
   if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
     throw new ShelterResponseValidationError("The shelter source is not an object.")
   }
@@ -91,5 +96,26 @@ export function validateShelterListResponse(payload: unknown): ShelterListRespon
     shelters: shelters.map(validateShelter),
     source: validateSource(source),
     bboxRadiusMetersUsed,
+  }
+}
+
+/**
+ * Validates the /shelters/within-bounds response in source order; an empty shelter list is
+ * valid. Unlike validateShelterListResponse, there is no bboxRadiusMetersUsed field to check.
+ *
+ * @throws {ShelterResponseValidationError} For an invalid list, item or source.
+ */
+export function validateShelterBoundsResponse(payload: unknown): ShelterBoundsResponse {
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+    throw new ShelterResponseValidationError("The shelter bounds response is not an object.")
+  }
+  const record = payload as Record<string, unknown>
+  const { shelters, source } = record
+  if (!Array.isArray(shelters)) {
+    throw new ShelterResponseValidationError("The shelter list is not an array.")
+  }
+  return {
+    shelters: shelters.map(validateShelter),
+    source: validateSource(source),
   }
 }

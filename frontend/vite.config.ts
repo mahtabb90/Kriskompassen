@@ -13,6 +13,13 @@ const icons = {
 } as const
 
 export default defineConfig({
+  // maplibre-gl (ShelterMap.tsx) spawns its tile-processing worker as an ES module; without
+  // this, Vite emits it in a format the browser's `new Worker(url, { type: "module" })` call
+  // can't execute. Paired with the `?worker&url` import + setWorkerUrl() call in ShelterMap.tsx.
+  worker: {
+    format: "es",
+  },
+
   plugins: [
     react(),
 

@@ -18,6 +18,7 @@ export const apiConfig = {
   geocodeSearchUrl: `${baseUrl}/api/v1/geocode/search`,
   crisisUrl: `${baseUrl}/api/v1/crisis`,
   sheltersUrl: `${baseUrl}/api/v1/shelters/nearest`,
+  sheltersWithinBoundsUrl: `${baseUrl}/api/v1/shelters/within-bounds`,
   timeoutMs: 10_000,
   vmaPollIntervalMs: 30_000,
 } as const
