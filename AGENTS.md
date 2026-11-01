@@ -55,17 +55,17 @@ Frontend versions are taken from `frontend/package-lock.json`.
 
 | Area | Technology | Version |
 | --- | --- | --- |
-| UI | React / React DOM | 19.3.0 |
-| Routing | React Router (`react-router-dom`) | 7.18.4 |
+| UI | React / React DOM | 19.3.1 |
+| Routing | React Router (`react-router-dom`) | 7.18.5 |
 | Language | TypeScript | 6.0.3 |
-| Build/dev server | Vite (+ `@vitejs/plugin-react` 6.1.1) | 8.3.0 |
+| Build/dev server | Vite (+ `@vitejs/plugin-react` 6.1.2) | 8.3.5 |
 | Styling | Tailwind CSS (via `@tailwindcss/vite`) | 4.3.3 |
-| Local storage | Dexie (IndexedDB) | 4.4.6 |
+| Local storage | Dexie (IndexedDB) | 4.4.7 |
 | Maps | MapLibre GL JS (no React wrapper), OpenFreeMap tiles (free, key-less) | 6.16.0 |
 | PWA | vite-plugin-pwa | 1.3.0 |
-| Linting | ESLint + typescript-eslint 8.70.0 | 10.10.0 |
-| Formatting | Prettier (+ `eslint-config-prettier` 10.1.8) | 3.9.9 |
-| Unit tests | Vitest | 4.1.11 |
+| Linting | ESLint + typescript-eslint 8.72.1 | 10.13.0 |
+| Formatting | Prettier (+ `eslint-config-prettier` 10.1.8) | 3.9.10 |
+| Unit tests | Vitest | 4.1.12 |
 | Component tests | React Testing Library / DOM Testing Library | 16.3.3 / 10.4.2 |
 | DOM test environment | jsdom | 27.4.0 |
 | E2E tests | Playwright (Node/TypeScript) | planned, not installed |
