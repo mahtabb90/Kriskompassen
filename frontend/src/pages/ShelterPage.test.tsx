@@ -238,3 +238,29 @@ describe("ShelterPage mode-driven tab", () => {
     ).toBe("true")
   })
 })
+
+describe("ShelterPage nearest list", () => {
+  it("marks the first shelter as nearest in the list", () => {
+    renderPage()
+
+    expect(screen.getByText("Närmast")).toBeTruthy()
+  })
+})
+
+describe("ShelterPage Kartan link", () => {
+  it("links to the all-shelters map page, next to the two real tabs", () => {
+    renderPage()
+
+    const kartanLink = screen.getByRole("link", { name: "Kartan" })
+    expect(kartanLink.getAttribute("href")).toBe("/skyddsrum/karta")
+  })
+
+  it("is available regardless of online/offline mode or which outer tab is active", () => {
+    mockMode("offline")
+    renderPage()
+
+    expect(screen.getByRole("link", { name: "Kartan" }).getAttribute("href")).toBe(
+      "/skyddsrum/karta"
+    )
+  })
+})

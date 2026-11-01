@@ -1,6 +1,9 @@
 import { apiConfig } from "../config/apiConfig"
-import type { ShelterListResponse } from "../types/shelter"
-import { validateShelterListResponse } from "./shelterResponseValidator"
+import type { ShelterBoundsResponse, ShelterListResponse } from "../types/shelter"
+import {
+  validateShelterBoundsResponse,
+  validateShelterListResponse,
+} from "./shelterResponseValidator"
 
 type ShelterRequestErrorCode = "network" | "http" | "timeout" | "invalid_json" | "aborted"
 
@@ -21,7 +24,7 @@ export class ShelterRequestError extends Error {
   }
 }
 
-async function fetchShelterResponse(url: string, signal?: AbortSignal): Promise<unknown> {
+export async function fetchShelterResponse(url: string, signal?: AbortSignal): Promise<unknown> {
   if (signal?.aborted) {
     throw new ShelterRequestError("aborted", "The shelter request was cancelled.")
   }
@@ -102,4 +105,32 @@ export async function fetchNearestShelters(
 ): Promise<ShelterListResponse> {
   const url = `${apiConfig.sheltersUrl}?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`
   return validateShelterListResponse(await fetchShelterResponse(url, signal))
+}
+
+/** Rectangular map viewport, in degrees, matching MapLibre's LngLatBounds accessors. */
+export interface ShelterBounds {
+  north: number
+  south: number
+  east: number
+  west: number
+}
+
+/**
+ * Fetches every shelter from the local snapshot inside one map viewport, without credentials,
+ * caching or retries. Shares fetchShelterResponse's deadline/abort/error handling with
+ * fetchNearestShelters.
+ *
+ * @throws {ShelterRequestError} For transport, HTTP, timeout, cancellation or JSON failures.
+ * @throws {ShelterResponseValidationError} If the response body is malformed.
+ */
+export async function fetchSheltersWithinBounds(
+  bounds: ShelterBounds,
+  signal?: AbortSignal
+): Promise<ShelterBoundsResponse> {
+  const { north, south, east, west } = bounds
+  const url =
+    `${apiConfig.sheltersWithinBoundsUrl}?north=${encodeURIComponent(north)}` +
+    `&south=${encodeURIComponent(south)}&east=${encodeURIComponent(east)}` +
+    `&west=${encodeURIComponent(west)}`
+  return validateShelterBoundsResponse(await fetchShelterResponse(url, signal))
 }

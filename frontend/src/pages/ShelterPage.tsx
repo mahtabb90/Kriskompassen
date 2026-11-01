@@ -23,7 +23,12 @@ interface NearestSheltersProps {
   onRemove: (id: string) => void
 }
 
-/** Loads and renders the nearest shelters for a known position; never mounted without one. */
+/**
+ * Loads and renders the nearest shelters for a known position, as a plain list; never mounted
+ * without one. There is no map here - "Kartan" (see ShelterPage's outer tablist row) covers
+ * every map need, including the nearest shelters (highlighted there), so this component no
+ * longer duplicates that experience with its own list/map toggle.
+ */
 function NearestShelters({
   origin,
   headingRef,
@@ -57,7 +62,7 @@ function NearestShelters({
         aria-label="Närmaste skyddsrum, sorterat efter avstånd, närmast först"
         className="contents"
       >
-        {state.data.map((shelter) => (
+        {state.data.map((shelter, index) => (
           <ShelterListItem
             key={shelter.id}
             shelter={shelter}
@@ -65,6 +70,7 @@ function NearestShelters({
             saved={isSaved(shelter.id)}
             onToggleSave={() => (isSaved(shelter.id) ? onRemove(shelter.id) : onSave(shelter))}
             comment={savedShelters.find((saved) => saved.id === shelter.id)?.comment ?? null}
+            isNearest={index === 0}
           />
         ))}
       </ol>
@@ -150,35 +156,42 @@ function ShelterPage() {
         </div>
       )}
 
-      <div
-        role="tablist"
-        aria-label="Skyddsrumsvyer"
-        className="mt-6 flex gap-6 border-b border-slate-200"
-      >
-        <button
-          type="button"
-          role="tab"
-          id={nearestTabId}
-          aria-selected={activeTab === "nearest"}
-          aria-controls={`${nearestTabId}-panel`}
-          tabIndex={activeTab === "nearest" ? 0 : -1}
-          onClick={() => setActiveTab("nearest")}
-          className={tabButtonClassName(activeTab === "nearest")}
-        >
-          Skyddsrum i närheten
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id={savedTabId}
-          aria-selected={activeTab === "saved"}
-          aria-controls={`${savedTabId}-panel`}
-          tabIndex={activeTab === "saved" ? 0 : -1}
-          onClick={() => setActiveTab("saved")}
-          className={tabButtonClassName(activeTab === "saved")}
-        >
-          Sparade skyddsrum
-        </button>
+      <div className="mt-6 flex items-center justify-between gap-6 border-b border-slate-200">
+        <div role="tablist" aria-label="Skyddsrumsvyer" className="flex gap-6">
+          <button
+            type="button"
+            role="tab"
+            id={nearestTabId}
+            aria-selected={activeTab === "nearest"}
+            aria-controls={`${nearestTabId}-panel`}
+            tabIndex={activeTab === "nearest" ? 0 : -1}
+            onClick={() => setActiveTab("nearest")}
+            className={tabButtonClassName(activeTab === "nearest")}
+          >
+            Skyddsrum i närheten
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id={savedTabId}
+            aria-selected={activeTab === "saved"}
+            aria-controls={`${savedTabId}-panel`}
+            tabIndex={activeTab === "saved" ? 0 : -1}
+            onClick={() => setActiveTab("saved")}
+            className={tabButtonClassName(activeTab === "saved")}
+          >
+            Sparade skyddsrum
+          </button>
+        </div>
+
+        {/* A real navigation link to its own page, not a third role="tab" - it leaves this
+            tablist's panels entirely rather than switching between them, so it's styled like a
+            tab for visual consistency without claiming tab semantics it doesn't have. The only
+            map in the whole Skyddsrum section - it highlights the user's nearest/saved shelters
+            itself, so neither tab below needs its own separate map anymore. */}
+        <Link to="/skyddsrum/karta" className={tabButtonClassName(false)}>
+          Kartan
+        </Link>
       </div>
 
       {activeTab === "nearest" && (

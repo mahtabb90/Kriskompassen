@@ -56,6 +56,29 @@ def _request(
     return asyncio.run(run_request())
 
 
+def _bounds_request(
+    *,
+    north: float = 60.0,
+    south: float = 58.0,
+    east: float = 19.0,
+    west: float = 17.0,
+    params: dict[str, object] | None = None,
+) -> httpx.Response:
+    async def run_request() -> httpx.Response:
+        application = create_app(Settings(cors_origins=[]))
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=application), base_url="http://backend.example"
+        ) as client:
+            query = (
+                {"north": north, "south": south, "east": east, "west": west}
+                if params is None
+                else params
+            )
+            return await client.get("/api/v1/shelters/within-bounds", params=query)
+
+    return asyncio.run(run_request())
+
+
 def _assert_failure(response: httpx.Response, status: int, code: str) -> None:
     assert response.status_code == status
     assert response.headers["Cache-Control"] == "no-store"
@@ -240,3 +263,146 @@ def test_source_path_does_not_depend_on_working_directory(
     """Finds the bundled snapshot from its module path instead of the process directory."""
     monkeypatch.chdir(tmp_path)
     assert len(shelters.load_local_shelters()) > 0
+
+
+def test_within_bounds_returns_only_shelters_inside_the_rectangle(shelters_file: Path) -> None:
+    """Filters a mix of inside/outside shelters down to just the ones within the rectangle."""
+    shelters_file.write_text(
+        json.dumps(
+            [
+                _shelter("inside-1", lat=59.0, lon=18.0),
+                _shelter("inside-2", lat=58.5, lon=17.5),
+                _shelter("outside-north", lat=61.0, lon=18.0),
+                _shelter("outside-south", lat=57.0, lon=18.0),
+                _shelter("outside-east", lat=59.0, lon=20.0),
+                _shelter("outside-west", lat=59.0, lon=16.0),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    response = _bounds_request(north=60.0, south=58.0, east=19.0, west=17.0)
+
+    assert response.status_code == 200
+    ids = {shelter["id"] for shelter in response.json()["shelters"]}
+    assert ids == {"inside-1", "inside-2"}
+
+
+def test_within_bounds_includes_points_on_the_boundary_edges(shelters_file: Path) -> None:
+    """Treats a shelter exactly on a rectangle edge as inside, not outside."""
+    shelters_file.write_text(
+        json.dumps(
+            [
+                _shelter("on-north", lat=60.0, lon=18.0),
+                _shelter("on-south", lat=58.0, lon=18.0),
+                _shelter("on-east", lat=59.0, lon=19.0),
+                _shelter("on-west", lat=59.0, lon=17.0),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    response = _bounds_request(north=60.0, south=58.0, east=19.0, west=17.0)
+
+    ids = {shelter["id"] for shelter in response.json()["shelters"]}
+    assert ids == {"on-north", "on-south", "on-east", "on-west"}
+
+
+def test_within_bounds_empty_result_is_not_an_error(shelters_file: Path) -> None:
+    """Returns 200 with an empty list for a rectangle that matches nothing (e.g. open sea)."""
+    shelters_file.write_text(json.dumps([_shelter("1", lat=59.0, lon=18.0)]), encoding="utf-8")
+
+    response = _bounds_request(north=10.0, south=5.0, east=10.0, west=5.0)
+
+    assert response.status_code == 200
+    assert response.json()["shelters"] == []
+
+
+def test_within_bounds_does_not_cap_result_size(shelters_file: Path) -> None:
+    """Returns every match, proving this doesn't accidentally reuse the nearest-endpoint's cap."""
+    many = [_shelter(str(i), lat=59.0 + i * 0.01, lon=18.0) for i in range(8)]
+    shelters_file.write_text(json.dumps(many), encoding="utf-8")
+
+    response = _bounds_request(north=60.0, south=58.0, east=19.0, west=17.0)
+
+    assert len(response.json()["shelters"]) == 8
+
+
+def test_within_bounds_response_has_no_bbox_radius_field(shelters_file: Path) -> None:
+    """Doesn't carry the nearest-endpoint's distance-based field, which has no meaning here."""
+    response = _bounds_request()
+    assert "bboxRadiusMetersUsed" not in response.json()
+
+
+def test_within_bounds_response_includes_full_source_metadata(shelters_file: Path) -> None:
+    """Keeps every field the frontend's strict response validator requires non-empty."""
+    response = _bounds_request()
+
+    source = response.json()["source"]
+    assert source["name"]
+    assert source["url"]
+    assert source["apiName"]
+    assert source["apiUrl"]
+
+
+@pytest.mark.parametrize(
+    ("params", "reason"),
+    [
+        ({"south": "58", "east": "19", "west": "17"}, "missing north"),
+        ({"north": "60", "east": "19", "west": "17"}, "missing south"),
+        ({"north": "60", "south": "58", "west": "17"}, "missing east"),
+        ({"north": "60", "south": "58", "east": "19"}, "missing west"),
+        ({"north": "91", "south": "58", "east": "19", "west": "17"}, "out-of-range north"),
+        ({"north": "60", "south": "-91", "east": "19", "west": "17"}, "out-of-range south"),
+        ({"north": "60", "south": "58", "east": "181", "west": "17"}, "out-of-range east"),
+        ({"north": "60", "south": "58", "east": "19", "west": "-181"}, "out-of-range west"),
+    ],
+)
+def test_within_bounds_rejects_invalid_query_params(
+    shelters_file: Path, params: dict[str, str], reason: str
+) -> None:
+    """Rejects missing or out-of-range coordinates with FastAPI's own validation response."""
+    response = _bounds_request(params=params)
+    assert response.status_code == 422, reason
+
+
+def test_within_bounds_inverted_rectangle_returns_empty_not_error(shelters_file: Path) -> None:
+    """Documents the accepted limitation: an inverted rectangle just matches nothing."""
+    shelters_file.write_text(json.dumps([_shelter("1", lat=59.0, lon=18.0)]), encoding="utf-8")
+
+    response = _bounds_request(north=58.0, south=60.0, east=19.0, west=17.0)
+
+    assert response.status_code == 200
+    assert response.json()["shelters"] == []
+
+
+@pytest.mark.parametrize("content", [b"", b"{", b"\xff", b"null", b"{}", b'[{"id": ""}]'])
+def test_within_bounds_rejects_invalid_file_content(shelters_file: Path, content: bytes) -> None:
+    """Returns a readable 500 response for JSON, encoding and schema failures alike."""
+    shelters_file.write_bytes(content)
+
+    response = _bounds_request()
+
+    _assert_failure(response, 500, "shelters_data_unavailable")
+    assert str(shelters_file) not in response.text
+
+
+def test_within_bounds_caches_the_snapshot_after_first_load(shelters_file: Path) -> None:
+    """Serves a second request from the same in-memory store, not by re-reading the file."""
+
+    async def run_two_requests() -> tuple[httpx.Response, httpx.Response]:
+        application = create_app(Settings(cors_origins=[]))
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=application), base_url="http://backend.example"
+        ) as client:
+            params = {"north": 60.0, "south": 58.0, "east": 19.0, "west": 17.0}
+            first = await client.get("/api/v1/shelters/within-bounds", params=params)
+            shelters_file.unlink()
+            second = await client.get("/api/v1/shelters/within-bounds", params=params)
+            return first, second
+
+    first, second = asyncio.run(run_two_requests())
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert second.json() == first.json()
