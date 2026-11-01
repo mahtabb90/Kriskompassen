@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AddressProvider } from "../context/AddressProvider"
 import { apiConfig } from "../config/apiConfig"
 import { ModeProvider } from "../context/ModeProvider"
+import CalmInCrisisPage from "../pages/CalmInCrisisPage"
 import CrisisInfoPage from "../pages/CrisisInfoPage"
 import CrisisKitPage from "../pages/CrisisKitPage"
 import HomePage from "../pages/HomePage"
@@ -74,6 +75,7 @@ function mountLayout(path: string) {
               <Route path="/crisis" element={<CrisisInfoPage />} />
               <Route path="/crisis-kit" element={<CrisisKitPage />} />
               <Route path="/crisis/:id" element={<DetailedCrisisCard />} />
+              <Route path="/lugn-i-kris" element={<CalmInCrisisPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>
@@ -84,18 +86,22 @@ function mountLayout(path: string) {
 }
 
 describe("routed page structure", () => {
-  it.each(["/", "/crisis", "/crisis-kit", "/crisis/food-in-crisis", "/no-such-page"])(
-    "%s has one page heading, one main landmark and one primary navigation",
-    async (path) => {
-      mountLayout(path)
+  it.each([
+    "/",
+    "/crisis",
+    "/crisis-kit",
+    "/crisis/food-in-crisis",
+    "/lugn-i-kris",
+    "/no-such-page",
+  ])("%s has one page heading, one main landmark and one primary navigation", async (path) => {
+    mountLayout(path)
 
-      const headings = await screen.findAllByRole("heading", { level: 1 })
-      expect(headings).toHaveLength(1)
-      expect(headings[0].id).toBe("page-heading")
-      expect(screen.getAllByRole("main")).toHaveLength(1)
-      expect(screen.getAllByRole("navigation", { name: "Huvudnavigation" })).toHaveLength(1)
-    }
-  )
+    const headings = await screen.findAllByRole("heading", { level: 1 })
+    expect(headings).toHaveLength(1)
+    expect(headings[0].id).toBe("page-heading")
+    expect(screen.getAllByRole("main")).toHaveLength(1)
+    expect(screen.getAllByRole("navigation", { name: "Huvudnavigation" })).toHaveLength(1)
+  })
 
   it("keeps route focus and updates the title when a delayed detail response arrives", async () => {
     let finish!: (response: Response) => void
