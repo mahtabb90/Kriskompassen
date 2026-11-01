@@ -42,6 +42,7 @@ export interface CrisisKitItem {
   category: CrisisKitCategory
   subcategory?: string
   isOwned: boolean
+  isNotNeeded?: boolean
   expirationDate?: string
   isCustom: boolean
 }
