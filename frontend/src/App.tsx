@@ -3,6 +3,7 @@ import AppLayout from "./components/AppLayout"
 import DetailedCrisisCard from "./components/DetailedCrisisCard"
 import { AddressProvider } from "./context/AddressProvider"
 import { ModeProvider } from "./context/ModeProvider"
+import CalmInCrisisPage from "./pages/CalmInCrisisPage"
 import CrisisInfoPage from "./pages/CrisisInfoPage"
 import CrisisKitPage from "./pages/CrisisKitPage"
 import HomePage from "./pages/HomePage"
@@ -33,6 +34,7 @@ function App() {
               <Route path="/skyddsrum" element={<ShelterPage />} />
               <Route path="/skyddsrum/karta" element={<ShelterMapPage />} />
               <Route path="/skyddsrum/:id" element={<ShelterDetailPage />} />
+              <Route path="/lugn-i-kris" element={<CalmInCrisisPage />} />
               <Route path="/min-info" element={<MyInfoPage />} />
               {import.meta.env.DEV && <Route path="/dev/indexeddb" element={<IndexedDbTest />} />}
               <Route path="*" element={<NotFoundPage />} />
