@@ -80,6 +80,17 @@ const headingTestItems: CrisisKitItem[] = [
   },
 ]
 
+function dateOffsetFromToday(days: number): string {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+
+  return `${year}-${month}-${day}`
+}
+
 function mountPage() {
   return render(<CrisisKitPage />)
 }
@@ -96,6 +107,62 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+})
+
+describe("CrisisKitPage ownership changes", () => {
+  it("saves missing status and clears a recommended item's date together", async () => {
+    const itemWithDate = {
+      ...recommendedItem,
+      isOwned: true,
+      expirationDate: "2030-06-15",
+    }
+    vi.mocked(getCrisisKitItems).mockResolvedValue([itemWithDate])
+    mountPage()
+
+    fireEvent.click(await screen.findByRole("checkbox"))
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Ja, markera som saknas",
+      })
+    )
+
+    await waitFor(() => {
+      expect(updateCrisisKitItem).toHaveBeenCalledWith(itemWithDate.id, {
+        isOwned: false,
+        expirationDate: null,
+      })
+    })
+    expect(
+      screen.queryByText("Markera varan som Finns för att kunna lägga till ett utgångsdatum.")
+    ).toBeNull()
+  })
+
+  it("clears a custom item's date when confirming that it is missing", async () => {
+    const customItemWithDate = {
+      ...customItem,
+      isOwned: true,
+      expirationDate: "2030-06-15",
+    }
+    vi.mocked(getCrisisKitItems).mockResolvedValue([customItemWithDate])
+    mountPage()
+
+    fireEvent.click(await screen.findByRole("checkbox"))
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Ja, markera som saknas",
+      })
+    )
+
+    await waitFor(() => {
+      expect(updateCustomCrisisKitItem).toHaveBeenCalledWith(
+        customItemWithDate.id,
+        customItemWithDate.name,
+        customItemWithDate.category,
+        null
+      )
+    })
+    expect(updateCustomCrisisKitItemOwnership).not.toHaveBeenCalled()
+  })
 })
 
 describe("CrisisKitPage custom-item creation", () => {
@@ -161,7 +228,6 @@ describe("CrisisKitPage custom-item creation", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("Storage failed")
     expect(screen.queryByRole("heading", { name: "Nödradio" })).toBeNull()
   })
-  expect(screen.queryByText("Saken har lagts till i din krislåda.")).toBeNull()
 
   it("shows an error if the initial load fails", async () => {
     vi.mocked(getCrisisKitItems).mockRejectedValueOnce(new Error("Storage failed"))
@@ -171,6 +237,171 @@ describe("CrisisKitPage custom-item creation", () => {
     expect(
       await screen.findByText("Det gick inte att läsa in din krislåda. Försök igen.")
     ).toBeTruthy()
+  })
+})
+
+describe("CrisisKitPage expiration summary", () => {
+  it("keeps the review disclosure keyboard-focusable with an external focus indicator", async () => {
+    mountPage()
+    const summary = await screen.findByText("Visa varor att se över")
+    expect(summary.tagName).toBe("SPAN")
+    expect(summary.closest("summary")).not.toBeNull()
+    expect(summary.closest("summary")?.className).toContain("focus-visible:outline-blue-900")
+    expect(summary.closest("summary")?.className).toContain("focus-visible:outline-offset-4")
+  })
+
+  it("shows the expired and soon-to-expire counts while keeping the item list collapsed by default", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      {
+        ...recommendedFoodItem,
+        id: "expired-1",
+        name: "Konserverade tomater",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(-18),
+      },
+      {
+        ...recommendedFoodItem,
+        id: "expired-2",
+        name: "Havregryn",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(-15),
+      },
+      {
+        ...recommendedFoodItem,
+        id: "soon-1",
+        name: "Knäckebröd",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(6),
+      },
+      {
+        ...recommendedItem,
+        id: "soon-2",
+        name: "Vatten på flaska",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(13),
+      },
+      {
+        ...recommendedItem,
+        id: "ok-1",
+        name: "Vattenreserv",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(45),
+      },
+      {
+        ...recommendedItem,
+        id: "missing-1",
+        name: "Saknad vara",
+        isOwned: false,
+        expirationDate: dateOffsetFromToday(-15),
+      },
+      { ...recommendedItem, id: "no-date-1", name: "Filt", isOwned: true },
+    ])
+    mountPage()
+
+    const reviewSection = screen.getByRole("region", { name: "Utgångsdatum att se över" })
+
+    await waitFor(() => {
+      expect(within(reviewSection).getByText("4", { selector: "span" })).toBeTruthy()
+    })
+    expect(within(reviewSection).getByText(/saker att se över/)).toBeTruthy()
+    expect(screen.getAllByText("2", { selector: "p.text-3xl" })).toHaveLength(2)
+    expect(screen.getByText("utgångna varor")).toBeTruthy()
+    expect(screen.getByText("varor går snart ut")).toBeTruthy()
+
+    const reviewDetails = screen.getByText("Visa varor att se över").closest("details")
+    expect(reviewDetails).not.toBeNull()
+    expect((reviewDetails as HTMLDetailsElement).open).toBe(false)
+    expect(
+      within(reviewDetails as HTMLElement).getByRole("heading", {
+        name: "Utgången (2)",
+      })
+    ).toBeTruthy()
+  })
+
+  it("shows expired and soon-to-expire items in separate groups when expanded", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      {
+        ...recommendedFoodItem,
+        id: "expired-later",
+        name: "Havregryn",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(-15),
+      },
+      {
+        ...recommendedFoodItem,
+        id: "expired-earlier",
+        name: "Konserverade tomater",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(-18),
+      },
+      {
+        ...recommendedFoodItem,
+        id: "soon-later",
+        name: "Vatten på flaska",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(13),
+      },
+      {
+        ...recommendedFoodItem,
+        id: "soon-earlier",
+        name: "Knäckebröd",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(6),
+      },
+    ])
+    mountPage()
+
+    const summary = await screen.findByText("Visa varor att se över")
+    fireEvent.click(summary)
+
+    const reviewDetails = summary.closest("details") as HTMLDetailsElement
+    const reviewContent = within(reviewDetails)
+
+    expect(reviewContent.getByRole("heading", { name: "Utgången (2)" })).toBeTruthy()
+    expect(reviewContent.getByRole("heading", { name: "Går snart ut (2)" })).toBeTruthy()
+
+    const expiredSection = reviewContent
+      .getByRole("heading", {
+        name: "Utgången (2)",
+      })
+      .closest("section") as HTMLElement
+    const soonSection = reviewContent
+      .getByRole("heading", {
+        name: "Går snart ut (2)",
+      })
+      .closest("section") as HTMLElement
+
+    const expiredItems = within(expiredSection).getAllByRole("listitem")
+    const soonItems = within(soonSection).getAllByRole("listitem")
+
+    expect(expiredItems.map((item) => item.textContent)).toEqual([
+      expect.stringContaining("Konserverade tomater"),
+      expect.stringContaining("Havregryn"),
+    ])
+    expect(soonItems.map((item) => item.textContent)).toEqual([
+      expect.stringContaining("Knäckebröd"),
+      expect.stringContaining("Vatten på flaska"),
+    ])
+  })
+
+  it("shows an empty message when no owned items need review", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      { ...recommendedItem, isOwned: false, expirationDate: dateOffsetFromToday(-15) },
+      { ...recommendedItem, id: "no-date", isOwned: true },
+      { ...recommendedItem, id: "ok", isOwned: true, expirationDate: dateOffsetFromToday(45) },
+    ])
+    mountPage()
+
+    const reviewSection = screen.getByRole("region", { name: "Utgångsdatum att se över" })
+    const totalCount = within(reviewSection).getByText(
+      (_, element) =>
+        element?.tagName === "P" &&
+        element.textContent?.replace(/\\s+/g, " ").trim() === "0 saker att se över"
+    )
+    expect(totalCount).toBeTruthy()
+    const summary = screen.getByText("Visa varor att se över")
+    fireEvent.click(summary)
+    expect(screen.getByText("Det finns inga varor att se över just nu.")).toBeTruthy()
   })
 })
 
@@ -187,8 +418,8 @@ describe("CrisisKitPage category sections", () => {
       /^(Mat|Dricksvatten|Toalett och hygien|Värme|Kommunikation|Läkemedel|Betalningar|Husdjur|Övrigt)$/
     )
 
-    expect(document.querySelectorAll("details")).toHaveLength(9)
-    expect(document.querySelectorAll("summary")).toHaveLength(9)
+    expect(document.querySelectorAll("details:not(.expiration-review)")).toHaveLength(9)
+    expect(document.querySelectorAll("details:not(.expiration-review) > summary")).toHaveLength(9)
     expect(categories.length).toBeGreaterThanOrEqual(9)
 
     const waterCategory = screen.getByText("Dricksvatten", { selector: "h2" })
@@ -206,7 +437,7 @@ describe("CrisisKitPage category sections", () => {
     mountPage()
 
     const heading = await screen.findByRole("heading", { name: "Dricksvatten", level: 2 })
-    const summaries = document.querySelectorAll("summary")
+    const summaries = document.querySelectorAll("details:not(.expiration-review) > summary")
 
     expect(heading.textContent).toBe("Dricksvatten")
     expect(heading.querySelector("svg")).toBeNull()
@@ -409,13 +640,18 @@ describe("CrisisKitPage custom-item editing", () => {
 describe("CrisisKitPage custom-item deletion", () => {
   it("deletes a custom item through the service and removes it from the page", async () => {
     vi.mocked(getCrisisKitItems).mockResolvedValue([customItem])
-    vi.spyOn(window, "confirm").mockReturnValue(true)
 
     mountPage()
 
     expect(await screen.findByRole("heading", { name: "Ficklampa" })).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Ta bort" }))
+
+    const dialog = screen.getByRole("dialog")
+
+    expect(within(dialog).getByText('Vill du ta bort "Ficklampa" från din krislåda?')).toBeTruthy()
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ja, ta bort" }))
 
     await waitFor(() => {
       expect(deleteCustomCrisisKitItem).toHaveBeenCalledWith(customItem.id)
@@ -429,13 +665,18 @@ describe("CrisisKitPage custom-item deletion", () => {
   it("keeps the item visible when deletion fails", async () => {
     vi.mocked(getCrisisKitItems).mockResolvedValue([customItem])
     vi.mocked(deleteCustomCrisisKitItem).mockRejectedValueOnce(new Error("Storage failed"))
-    vi.spyOn(window, "confirm").mockReturnValue(true)
 
     mountPage()
 
     expect(await screen.findByRole("heading", { name: "Ficklampa" })).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Ta bort" }))
+
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Ja, ta bort",
+      })
+    )
 
     expect((await screen.findByRole("alert")).textContent).toContain("Storage failed")
     expect(screen.getByRole("heading", { name: "Ficklampa" })).toBeTruthy()
