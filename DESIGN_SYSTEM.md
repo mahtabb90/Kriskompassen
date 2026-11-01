@@ -235,7 +235,7 @@ Content cards represent units of crisis information. They are clean, distinct su
 
 ### 5.2 The Signature Crisis Indicator Bar
 
-The signature top accent bar applies specifically to **crisis-information cards (`CrisisCard`) and crisis-detail surfaces (`DetailedCrisisCard`)**, not to every generic card, panel, empty state, or settings container in the application:
+The signature top accent bar applies specifically to **crisis-information cards (`CrisisCard`) and crisis-detail surfaces (`DetailedCrisisCard`)**, not to every generic card, panel, empty state, or settings container in the application. The one other use is the white content cards of the static "Lugn i kris" page (section 5.4):
 
 ```html
 <div className="flex h-1.5 w-full" aria-hidden="true">
@@ -271,6 +271,18 @@ Crisis-information overview cards (`CrisisCard`) and the emergency-kit category 
 | Payments | payment card | none | Betalningar |
 | Pets | paw | none | Husdjur |
 | Other / unknown | generic box | any other ID | Övrigt |
+
+### 5.4 Calm Page Motif and Panels ("Lugn i kris")
+
+The static `/lugn-i-kris` page uses a few decorative elements. They add no new colours, gradients or animation.
+
+- **Signature bar:** the hero, advice and sources cards carry the same blue/amber top bar as section 5.2 (without the hover colour), on an `overflow-hidden` card with padding on an inner element. The emergency panel does not.
+- **Hero:** a white content card (section 5.1) with the `h1`, a one-line `p` (`text-xl font-semibold text-blue-900`) and the lead paragraph. `CalmHeroMotif` sits beside the text from `sm`. On mobile it sits directly below the text with a tight `gap-3` and is smaller (`size-20`, `sm:size-40`) to keep the hero compact.
+- **Hero motif:** an inline SVG of two light rings (`text-blue-200`), one darker inner ring with a gentle wave (`text-blue-900`) and one small amber dot (`text-amber-400`). Keep it to three rings so it reads as stillness, not a target. It is `aria-hidden`, `focusable="false"`, titleless and not animated.
+- **Emergency panel:** `rounded-2xl border-2 border-blue-900 bg-blue-50` with an `h2` label ("Vid akut fara") and plain text. It uses no red and no warning triangle, which stay reserved for VMA (section 2.4.1). The visible label, not colour, carries the meaning. It contains no link or control.
+- **Advice cards:** section 5.1 cards. Each `h2` is preceded by a `CalmIcon` (same 24×24, 1.8 stroke, `currentColor` style as section 5.3, `text-blue-900`, `aria-hidden`) in a 48px `rounded-full bg-blue-50` circle. `CalmIcon` is separate from `CrisisIcon`, so the article and kit mapping in section 5.3 is unaffected.
+- **Divider:** a decorative row of two thin `bg-blue-200` lines around a `size-2` amber dot, placed before the sources section and hidden from assistive technology.
+- **Amber:** only the hero dot and the divider dot. Amber stays a small accent and never signals urgency.
 
 ---
 
@@ -450,7 +462,7 @@ KrisKompassen shows the same primary links, from the shared `navigationItems` li
 ### 7.2 Mobile Menu Dialog
 
 - A native modal `<dialog>` named **Meny** covers the whole viewport, including the header and the VMA notice, on a white surface with safe-area padding. The dialog element itself is fullscreen (`.mobile-menu-dialog`: fixed, `inset: 0`, no margin or border, `width: 100%`, `height`/`min-height: 100dvh`, no max-width/max-height), not only its backdrop. A **Stäng menyn** outlined button (48×48px minimum) sits in a fixed top row beside the heading; the link list below scrolls internally (`overscroll-contain`), so short screens and enlarged text remain usable. When the browser offers installation, a fixed footer below the list holds the **Installera app** button (section 6.6).
-- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Min info). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
+- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Min info, Lugn i kris). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
 - The modal makes the page inert, locks page scrolling and wraps Tab at its boundaries. Escape and **Stäng menyn** return focus to the Meny button, as does selecting the current route. Selecting another route closes the menu and leaves focus to the layout page-heading focus. Crossing `48rem` while open closes it without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating). There is no animation.
 
 ---
