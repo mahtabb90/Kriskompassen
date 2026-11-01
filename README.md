@@ -214,10 +214,14 @@ For configuration, alternative ports and further development instructions, see t
 ## Navigation and accessibility
 
 The main navigation links to **Hem** (Home), **Krisinformation** (Crisis information),
-**Min krislåda** (My emergency kit) and **Min info** (My information), and clearly marks the
-current page. On phones, the bottom menu scrolls sideways when its links do not fit; users
-can swipe or select the visible left/right arrows to reach more pages. Larger screens keep
-the navigation above the page content.
+**Min krislåda** (My emergency kit), **Skyddsrum** (Shelters), **Min info** (My information)
+and **Lugn i kris** (Calm in a crisis), and clearly marks the current page. On phones, a
+**Meny** button opens a full-screen menu with the same links. Larger screens keep the
+navigation above the page content.
+
+**Lugn i kris** is a short, static page with simple advice for staying focused during a
+crisis, based on 1177, Krisinformation.se and SOS Alarm. It works offline, stores nothing and
+does not replace healthcare, professional support or official emergency instructions.
 
 Keyboard navigation includes a link to skip directly to the page content and visible focus
 indicators. Pages have descriptive headings and titles.

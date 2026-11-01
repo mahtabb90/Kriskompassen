@@ -84,6 +84,7 @@ describe("MobileMenu", () => {
       "Min krislåda",
       "Skyddsrum",
       "Min info",
+      "Lugn i kris",
     ])
     expect(links.map((link) => link.getAttribute("href"))).toEqual(
       navigationItems.map((item) => item.to)
@@ -181,7 +182,7 @@ describe("MobileMenu", () => {
   it("wraps Tab and Shift+Tab between the first and last control", () => {
     const { dialog } = openMenu()
     const first = within(dialog).getByRole("button", { name: "Stäng menyn" })
-    const last = within(dialog).getByRole("link", { name: "Min info" })
+    const last = within(dialog).getByRole("link", { name: "Lugn i kris" })
     last.focus()
     fireEvent.keyDown(last, { key: "Tab" })
     expect(document.activeElement).toBe(first)
@@ -272,7 +273,7 @@ describe("MobileMenu install button", () => {
     const { dialog } = openMenu()
     const install = within(dialog).getByRole("button", { name: "Installera app" })
     const first = within(dialog).getByRole("button", { name: "Stäng menyn" })
-    const lastLink = within(dialog).getByRole("link", { name: "Min info" })
+    const lastLink = within(dialog).getByRole("link", { name: "Lugn i kris" })
     expect(
       lastLink.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy()
