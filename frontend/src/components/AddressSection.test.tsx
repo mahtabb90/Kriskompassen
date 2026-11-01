@@ -73,6 +73,7 @@ describe("AddressSection", () => {
 
     expect(screen.getByText("Testgatan 1, Exempelstad")).toBeTruthy()
     expect(screen.getByText("Angiven manuellt")).toBeTruthy()
+    expect(screen.queryByText(/Lägg till kommun eller postnummer och sök igen/)).toBeNull()
     expect(onResolved).toHaveBeenCalledExactlyOnceWith({
       text: "Testgatan 1, Exempelstad",
       source: "manual",
@@ -123,11 +124,13 @@ describe("AddressSection", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("heading", { name: /Flera adresser hittades/ })
     )
+    expect(screen.getByText(/Lägg till kommun eller postnummer och sök igen/)).toBeTruthy()
     const candidateButton = screen.getByRole("button", { name: "Storgatan 1, Uppsala" })
 
     fireEvent.click(candidateButton)
 
     expect(screen.queryByRole("heading", { name: /Flera adresser hittades/ })).toBeNull()
+    expect(screen.queryByText(/Lägg till kommun eller postnummer och sök igen/)).toBeNull()
     expect(screen.getByText("Storgatan 1, Uppsala")).toBeTruthy()
     expect(onResolved).toHaveBeenCalledExactlyOnceWith({
       text: "Storgatan 1, Uppsala",
@@ -139,6 +142,25 @@ describe("AddressSection", () => {
     })
   })
 
+  it("shows the same guidance text no matter how many candidates are listed (2-5)", async () => {
+    fetchMock.mockResolvedValue(
+      searchResponse(
+        Array.from({ length: 5 }, (_, index) => ({
+          address: `Storgatan 1, Ort ${index + 1}`,
+          municipality: `Ort ${index + 1} kommun`,
+          lat: 59 + index,
+          lon: 18 + index,
+        }))
+      )
+    )
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+
+    await confirmManualAddress("Storgatan 1")
+
+    expect(screen.getAllByRole("button", { name: /Storgatan 1, Ort/ })).toHaveLength(5)
+    expect(screen.getByText(/Lägg till kommun eller postnummer och sök igen/)).toBeTruthy()
+  })
+
   it("shows an accessible error when the address search finds no match", async () => {
     fetchMock.mockResolvedValue(searchResponse([]))
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
@@ -146,6 +168,7 @@ describe("AddressSection", () => {
     await confirmManualAddress("Obefintliggatan 999")
 
     expect(screen.getByRole("alert").textContent).toContain("Ingen adress hittades")
+    expect(screen.queryByText(/Lägg till kommun eller postnummer och sök igen/)).toBeNull()
   })
 
   it("fetches and labels an automatically retrieved address as approximate", async () => {

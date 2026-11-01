@@ -221,6 +221,9 @@ function AddressSection({
           >
             Flera adresser hittades — välj rätt:
           </h3>
+          <p className="text-sm text-slate-600">
+            Hittar du inte din adress i listan? Lägg till kommun eller postnummer och sök igen.
+          </p>
           <ul className="flex flex-col gap-2">
             {candidates.map((candidate, index) => (
               <li key={candidateKey(candidate, index)}>
