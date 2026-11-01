@@ -12,11 +12,12 @@ from fastapi.responses import JSONResponse
 
 from src.api import crisis, geocode, health, shelters, vma
 from src.core.config import Settings
-from src.core.errors import CrisisError, UpstreamError
+from src.core.errors import CrisisError, ShelterDataError, UpstreamError
 from src.models.crisis import CrisisErrorDetail, CrisisErrorResponse
 from src.models.errors import ErrorDetail, ErrorResponse
+from src.models.shelter import ShelterDataErrorDetail, ShelterDataErrorResponse
 from src.services.geocode_cache import GeocodeCache, GeocodeSearchCache, NominatimThrottle
-from src.services.shelters_cache import ShelterAreaCache
+from src.services.shelters import LocalShelterStore
 from src.services.vma_cache import VmaCache
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         description=(
             "Serves curated crisis preparedness articles, retrieves VMA information from "
             "Sveriges Radio, reverse-geocodes positions through OpenStreetMap Nominatim and "
-            "finds the nearest civil-defense shelters through MCF's open shelter data."
+            "finds the nearest civil-defense shelters from a bundled snapshot of MCF's open "
+            "shelter data."
         ),
         lifespan=lifespan,
     )
@@ -67,9 +69,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_queue_depth=app_settings.geocode_max_queue_depth,
         lock=nominatim_lock,
     )
-    application.state.shelter_cache = ShelterAreaCache(
-        ttl_seconds=app_settings.shelters_cache_ttl_seconds,
-    )
+    application.state.shelter_store = LocalShelterStore()
     application.add_middleware(
         CORSMiddleware,
         allow_origins=app_settings.cors_origins,
@@ -94,6 +94,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """Returns readable article failures without exposing local files or their contents."""
         logger.warning("Crisis request failed: %s", error.code)
         body = CrisisErrorResponse(error=CrisisErrorDetail(code=error.code, message=error.message))
+        return JSONResponse(
+            status_code=error.status_code,
+            content=body.model_dump(),
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @application.exception_handler(ShelterDataError)
+    async def handle_shelter_data_error(_request: Request, error: ShelterDataError) -> JSONResponse:
+        """Returns readable shelter-data failures without exposing the local file's path."""
+        logger.warning("Shelter data request failed: %s", error.code)
+        body = ShelterDataErrorResponse(
+            error=ShelterDataErrorDetail(code=error.code, message=error.message)
+        )
         return JSONResponse(
             status_code=error.status_code,
             content=body.model_dump(),

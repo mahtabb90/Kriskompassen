@@ -18,17 +18,17 @@ function Pathname() {
 }
 
 function mountMenu(initialPath = "/") {
-  const triggerRef = createRef<HTMLButtonElement>()
+  const footerRef = createRef<HTMLElement>()
   const view = render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <MobileMenu triggerRef={triggerRef} />
+      <MobileMenu footerRef={footerRef} />
       <Pathname />
       <h1 id="page-heading" tabIndex={-1}>
         Sida
       </h1>
     </MemoryRouter>
   )
-  return { ...view, trigger: screen.getByRole("button", { name: "Meny" }), triggerRef }
+  return { ...view, trigger: screen.getByRole("button", { name: "Meny" }), footerRef }
 }
 
 function openMenu(initialPath = "/") {
@@ -115,6 +115,14 @@ describe("MobileMenu", () => {
     act(() => dialog.close())
     expect(trigger.getAttribute("aria-expanded")).toBe("false")
     expect(document.activeElement).toBe(trigger)
+  })
+
+  it("places the trigger in the footer landmark and keeps the dialog outside it", () => {
+    const { trigger, dialog, footerRef } = openMenu()
+    const footer = screen.getByRole("navigation", { name: "Huvudmeny", hidden: true })
+    expect(footerRef.current).toBe(footer)
+    expect(footer.contains(trigger)).toBe(true)
+    expect(footer.contains(dialog)).toBe(false)
   })
 
   it("can be reopened after closing", () => {

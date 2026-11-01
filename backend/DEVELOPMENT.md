@@ -3,9 +3,12 @@
 The FastAPI backend fetches VMA from Sveriges Radio's dedicated v3 API through a short shared
 in-memory cache. The frontend service validates public Swedish CAP records and maps them to a
 shared presentation model. A shared banner shows the most recent active warning. The frontend
-polls our backend while the app is open; persistent VMA storage remains separate work;
-curated preparedness articles are served from a bundled JSON file through their own API. The user has confirmed working live integration;
-the verification record below distinguishes that result from active-warning rendering.
+polls our backend while the app is open; VMA is not stored persistently.
+Curated preparedness articles are served from a bundled JSON file through their own API,
+and shelter information is served from a bundled snapshot of MCF's register. A backend database
+is deferred for now and may be reconsidered in the future. The user has confirmed working live
+VMA integration; the verification record below distinguishes that result from active-warning
+rendering.
 
 ## Separate information sources
 
@@ -13,6 +16,7 @@ the verification record below distinguishes that result from active-warning rend
 | --- | --- | --- |
 | VMA warnings, updates and cancellations | Sveriges Radio VMA API v3 | Implemented through the backend and frontend service |
 | Preparedness articles | Manually maintained summaries attributed to Krisinformation.se | File-backed article API; no automatic source fetching |
+| Civil-defense shelters | Myndigheten för civilt försvar (MCF), open OGC API Features | File-backed snapshot API and browser-local offline cache; refreshed by a manual script, no automatic daily sync yet |
 | General crisis news | Krisinformation.se news API v3 | Chosen source for future work; no news fetching service or route is implemented |
 
 Do not feed news records into the VMA validator or silently fall back to news if VMA fetching fails.
@@ -20,6 +24,47 @@ The former assumption that Krisinformation VMA records have the news format is n
 The [Krisinformation open-data page](https://www.krisinformation.se/om-krisinformation.se/oppen-data/)
 documents general news. Its [publication policy](https://www.krisinformation.se/om-krisinformation/publiceringsdokument-for-krisinformation.se/)
 says its own VMA information is updated through an API from Sveriges Radio.
+
+## Storage and shelter caching
+
+The current backend uses static deployment files for curated content and the shelter snapshot,
+and on-demand requests for VMA and geocoding. There is no backend database, database connection
+configuration, migration step or writable server-side shelter store. Database integration is
+deferred and can be reconsidered in future work. This does not change the frontend's existing IndexedDB
+storage or the account-free product decision.
+
+- **Curated content:** `src/data/crisis.json` is shipped with the backend and read on demand.
+  Content updates follow the file-review and deployment process below; runtime requests never
+  write to this file.
+- **Shelter lookups:** `GET /api/v1/shelters/nearest?lat=&lon=` ranks the bundled
+  `src/data/shelters.json` snapshot by distance and returns the five nearest as
+  `{shelters, source, bboxRadiusMetersUsed}`, without contacting MCF. `scripts/fetch_shelters.py`
+  refreshes the file manually; there is no scheduled synchronization and the register is not
+  imported into a database. See [Civil-defense shelters](#civil-defense-shelters).
+- **In-memory snapshot:** `LocalShelterStore` keeps the parsed snapshot in memory after its first
+  successful load. State is per instance and is lost on cold start, when the unchanged file is
+  loaded again. Browser responses use `Cache-Control: no-store`; this is separate from the app's
+  explicit IndexedDB cache.
+- **Device-local shelter cache:** the frontend validates fetched shelter data and writes the
+  shelter records to `shelterCache` in IndexedDB, adding `fetchedAt`. A later fetch overwrites
+  an existing record with the same ID. Only fetched records are cached; there is no download of
+  the complete register, automatic expiry or periodic synchronization of this local cache.
+  Online lookups rank the five nearest records from the current response; offline lookups
+  rank records cached from previous searches. Results are limited to previously fetched areas,
+  so offline results do not establish complete coverage or current source data. `fetchedAt` is
+  when the device received the record, not the snapshot's age.
+- **Address-save prefetch:** saving an address with coordinates starts a best-effort online
+  shelter lookup and writes its result to the same local cache. A failed prefetch never blocks
+  or fails the address save.
+- **Saved shelters:** bookmarks are stored separately in IndexedDB's `savedShelters` table,
+  with ID, fallback location/coordinates, save time and an optional short comment. Shelter
+  detail views read `shelterCache` by ID; there is no single-shelter backend endpoint. Local
+  bookmarks do not create a server record or sync to an account.
+
+The browser-local schema is version 5 in `frontend/src/db/db.ts`: `crisisItems`,
+`crisisKitItems`, `savedAddresses`, `shelterCache` and `savedShelters`. See `AGENTS.md` §9 for
+local personal-data rules and §10 before changing this schema or revisiting a backend database.
+VMA and geocoding also use temporary per-instance caches, described in their sections below.
 
 ## Curated preparedness articles
 
@@ -99,6 +144,48 @@ qualifications that must also survive summarisation.
 The Python runtime includes project files in its function bundle; see
 [Vercel's Python bundling documentation](https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled).
 Do not add runtime writes to this deployment file as a substitute for durable database storage.
+
+## Civil-defense shelters
+
+MVP decision: `src/data/shelters.json` is a single static, committed snapshot of MCF's full
+national shelter register (civil-defense shelters, "skyddsrum") — the same deployment-bundled
+file pattern as `crisis.json` above, not a live call per search. `src/services/shelters.py`
+reads it once per process (`LocalShelterStore`, cached in memory after the first successful
+load - unlike `crisis.py`, which re-reads its small file every request, because this snapshot
+has 60,000+ records, too expensive to re-parse every call) and ranks shelters by Haversine
+distance from the requested position. `GET /api/v1/shelters/nearest?lat=&lon=` returns the five
+closest. Imports and application startup do not read the file, so a data error does not disable
+unrelated API endpoints; a missing or invalid snapshot raises
+`500 {"error":{"code":"shelters_data_unavailable","message":"Skyddsrumsdata kunde inte läsas."}}`
+rather than falling back to a live MCF call. No database or runtime write is involved.
+
+**There is no automatic refresh yet.** The snapshot is refreshed by running
+`backend/scripts/fetch_shelters.py` manually and committing the result — this is a deliberate,
+scoped-down MVP decision, not an oversight; building a scheduled daily sync is separate, planned
+future work (see the team's backlog item "Uppdatering av lokal skyddsrumsfil" for the research
+already done: pagination, CSV format, Vercel Blob vs. a committed file + GitHub Action). The data
+visibly ages between manual runs; `src/data/shelters.meta.json` (also written by the script, not
+read by the app) records `fetchedAt`, `count` and `sourceUrl` for traceability. The team decided
+this staleness does not need to be surfaced to end users for the MVP.
+
+The script pages through MCF's open [OGC API Features collection](https://inspire.mcf.se/skyddsrum/ogc/features/v1/collections/US_civilProtectionSite/items)
+(the modern counterpart to the WFS endpoint the earlier live lookup used) using `startIndex`,
+since the server caps each page at roughly 10,000 features regardless of the requested `limit`.
+It requests the `text/csv` output format rather than JSON/GeoJSON: a 10,000-feature page reliably
+completes as CSV, but the same page size as JSON intermittently aborts mid-response — a
+server-side quirk observed directly against this endpoint, not a client issue. The dataset's
+[Geodataportalen metadata record](https://www.geodata.se/geodataportalen/srv/swe/catalog.search#/metadata/6341813c-bfa3-45df-8234-13cf583bf533)
+states no access or reuse restrictions apply. The script's fetch/mapping logic is written to be
+reused as-is by the future scheduled-sync job, not thrown away.
+
+### Refreshing the shelter snapshot
+
+1. `cd backend && python scripts/fetch_shelters.py` (needs network access to `inspire.mcf.se`;
+   takes roughly 15-30 seconds for the whole national register).
+2. Confirm `src/data/shelters.json` and `src/data/shelters.meta.json` both updated.
+3. Run the backend checks from this guide (tests, Ruff) and spot-check a few coordinates against
+   `GET /api/v1/shelters/nearest` in `/docs`.
+4. Commit both files together, mentioning the new `fetchedAt` date in the commit message.
 
 ## Official VMA API and verification
 
@@ -296,8 +383,9 @@ Settings read process environment variables, not `.env` files. `.env.example` li
 | `KRISKOMPASSEN_CORS_ORIGINS` | `["http://localhost:5173","http://127.0.0.1:5173"]` | Exact allowed browser origins |
 | `VITE_API_BASE_URL` | `http://localhost:8000` | Public backend base URL |
 
-The frontend's `src/config/apiConfig.ts` configures `/api/v1/crisis`, `/api/v1/vmas` and
-`/api/v1/geocode`, with a 10,000 ms total deadline.
+The frontend's `src/config/apiConfig.ts` configures `/api/v1/crisis`, `/api/v1/vmas`,
+`/api/v1/geocode`, `/api/v1/geocode/search` and `/api/v1/shelters/nearest`, with a 10,000 ms
+total deadline per request.
 The shorter upstream deadline leaves time to return a controlled backend error. Credentials are
 not needed for SR; do not add them. CORS permits GET with Accept, without browser credentials.
 
@@ -365,6 +453,7 @@ The router adds attribution from backend configuration, ignoring any upstream `s
 | `GET /health` | `200 {"status":"ok"}`, without contacting SR |
 | `GET /api/v1/vmas` | `200 {"data":{"timestamp":"...","alerts":[],"source":{...}},"checkedAt":"...","stale":false}` |
 | `GET /api/v1/geocode?lat=&lon=` | `200 {"found":true\|false,"address":"...","municipality":"...","county":"...","lat":...,"lon":...,"message":"...","source":{...}}` |
+| `GET /api/v1/shelters/nearest?lat=&lon=` | `200 {"shelters":[],"source":{...},"bboxRadiusMetersUsed":...}` from the bundled snapshot, or `500 shelters_data_unavailable` |
 | `GET /docs` | Interactive backend API documentation |
 | `GET /openapi.json` | Backend API schema |
 

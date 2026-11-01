@@ -37,6 +37,11 @@ The project is in an early stage of development.
 
 Our initial focus is to establish the project structure and a working development-to-deployment workflow. Features, including offline support, will be developed incrementally based on priorities and feedback.
 
+A backend database is deferred for now and may be reconsidered in the future. Preparedness
+content is maintained in static files shipped with the backend; shelter information is fetched
+on demand and cached for reuse. Saved information remains local to the user's device in
+IndexedDB.
+
 The current version includes a home page, crisis preparedness summaries and detailed articles
 based on manually maintained preparedness information from Krisinformation.se. Online articles
 are delivered by the project’s server; this is not an automatic news feed. Users can save and
@@ -67,12 +72,14 @@ and are the starting point for finding nearby shelters, below.
 
 On the "Skyddsrum" page, users see the 5 civil-defense shelters nearest to their active address,
 sorted closest first. Shelter data comes from Myndigheten för civilt försvar (MCF), the Swedish
-authority responsible for the national shelter register, through its open WFS / OGC API Features
-service (GeoJSON, delivered directly in WGS84 coordinates); the dataset's
+authority responsible for the national shelter register; the dataset's
 [Geodataportalen metadata record](https://www.geodata.se/geodataportalen/srv/swe/catalog.search#/metadata/6341813c-bfa3-45df-8234-13cf583bf533)
-states no access or reuse restrictions apply. The backend widens its search radius around the
-active address until enough shelters are found, and shelters fetched this way are cached on the
-device so a previously searched area remains available offline. Since MCF's source data has no
+states no access or reuse restrictions apply. The backend serves this from a bundled local
+snapshot of MCF's full register (`backend/src/data/shelters.json`, refreshed manually for now —
+see `backend/DEVELOPMENT.md`), not a live call per search, so results stay fast and available
+even if MCF's own service is slow or unreachable; an automatic daily refresh is planned but not
+built yet. Nearest-shelter results fetched this way are also cached on the device so a
+previously searched area remains available offline. Since MCF's source data has no
 postal address, each shelter is shown by its free-text location description together with the
 active address's municipality, worded as a location description rather than a verified address.
 MCF genuinely registers several separate shelters under one shared property - sometimes with the
@@ -86,6 +93,10 @@ Saving a geolocated address also fetches and caches its nearest shelters in the 
 away, without the user needing to visit "Skyddsrum" first. This runs silently and never blocks or
 fails the address save itself; it exists so that addresses saved ahead of a crisis already have
 their nearby shelters available offline even if MCF's service later becomes unreachable.
+
+Fetched shelter records are cached on the device with a fetch timestamp and refreshed when the
+same shelter is fetched again. The backend keeps only a temporary in-memory cache of nearby
+search results; it does not maintain a persistent copy of the national shelter register.
 
 ## 🛠️ Tech stack
 
