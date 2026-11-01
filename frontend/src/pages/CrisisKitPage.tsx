@@ -108,6 +108,24 @@ function CrisisKitPage() {
     )
   }
 
+  async function handleNotNeededChange(item: CrisisKitItemType, isNotNeeded: boolean) {
+    setAddItemMessage(null)
+
+    await updateCrisisKitItem(item.id, { isNotNeeded })
+
+    setItems((currentItems) =>
+      currentItems.map((currentItem) =>
+        currentItem.id === item.id
+          ? {
+              ...currentItem,
+              isNotNeeded,
+              isOwned: isNotNeeded ? false : currentItem.isOwned,
+            }
+          : currentItem
+      )
+    )
+  }
+
   async function handleExpirationDateSave(item: CrisisKitItemType, expirationDate: string | null) {
     setAddItemMessage(null)
 
@@ -187,7 +205,7 @@ function CrisisKitPage() {
       </h1>
 
       <p className="mt-4 max-w-prose text-lg leading-relaxed text-slate-700">
-        Håll koll på vad du har hemma inför en kris. Markera vad du har och lägg till egna saker.
+        Håll koll på vad du har hemma inför en kris. Markera vad du har, vad du inte behöver och lägg till egna saker.
       </p>
       <p className="mt-2 max-w-prose text-lg leading-relaxed text-slate-700">
         Ange utgångsdatum för att hålla koll på när saker behöver kontrolleras eller bytas ut.
@@ -628,6 +646,7 @@ function CrisisKitPage() {
                                     item={item}
                                     headingLevel={4}
                                     onOwnershipChange={handleOwnershipChange}
+                                    onNotNeededChange={handleNotNeededChange}
                                     onExpirationDateSave={handleExpirationDateSave}
                                     onCustomItemSave={handleCustomItemSave}
                                     onCustomItemDelete={handleCustomItemDelete}
@@ -647,6 +666,7 @@ function CrisisKitPage() {
                                   key={item.id}
                                   item={item}
                                   onOwnershipChange={handleOwnershipChange}
+                                  onNotNeededChange={handleNotNeededChange}
                                   onExpirationDateSave={handleExpirationDateSave}
                                   onCustomItemSave={handleCustomItemSave}
                                   onCustomItemDelete={handleCustomItemDelete}
@@ -669,6 +689,7 @@ function CrisisKitPage() {
                             item={item}
                             headingLevel={4}
                             onOwnershipChange={handleOwnershipChange}
+                            onNotNeededChange={handleNotNeededChange}
                             onExpirationDateSave={handleExpirationDateSave}
                             onCustomItemSave={handleCustomItemSave}
                             onCustomItemDelete={handleCustomItemDelete}

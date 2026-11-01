@@ -119,7 +119,11 @@ describe("CrisisKitPage ownership changes", () => {
     vi.mocked(getCrisisKitItems).mockResolvedValue([itemWithDate])
     mountPage()
 
-    fireEvent.click(await screen.findByRole("checkbox"))
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Jag har den här saken",
+      })
+    )
     fireEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: "Ja, markera som saknas",
@@ -146,7 +150,11 @@ describe("CrisisKitPage ownership changes", () => {
     vi.mocked(getCrisisKitItems).mockResolvedValue([customItemWithDate])
     mountPage()
 
-    fireEvent.click(await screen.findByRole("checkbox"))
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Jag har den här saken",
+      })
+    )
     fireEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: "Ja, markera som saknas",
@@ -162,6 +170,112 @@ describe("CrisisKitPage ownership changes", () => {
       )
     })
     expect(updateCustomCrisisKitItemOwnership).not.toHaveBeenCalled()
+  })
+
+  it("marks a recommended item as not needed after confirmation", async () => {
+    const ownedItem = {
+      ...recommendedItem,
+      isOwned: true,
+    }
+    vi.mocked(getCrisisKitItems).mockResolvedValue([ownedItem])
+    mountPage()
+
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Behövs inte",
+      })
+    )
+
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Ja, markera som Behövs inte",
+      })
+    )
+
+    await waitFor(() => {
+      expect(updateCrisisKitItem).toHaveBeenCalledWith(ownedItem.id, {
+        isNotNeeded: true,
+      })
+    })
+
+    expect(await screen.findByText("Markerad: Behövs inte")).toBeTruthy()
+    expect(screen.getByText("Deaktiverad – räknas inte med i beredskapsöversikten.")).toBeTruthy()
+
+    expect(
+      (
+        screen.getByRole("checkbox", {
+          name: "Jag har den här saken",
+        }) as HTMLInputElement
+      ).checked
+    ).toBe(false)
+  })
+
+  it("restores an item marked as not needed", async () => {
+    const excludedItem = {
+      ...recommendedItem,
+      isNotNeeded: true,
+      isOwned: false,
+    }
+    vi.mocked(getCrisisKitItems).mockResolvedValue([excludedItem])
+    mountPage()
+
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Markerad: Behövs inte",
+      })
+    )
+
+    await waitFor(() => {
+      expect(updateCrisisKitItem).toHaveBeenCalledWith(excludedItem.id, {
+        isNotNeeded: false,
+      })
+    })
+
+    expect(
+      await screen.findByRole("checkbox", {
+        name: "Behövs inte",
+      })
+    ).toBeTruthy()
+
+    expect(screen.queryByText("Deaktiverad – räknas inte med i beredskapsöversikten.")).toBeNull()
+
+    expect(
+      (
+        screen.getByRole("checkbox", {
+          name: "Jag har den här saken",
+        }) as HTMLInputElement
+      ).checked
+    ).toBe(false)
+  })
+
+  it("displays excluded items as deactivated with ownership disabled", async () => {
+    const excludedItem = {
+      ...recommendedItem,
+      isOwned: false,
+      isNotNeeded: true,
+    }
+
+    vi.mocked(getCrisisKitItems).mockResolvedValue([excludedItem])
+    mountPage()
+
+    expect(await screen.findByText("Deaktiverad")).toBeTruthy()
+    expect(screen.queryByText("Saknas")).toBeNull()
+
+    expect(
+      (
+        screen.getByRole("checkbox", {
+          name: "Jag har den här saken",
+        }) as HTMLInputElement
+      ).disabled
+    ).toBe(true)
+
+    expect(
+      (
+        screen.getByRole("checkbox", {
+          name: "Markerad: Behövs inte",
+        }) as HTMLInputElement
+      ).disabled
+    ).toBe(false)
   })
 })
 
