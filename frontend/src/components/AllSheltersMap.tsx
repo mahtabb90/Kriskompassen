@@ -420,7 +420,10 @@ function AllSheltersMap({
     <div
       role="group"
       aria-label="Karta över alla skyddsrum i Sverige"
-      className="relative h-[70vh] min-h-96 w-full overflow-hidden rounded-2xl border border-blue-200/80"
+      // isolate gives this wrapper its own stacking context, so the z-10 hint below only
+      // competes against its own siblings here, never against unrelated fixed chrome
+      // elsewhere on the page (e.g. MobileFooter) - see KAN-185.
+      className="relative isolate h-[70vh] min-h-96 w-full overflow-hidden rounded-2xl border border-blue-200/80"
     >
       <div ref={containerRef} className="h-full w-full" />
       {belowMinZoom && (
