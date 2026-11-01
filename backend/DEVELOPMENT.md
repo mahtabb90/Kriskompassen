@@ -122,18 +122,29 @@ remain readable and are never automatically overwritten by online responses.
 
 ### Preparedness article source review
 
-The six Swedish summaries were rewritten and checked on 2026-10-20. Their shared compilation/
-review timestamp is `2026-10-20T12:37:11.000Z`; IDs, titles, display order and Krisinformation.se
-attribution are retained. This is a dated editorial check, not automatic ongoing source validation.
+The original six Swedish summaries were rewritten and checked on 2026-10-20. Their shared
+compilation/review timestamp is `2026-10-20T12:37:11.000Z`; IDs, display order and
+Krisinformation.se attribution are retained. Display titles now omit the former "i kris" suffix;
+that presentation-only change does not redate their source review. The payments article was
+checked on 2026-11-01 with compilation/review timestamp `2026-11-01T18:47:44.000Z`.
+The electricity article was checked on 2026-11-01 with compilation/review timestamp
+`2026-11-01T18:59:14.000Z`.
+The home-flooding article was checked on 2026-11-01 with compilation/review timestamp
+`2026-11-01T19:22:34.000Z`.
+The pets article was checked on 2026-11-01 with compilation/review timestamp
+`2026-11-01T19:49:26.000Z`.
+These are dated editorial checks, not automatic ongoing source validation.
 The language review distinguishes preparations made in advance from conditional advice for an
 actual disruption. It also replaces ambiguous food/radio instructions, uses consistent reader
 address and explains the prescription exclusions in shorter sentences.
 
 The former `/forbered-dig/hemberedskap/...` URLs now redirect to Krisinformation.se's new structure.
-The public source links use the current Hemberedskap page for five articles and the specific
-internet/telephony article for communication. The relevant Hemberedskap sections and supporting
-authority pages checked for each article are listed below. The authority pages clarify safety
-qualifications that must also survive summarisation.
+The public source links use the current Hemberedskap page for seven articles, the specific
+internet/telephony article for communication, the power-outage page for electricity and the
+flooding page for home-flooding guidance.
+The relevant source sections and supporting authority pages checked for each article are
+listed below. The authority pages clarify safety qualifications that must also survive
+summarisation.
 
 | Article ID | Reviewed on | Krisinformation.se source | Supporting authority sources | Checked facts and qualifications |
 | --- | --- | --- | --- | --- |
@@ -143,6 +154,10 @@ qualifications that must also survive summarisation.
 | `heating-in-crisis` | 2026-10-20 | [Hemberedskap, Värme](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Myndigheten för civilt försvar: Tillgång till värme i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/tillgang-till-varme-i-kris/) | Share a room, limit draughts, use layers and insulating bedding. Keep escape routes and ventilation usable; follow heater instructions, ventilate regularly, prevent fires and avoid stove/candle use during sleep. |
 | `communication-in-crisis` | 2026-10-20 | [Om internet och telefoni går ner](https://www.krisinformation.se/din-beredskap/kommunikation/om-internet-och-telefoni-gar-ner/) | [Myndigheten för civilt försvar: Tillgång till kommunikation i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/tillgang-till-kommunikation-i-kris/) | Local P4 information, radios independent of mains power, car radio, spare batteries, written telephone numbers, charged powerbank and car charging. |
 | `hygiene-in-crisis` | 2026-10-20 | [Hemberedskap, Toalett och hygien](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Myndigheten för civilt försvar: Tvätt och toalett i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/vatten/hygien-tvatt-och-toalett/) | Prioritise drinking/cooking water; prepare hygiene supplies and a covered bucket. Preserve hand hygiene and municipality-specific toilet-waste handling rather than assuming one disposal method applies everywhere. |
+| `payments-in-crisis` | 2026-11-01 | [Hemberedskap, Betalningar](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Sveriges Riksbank: Rekommendationer till allmänheten om betalningar](https://www.riksbank.se/sv/betalningar--kontanter/betalningsberedskap/rekommendationer-till-allmanheten/), [Myndigheten för civilt försvar: Betalningar och kontanter i kris](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/betalningar-och-kontanter-i-kris/) | About SEK 1,000 per adult in mixed denominations is a benchmark for one week's essential purchases, not a universal requirement; household needs vary and smaller reserves also help. Prepare multiple banks, card networks, mobile payments, internet connections and electronic identification options where possible. Retain physical cards and know their PINs; chip-based offline payments may work during some data-communication disruptions, not every kind of outage. |
+| `electricity-in-crisis` | 2026-11-01 | [Strömavbrott](https://www.krisinformation.se/din-beredskap/rad-vid-kriser/stromavbrott/) | [Elsäkerhetsverket: Vid strömavbrott](https://www.elsakerhetsverket.se/privatpersoner/du-ar-ansvarig-for-elen/vid-stromavbrott/) | Prepare torches, spare batteries, charged devices, vehicle fuel/charge, grid-operator contacts and local emergency information. Check whether a fuse or residual-current device has tripped; seek grid-operator updates for wider outages and follow P4. A fire station may help contact 112 when telephony fails. Switch off potentially hazardous appliances; never open or dismantle electrical equipment to fix an outage because power can return without warning. Restart appliances and heating gradually to avoid renewed overload. |
+| `flooding-in-crisis` | 2026-11-01 | [Översvämning](https://www.krisinformation.se/din-beredskap/rad-vid-kriser/extremvader-och-naturolyckor/oversvamning/) | [Myndigheten för civilt försvar: Information till fastighetsägare](https://www.mcf.se/siteassets/dokument/amnesomraden/skydd-mot-olyckor-och-farliga-amnen/naturolyckor-och-klimat/oversvamning/faktablad-oversvamning.pdf), [Elsäkerhetsverket: Vid åska, ras eller översvämning](https://www.elsakerhetsverket.se/privatpersoner/du-ar-ansvarig-for-elen/vid-aska-ras-eller-oversvamning/), [Länsstyrelsen Gävleborg: Checklista vid översvämning](https://www.lansstyrelsen.se/download/18.2089be8218df2a70b173f2fa/1710168528101/S%C3%A5%20f%C3%B6rbreder%20du%20dig%20f%C3%B6r%20%C3%B6versv%C3%A4mning%20-%20Checklista.pdf) | Home-focused preparations, insurance records and evacuation planning; basement storage at least 50 cm above the floor without implying floodproof storage. Maintain drainage and sewer-backflow protection. Disconnect electricity only without self-exposure; never enter potentially live water. Preserve the basement-pumping pressure-balance caveat for waterlogged ground, structural/undermining risk and electrical inspection before reconnection. Avoid flooded travel; use 112 for acute danger to life or health. Document damage, maintain hand hygiene and dry safely; wait for municipal drinking-water clearance and assess/sample affected private wells. |
+| `pets-in-crisis` | 2026-11-01 | [Hemberedskap, Husdjur](https://www.krisinformation.se/din-beredskap/hemberedskap/) | [Myndigheten för civilt försvar: Beredskap för dina husdjur](https://www.mcf.se/sv/rad-till-privatpersoner/hemberedskap---preppa-for-en-vecka/beredskap-for-dina-husdjur/) | At least one week's species-appropriate supplies; food with a long shelf life that tolerates room temperature, oldest food first, water, necessary medicines, warmth, blankets and species-appropriate first aid. Prepare suitable transport equipment and familiarise the animal with it. Pets cannot enter civil-defense shelters; plan relocation to someone in a safer area where possible before seeking shelter, and take pets when evacuating the home. This does not give a blanket assurance that pets can be left unattended for several days. |
 
 The Python runtime includes project files in its function bundle; see
 [Vercel's Python bundling documentation](https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled).

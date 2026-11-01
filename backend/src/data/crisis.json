@@ -1,7 +1,7 @@
 [
   {
     "id": "food-in-crisis",
-    "title": "Mat i kris",
+    "title": "Mat",
     "description": "Planera måltider som fungerar när du inte kan handla eller använda spisen.",
     "content": "Bygg upp ett matförråd som räcker till hela hushållet i minst en vecka. Välj mat som ger tillräckligt med energi och kan förvaras i rumstemperatur.\n\nHa både mat som kan ätas direkt och mat som går snabbt att tillaga med lite vatten. Knäckebröd, konserverade bönor och gryn är exempel på sådant som kan ingå i förrådet. Fyll på förrådet stegvis. När du handlar kan du köpa lite extra av den mat du brukar äta.",
     "source": "Krisinformation.se",
@@ -10,7 +10,7 @@
   },
   {
     "id": "drinking-water-in-crisis",
-    "title": "Dricksvatten i kris",
+    "title": "Dricksvatten",
     "description": "Lagra dricksvatten hemma och planera hur du kan få tag på mer om vattenförsörjningen avbryts.",
     "content": "Räkna med tre till fem liter vatten per vuxen och dygn till dryck, matlagning och grundläggande hygien. Om du har husdjur behöver du också ta hänsyn till deras vattenbehov.\n\nAnvänd rena flaskor eller dunkar som är avsedda för dricksvatten. Fyll dem med dricksvatten av god kvalitet, förslut dem väl och förvara vattnet mörkt och svalt. Ha också en dunk att hämta vatten i om kommunen ordnar vattenutdelning.\n\nVid en störning i vattenförsörjningen ska du följa kommunens besked om vattenkvaliteten. Vid en kokningsrekommendation ska allt vatten till dryck och matlagning kokas upp tills det bubblar kraftigt. Låt det kokta vattnet svalna i en ren behållare. Kokning oskadliggör bakterier, virus och parasiter. Vatten med kemiska föroreningar blir inte säkert att dricka genom kokning.",
     "source": "Krisinformation.se",
@@ -19,7 +19,7 @@
   },
   {
     "id": "medication-in-crisis",
-    "title": "Läkemedel i kris",
+    "title": "Läkemedel",
     "description": "Se över dina recept och planera uttagen i god tid inför en eventuell kris.",
     "content": "Socialstyrelsen rekommenderar att du som använder receptbelagda läkemedel under en längre tid har en månads förbrukning hemma som reserv. Rådet gäller också förbrukningsartiklar som vården har skrivit ut för långvarig användning.\n\nSe över när dina recept behöver förnyas och planera dina uttag i god tid utifrån vad recepten tillåter. Använd de äldsta läkemedlen först. Har du redan en månads förbrukning i reserv har du den beredskap som rekommenderas.\n\nRekommendationen gäller inte receptfria läkemedel eller förbrukningsartiklar som inte har skrivits ut av vården. Den omfattar inte heller läkemedel för kortvariga behandlingar, dospåsar eller livsmedel på recept. Läkemedel eller doseringar som fortfarande provas ut är också undantagna. Detsamma gäller läkemedel som av medicinska skäl inte kan hämtas ut i förväg.\n\nKontakta den som skriver ut dina läkemedel eller förbrukningsartiklar om du är osäker på vad som gäller för dig eller inte kan ordna en månads förbrukning hemma.",
     "source": "Krisinformation.se",
@@ -28,7 +28,7 @@
   },
   {
     "id": "heating-in-crisis",
-    "title": "Värme i kris",
+    "title": "Värme",
     "description": "Planera hur hushållet kan hålla värmen om uppvärmningen slutar fungera.",
     "content": "Välj i förväg ett rum där hushållet kan samlas om bostaden blir kall. Ha varma kläder, filtar, liggunderlag och sovsäckar tillgängliga.\n\nVid ett värmeavbrott hjälper flera lager kläder, mössa och varma strumpor dig att hålla värmen. Lägg mattor eller filtar på golvet och täta dragiga springor vid dörrar och fönster. Håll utrymningsvägarna fria och se till att ventilationen fungerar.\n\nOm du planerar att använda en kamin eller annan värmekälla, läs anvisningarna om placering, avstånd och ventilation i förväg. Följ dem och vädra regelbundet när värmekällan används. Hantera bränsle försiktigt och placera levande ljus på säkert avstånd från brännbara material. Använd inte en kamin eller levande ljus när du sover.",
     "source": "Krisinformation.se",
@@ -37,7 +37,7 @@
   },
   {
     "id": "communication-in-crisis",
-    "title": "Kommunikation i kris",
+    "title": "Kommunikation",
     "description": "Planera för att kunna ta del av viktig information och hålla kontakt med närstående vid störningar.",
     "content": "Ta i förväg reda på hur du kan få viktig samhällsinformation om elen, internet eller mobilnätet slutar fungera. Se till att du har en radio som fungerar med batterier, solceller eller vev. Ha extra batterier till batteridriven utrustning.\n\nSkriv ner viktiga telefonnummer på papper och ha en laddad powerbank till mobilen. Om du har bil kan du också lyssna på bilradion och använda en mobilladdare som fungerar i bilen.\n\nVid en kris ger din lokala P4-kanal i Sveriges Radio information om läget och myndigheternas råd.",
     "source": "Krisinformation.se",
@@ -46,11 +46,47 @@
   },
   {
     "id": "hygiene-in-crisis",
-    "title": "Toalett och hygien i kris",
+    "title": "Toalett och hygien",
     "description": "Planera inför toalettbesök och tvätt som kräver lite eller inget vatten.",
     "content": "Planera hur du kan sköta toalettbesök och personlig hygien om du blir utan vatten. Ha toalettpapper, våtservetter, handsprit och en hink med tättslutande lock hemma. Komplettera med blöjor och mensskydd om det behövs i hushållet.\n\nVid vattenbrist ska det vatten som finns i första hand användas till dryck och matlagning. Var noga med handhygienen även när tillgången till vatten är begränsad.\n\nTa i förväg reda på vilka råd kommunen ger om toalettbesök utan spolning och hantering av toalettavfall. Följ kommunens anvisningar vid ett avbrott. Avfallshanteringen kan skilja sig mellan kommuner.",
     "source": "Krisinformation.se",
     "sourceUrl": "https://www.krisinformation.se/din-beredskap/hemberedskap/",
     "fetchedAt": "2026-10-20T12:37:11.000Z"
+  },
+  {
+    "id": "payments-in-crisis",
+    "title": "Betalningar",
+    "description": "Förbered kontanter och flera sätt att betala om de vanliga betalsätten inte fungerar.",
+    "content": "Riksbanken rekommenderar att hushåll har cirka 1 000 kronor i kontanter hemma per vuxen, gärna fördelade på olika valörer. Beloppet är ett riktmärke för en veckas inköp av livsnödvändiga varor. Behovet kan variera mellan hushåll, och även ett mindre belopp stärker beredskapen.\n\nFör att kunna betala på flera sätt bör du, om möjligt, ha konton i olika banker, betalkort från olika kortnätverk, till exempel Visa och Mastercard, samt tillgång till en mobil betaltjänst som Swish. Du bör också ha flera alternativ för internetuppkoppling och flera sätt att identifiera dig elektroniskt, exempelvis med BankID och bankens säkerhetsdosa.\n\nOm du brukar blippa med exempelvis Apple Pay eller Google Pay bör du även ha dina fysiska betalkort tillgängliga och kunna deras pinkoder. Vid vissa avbrott i datakommunikationen kan kortens chip användas för offlinebetalningar.",
+    "source": "Krisinformation.se",
+    "sourceUrl": "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+    "fetchedAt": "2026-11-01T18:47:44.000Z"
+  },
+  {
+    "id": "electricity-in-crisis",
+    "title": "Elektricitet",
+    "description": "Förbered belysning och laddning och ta reda på hur du hanterar ett strömavbrott säkert.",
+    "content": "Ett strömavbrott kan påverka både apparater i hemmet och tillgången till värme, vatten, telefoni och internet. Ha ficklampor och reservbatterier hemma och spara kontaktuppgifter till ditt elnätsföretag. Inför ett väntat oväder bör du ladda mobilen och powerbank. Om du har bil bör den vara tankad eller laddad. Ta i förväg reda på kommunens information om krisberedskap och var närmaste brandstation finns.\n\nOm strömmen försvinner, kontrollera om en säkring eller jordfelsbrytare har löst ut. Saknar även grannarna el kan det röra sig om ett större avbrott. Kontakta elnätsföretaget för information och följ läget via Sveriges Radio P4. Om telefonin inte fungerar kan du få hjälp att larma 112 på en brandstation.\n\nStäng av spis, strykjärn och andra apparater som kan bli farliga när strömmen återkommer. Försök aldrig åtgärda avbrottet genom att öppna eller skruva i elektrisk utrustning. Elen kan komma tillbaka utan förvarning och göra utrustningen livsfarlig.\n\nNär elen kommer tillbaka ska du starta apparater och uppvärmning stegvis. Det minskar risken för att elnätet överbelastas och att ett nytt avbrott uppstår.",
+    "source": "Krisinformation.se",
+    "sourceUrl": "https://www.krisinformation.se/din-beredskap/rad-vid-kriser/stromavbrott/",
+    "fetchedAt": "2026-11-01T18:59:14.000Z"
+  },
+  {
+    "id": "flooding-in-crisis",
+    "title": "Översvämning",
+    "description": "Skydda bostaden mot vatten och planera hur du agerar säkert vid en översvämning.",
+    "content": "Översvämningar kan bland annat orsakas av snösmältning och kraftigt regn. Som fastighetsägare ansvarar du för att skydda dig själv och din egendom. Kontrollera försäkringen och fotografera bostaden i förväg. Planera vad du behöver ta med dig och vart du ska ta vägen om du måste lämna hemmet. Förvara värdefulla och fuktkänsliga saker på en säker plats. I källarförråd bör saker stå minst 50 centimeter över golvet.\n\nRensa och kontrollera stuprör, brunnar, diken och dräneringsrör. Kontrollera också att rötter inte orsakar stopp eller läckage i vatten- och avloppsledningarna. Marken bör luta bort från huset, och tak, fönster och dörrar ska hålla tätt. Se över hur elinstallationerna kan skyddas mot vatten och ordna reservkraft om det behövs. Förbered pumpar eller tillfälliga översvämningsskydd. Se även över avloppsskydd som avstängningsbara golvbrunnar, backventiler, pluggar till tvättställsledningar och vattentäta toalettlock. Diskutera förebyggande åtgärder med grannar och kommunen.\n\nNär översvämning hotar ska du följa väderprognoser, SMHI:s varningar och nyhetsrapporteringen. Flytta utsatta föremål till en säker plats. Om vatten tränger in ska du stänga av strömmen med huvudströmbrytaren, men bara om det kan göras utan fara. Gå aldrig i vatten som kan vara strömförande. Om elen inte kan kopplas bort säkert ska du lämna området kring elinstallationerna och hålla andra borta.\n\nTäta källarfönster och ventilationsöppningar. Golvbrunnar och toaletter kan täppas igen med sandpåsar eller fyllda örngott för att hindra avloppsvatten från att tränga upp. En barriär av plast och sandsäckar eller jord kan stoppa en mindre översvämning, och ett dike kan leda bort vatten. Inkommande vatten kan pumpas ut med en länspump, men trycket inne i och utanför källaren måste hållas i balans. Om marken runt huset är vattenmättad kan en tömd källare utsättas för tryck som skadar golv eller väggar.\n\nFlytta bilen till högre mark om du kan göra det säkert och håll kontakt med grannarna. Undvik att gå eller köra genom översvämmade områden. Om du inte kan lämna platsen, stanna på en hög plats där räddningspersonal kan hämta dig. Ring 112 vid akut fara för liv och hälsa.\n\nVar försiktig efteråt: marken under huset och byggnadens grund kan ha skadats, vilket kan innebära risk för ras. Kontakta försäkringsbolaget snarast och dokumentera skadorna i en förteckning samt med fotografier och film. Låt en elektriker kontrollera att det är säkert innan strömmen slås på igen. Tvätta händerna noga efter kontakt med översvämningsvatten. När det är säkert att vistas i huset kan du vädra ut fukten eller använda en avfuktare.\n\nDricksvattnet kan förorenas av bakterier vid en översvämning. Vänta med att dricka kommunalt kranvatten tills kommunen har meddelat att det är säkert. Har du egen brunn behöver du bedöma om vattnet har påverkats. Lämna ett vattenprov för analys om du är osäker.",
+    "source": "Krisinformation.se",
+    "sourceUrl": "https://www.krisinformation.se/din-beredskap/rad-vid-kriser/extremvader-och-naturolyckor/oversvamning/",
+    "fetchedAt": "2026-11-01T19:22:34.000Z"
+  },
+  {
+    "id": "pets-in-crisis",
+    "title": "Husdjur",
+    "description": "Planera för ditt husdjurs mat, vatten, värme och omsorg om vardagen störs.",
+    "content": "Husdjur behöver också mat, vatten och värme vid en kris. Förbered ett förråd som räcker i minst en vecka och anpassa innehållet efter djurets behov. Välj foder med lång hållbarhet som kan förvaras i rumstemperatur, till exempel torrfoder eller konserver. Använd det äldsta fodret först och fyll på förrådet efter hand.\n\nSamla vatten, de mediciner djuret behöver, filtar och utrustning för första hjälpen som passar ditt djurslag. Ha även en transportbur, väska eller annan lämplig transportutrustning redo. Vänj gärna djuret vid den i förväg, så att den blir lättare att använda om ni behöver lämna hemmet.\n\nHusdjur får inte tas med in i skyddsrum. Skyddsrummen är avsedda för människor, och där kan också finnas personer som är allergiska mot djur. Planera därför i förväg vart ditt husdjur kan ta vägen. Undersök om någon i ett säkrare område kan ta emot det, så att djuret om möjligt kan flyttas dit innan du behöver söka skydd. Om du behöver utrymma bostaden, till exempel vid en skogsbrand eller ett farligt utsläpp, ska du ta med ditt husdjur.",
+    "source": "Krisinformation.se",
+    "sourceUrl": "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+    "fetchedAt": "2026-11-01T19:49:26.000Z"
   }
 ]

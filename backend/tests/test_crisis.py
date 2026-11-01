@@ -62,14 +62,22 @@ def test_bundled_articles_keep_offline_keys_and_reviewed_provenance() -> None:
         "heating-in-crisis",
         "communication-in-crisis",
         "hygiene-in-crisis",
+        "payments-in-crisis",
+        "electricity-in-crisis",
+        "flooding-in-crisis",
+        "pets-in-crisis",
     ]
     assert [article.title for article in articles] == [
-        "Mat i kris",
-        "Dricksvatten i kris",
-        "Läkemedel i kris",
-        "Värme i kris",
-        "Kommunikation i kris",
-        "Toalett och hygien i kris",
+        "Mat",
+        "Dricksvatten",
+        "Läkemedel",
+        "Värme",
+        "Kommunikation",
+        "Toalett och hygien",
+        "Betalningar",
+        "Elektricitet",
+        "Översvämning",
+        "Husdjur",
     ]
     assert all(article.source == "Krisinformation.se" for article in articles)
     assert [article.sourceUrl for article in articles] == [
@@ -79,8 +87,17 @@ def test_bundled_articles_keep_offline_keys_and_reviewed_provenance() -> None:
         "https://www.krisinformation.se/din-beredskap/hemberedskap/",
         "https://www.krisinformation.se/din-beredskap/kommunikation/om-internet-och-telefoni-gar-ner/",
         "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+        "https://www.krisinformation.se/din-beredskap/hemberedskap/",
+        "https://www.krisinformation.se/din-beredskap/rad-vid-kriser/stromavbrott/",
+        "https://www.krisinformation.se/din-beredskap/rad-vid-kriser/extremvader-och-naturolyckor/oversvamning/",
+        "https://www.krisinformation.se/din-beredskap/hemberedskap/",
     ]
-    assert all(article.fetchedAt == "2026-10-20T12:37:11.000Z" for article in articles)
+    assert [article.fetchedAt for article in articles] == ["2026-10-20T12:37:11.000Z"] * 6 + [
+        "2026-11-01T18:47:44.000Z",
+        "2026-11-01T18:59:14.000Z",
+        "2026-11-01T19:22:34.000Z",
+        "2026-11-01T19:49:26.000Z",
+    ]
 
 
 def test_serves_full_articles_and_preserves_text(article_file: Path) -> None:
@@ -202,7 +219,7 @@ def test_source_path_does_not_depend_on_working_directory(
 ) -> None:
     """Finds the bundled source from its module path instead of the process directory."""
     monkeypatch.chdir(tmp_path)
-    assert len(crisis.load_crisis_articles()) == 6
+    assert len(crisis.load_crisis_articles()) == 10
 
 
 def test_unapproved_origin_has_no_cors_grant(article_file: Path) -> None:
