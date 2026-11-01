@@ -1,7 +1,8 @@
-import { useState } from "react"
-import type { ChangeEvent, FormEvent } from "react"
+import { useEffect, useRef, useState } from "react"
+import type { ChangeEvent, FormEvent, SyntheticEvent } from "react"
 import type { CrisisKitItem as CrisisKitItemType } from "../types/crisisKit"
 import { CRISIS_KIT_CATEGORIES } from "../types/crisisKit"
+import { formatExpirationDate, getExpirationStatus } from "../utils/expirationDate"
 
 interface CrisisKitItemProps {
   item: CrisisKitItemType
@@ -37,6 +38,10 @@ function CrisisKitItem({
   const Heading = headingLevel === 4 ? "h4" : "h3"
 
   const [isSavingOwnership, setIsSavingOwnership] = useState(false)
+  const [isOwnershipConfirmationOpen, setIsOwnershipConfirmationOpen] = useState(false)
+  const ownershipConfirmationDialogRef = useRef<HTMLDialogElement>(null)
+  const [customItemDeleteConfirmationOpen, setCustomItemDeleteConfirmationOpen] = useState(false)
+  const customItemDeleteDialogRef = useRef<HTMLDialogElement>(null)
   const [isSavingExpiration, setIsSavingExpiration] = useState(false)
   const [ownershipError, setOwnershipError] = useState<string | null>(null)
   const [expirationError, setExpirationError] = useState<string | null>(null)
@@ -53,23 +58,97 @@ function CrisisKitItem({
   const [customItemDeleteError, setCustomItemDeleteError] = useState<string | null>(null)
 
   const todayString = getTodayString()
-  const isExpired = item.expirationDate !== undefined && item.expirationDate < todayString
+  const expirationStatus = getExpirationStatus(item.expirationDate, todayString)
   const hasExpirationChanges = expirationDate !== (item.expirationDate ?? "")
   const expirationEditorId = `expiration-editor-${item.id}`
 
-  async function handleOwnershipChange(event: ChangeEvent<HTMLInputElement>) {
-    const isOwned = event.target.checked
+  useEffect(() => {
+    const dialog = ownershipConfirmationDialogRef.current
 
+    if (!dialog) {
+      return
+    }
+
+    if (isOwnershipConfirmationOpen && !dialog.open) {
+      if (typeof dialog.showModal === "function") {
+        dialog.showModal()
+      } else {
+        dialog.setAttribute("open", "")
+      }
+    } else if (!isOwnershipConfirmationOpen && dialog.open) {
+      if (typeof dialog.close === "function") {
+        dialog.close()
+      } else {
+        dialog.removeAttribute("open")
+      }
+    }
+  }, [isOwnershipConfirmationOpen])
+
+  useEffect(() => {
+    const dialog = customItemDeleteDialogRef.current
+
+    if (!dialog) {
+      return
+    }
+
+    if (customItemDeleteConfirmationOpen && !dialog.open) {
+      if (typeof dialog.showModal === "function") {
+        dialog.showModal()
+      } else {
+        dialog.setAttribute("open", "")
+      }
+    } else if (!customItemDeleteConfirmationOpen && dialog.open) {
+      if (typeof dialog.close === "function") {
+        dialog.close()
+      } else {
+        dialog.removeAttribute("open")
+      }
+    }
+  }, [customItemDeleteConfirmationOpen])
+
+  async function saveOwnershipChange(isOwned: boolean) {
     setIsSavingOwnership(true)
     setOwnershipError(null)
 
     try {
       await onOwnershipChange(item, isOwned)
+
+      if (!isOwned && item.expirationDate) {
+        setExpirationDate("")
+        setIsExpirationEditorOpen(false)
+      }
+
+      setIsOwnershipConfirmationOpen(false)
     } catch {
       setOwnershipError("Det gick inte att spara ändringen. Försök igen.")
+      setIsOwnershipConfirmationOpen(false)
     } finally {
       setIsSavingOwnership(false)
     }
+  }
+
+  function handleOwnershipChange(event: ChangeEvent<HTMLInputElement>) {
+    const isOwned = event.target.checked
+
+    if (!isOwned && item.expirationDate) {
+      setIsOwnershipConfirmationOpen(true)
+      return
+    }
+
+    void saveOwnershipChange(isOwned)
+  }
+
+  function handleOwnershipConfirmationCancel() {
+    setIsOwnershipConfirmationOpen(false)
+  }
+
+  function handleOwnershipConfirmationCancelEvent(event: SyntheticEvent<HTMLDialogElement>) {
+    event.preventDefault()
+    setIsOwnershipConfirmationOpen(false)
+  }
+
+  async function handleOwnershipConfirmation() {
+    await saveOwnershipChange(false)
   }
 
   async function handleExpirationSave(dateToSave = expirationDate) {
@@ -126,22 +205,28 @@ function CrisisKitItem({
     }
   }
 
-  async function handleCustomItemDelete() {
-    const confirmed = window.confirm(`Vill du ta bort "${item.name}" från din krislåda?`)
+  function handleCustomItemDelete() {
+    setCustomItemDeleteError(null)
+    setCustomItemDeleteConfirmationOpen(true)
+  }
 
-    if (!confirmed) {
-      return
-    }
+  function handleCustomItemDeleteCancel(event: SyntheticEvent<HTMLDialogElement>) {
+    event.preventDefault()
+    setCustomItemDeleteConfirmationOpen(false)
+  }
 
+  async function handleCustomItemDeleteConfirmation() {
     setIsDeletingCustomItem(true)
     setCustomItemDeleteError(null)
 
     try {
       await onCustomItemDelete(item)
+      setCustomItemDeleteConfirmationOpen(false)
     } catch (error) {
       setCustomItemDeleteError(
         error instanceof Error ? error.message : "Det gick inte att ta bort saken. Försök igen."
       )
+      setCustomItemDeleteConfirmationOpen(false)
     } finally {
       setIsDeletingCustomItem(false)
     }
@@ -245,7 +330,7 @@ function CrisisKitItem({
                 type="button"
                 onClick={handleEditStart}
                 disabled={isDeletingCustomItem}
-                className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50    disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-lg border-2 border-blue-900 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Redigera
               </button>
@@ -253,7 +338,7 @@ function CrisisKitItem({
                 type="button"
                 onClick={handleCustomItemDelete}
                 disabled={isDeletingCustomItem}
-                className="min-h-11 rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50   focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-lg border-2 border-red-800 px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isDeletingCustomItem ? "Tar bort..." : "Ta bort"}
               </button>
@@ -265,6 +350,81 @@ function CrisisKitItem({
               {customItemDeleteError}
             </p>
           )}
+
+          <dialog
+            ref={ownershipConfirmationDialogRef}
+            aria-labelledby={`ownership-confirmation-title-${item.id}`}
+            onCancel={handleOwnershipConfirmationCancelEvent}
+            className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-blue-200/80 bg-white p-6 text-left text-slate-700 shadow-sm backdrop:bg-slate-950/50"
+          >
+            <h2
+              id={`ownership-confirmation-title-${item.id}`}
+              className="wrap-anywhere text-xl font-bold text-blue-900"
+            >
+              Vill du markera varan som saknas?
+            </h2>
+            <p className="mt-3 text-base leading-relaxed text-slate-700">
+              Varans kontrolldatum kommer att raderas.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleOwnershipConfirmationCancel}
+                disabled={isSavingOwnership}
+                autoFocus
+                className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-base font-semibold text-blue-900 hover:bg-blue-50 active:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Avbryt
+              </button>
+              <button
+                type="button"
+                onClick={handleOwnershipConfirmation}
+                disabled={isSavingOwnership}
+                className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 text-base font-semibold text-white hover:bg-blue-950 active:bg-blue-950 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingOwnership ? "Sparar..." : "Ja, markera som saknas"}
+              </button>
+            </div>
+          </dialog>
+
+          <dialog
+            ref={customItemDeleteDialogRef}
+            aria-labelledby={`custom-item-delete-title-${item.id}`}
+            onCancel={handleCustomItemDeleteCancel}
+            className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-blue-200/80 bg-white p-6 text-left text-slate-700 shadow-sm backdrop:bg-slate-950/50"
+          >
+            <h2
+              id={`custom-item-delete-title-${item.id}`}
+              className="wrap-anywhere text-xl font-bold text-blue-900"
+            >
+              Vill du ta bort "{item.name}" från din krislåda?
+            </h2>
+
+            <p className="mt-3 text-base leading-relaxed text-slate-700">
+              Åtgärden kan inte ångras.
+            </p>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setCustomItemDeleteConfirmationOpen(false)}
+                disabled={isDeletingCustomItem}
+                autoFocus
+                className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-base font-semibold text-blue-900 hover:bg-blue-50 active:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Avbryt
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCustomItemDeleteConfirmation}
+                disabled={isDeletingCustomItem}
+                className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-red-800 px-5 py-3 text-base font-semibold text-white hover:bg-red-900 active:bg-red-900 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDeletingCustomItem ? "Tar bort..." : "Ja, ta bort"}
+              </button>
+            </div>
+          </dialog>
 
           <div className="mt-4">
             <label className="flex min-h-11 cursor-pointer items-center gap-3">
@@ -287,136 +447,154 @@ function CrisisKitItem({
             )}
           </div>
 
-          <div className="mt-4 border-t border-slate-100 pt-3">
-            <button
-              type="button"
-              onClick={() => setIsExpirationEditorOpen((isOpen) => !isOpen)}
-              aria-expanded={isExpirationEditorOpen}
-              aria-controls={expirationEditorId}
-              className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-slate-50   "
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="size-5 shrink-0 text-blue-800"
+          {item.isOwned && (
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <button
+                type="button"
+                onClick={() => setIsExpirationEditorOpen((isOpen) => !isOpen)}
+                aria-expanded={isExpirationEditorOpen}
+                aria-controls={expirationEditorId}
+                className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-slate-50   "
               >
-                <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
-                <path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17" />
-              </svg>
-
-              <span className="min-w-0 flex-1">
-                {item.expirationDate ? (
-                  <>
-                    <span className="block text-sm font-medium text-slate-500">Kontrolldatum</span>
-                    <span className="block text-sm font-medium text-slate-800">
-                      {item.expirationDate}
-                    </span>
-                    {isExpired && (
-                      <span className="mt-0.5 block text-sm font-medium text-red-800">
-                        Utgånget
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-sm font-medium text-blue-800">Lägg till kontrolldatum</span>
-                )}
-              </span>
-
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className={`size-5 shrink-0 text-slate-500 transition-transform ${
-                  isExpirationEditorOpen ? "rotate-180" : ""
-                }`}
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
-
-            {isExpirationEditorOpen && (
-              <div id={expirationEditorId} className="mt-3">
-                <label
-                  htmlFor={`expiration-${item.id}`}
-                  className="block text-sm font-medium text-slate-700"
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  className="size-5 shrink-0 text-blue-800"
                 >
-                  Utgångsdatum / kontrolldatum
-                </label>
+                  <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+                  <path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17" />
+                </svg>
 
-                <input
-                  id={`expiration-${item.id}`}
-                  type="date"
-                  value={expirationDate}
-                  onChange={handleExpirationDateChange}
-                  aria-describedby={
-                    expirationError
-                      ? `expiration-error-${item.id}`
-                      : expirationMessage
-                        ? `expiration-message-${item.id}`
-                        : undefined
-                  }
-                  aria-invalid={Boolean(expirationError)}
-                  className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800   "
-                />
-
-                {isExpired && !hasExpirationChanges && (
-                  <p className="mt-2 text-sm font-medium text-red-800">
-                    Det är dags att kontrollera saken igen.
-                  </p>
-                )}
-
-                {expirationError && (
-                  <p
-                    id={`expiration-error-${item.id}`}
-                    className="mt-2 text-sm font-medium text-red-800"
-                    role="alert"
-                  >
-                    {expirationError}
-                  </p>
-                )}
-
-                {expirationMessage && (
-                  <p
-                    id={`expiration-message-${item.id}`}
-                    className="mt-2 text-sm font-medium text-green-800"
-                    role="status"
-                  >
-                    <span aria-hidden="true" className="mr-2">
-                      ✓
+                <span className="min-w-0 flex-1">
+                  {item.expirationDate ? (
+                    <>
+                      <span className="block text-sm font-medium text-slate-500">
+                        Kontrolldatum
+                      </span>
+                      <span className="block text-sm font-medium text-slate-800">
+                        {formatExpirationDate(item.expirationDate)}
+                      </span>
+                      {expirationStatus && (
+                        <span
+                          className={`mt-0.5 block text-sm font-medium ${
+                            expirationStatus === "expired"
+                              ? "text-red-800"
+                              : expirationStatus === "soon"
+                                ? "text-orange-800"
+                                : "text-green-800"
+                          }`}
+                        >
+                          {expirationStatus === "expired"
+                            ? "Utgången"
+                            : expirationStatus === "soon"
+                              ? "Går snart ut"
+                              : "OK"}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-sm font-medium text-blue-800">
+                      Lägg till kontrolldatum
                     </span>
-                    {expirationMessage}
-                  </p>
-                )}
+                  )}
+                </span>
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleExpirationSave()}
-                    disabled={isSavingExpiration || !hasExpirationChanges}
-                    className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 text-base font-semibold text-white hover:bg-blue-950 active:bg-blue-950 disabled:opacity-60"
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className={`size-5 shrink-0 text-slate-500 transition-transform ${
+                    isExpirationEditorOpen ? "rotate-180" : ""
+                  }`}
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+
+              {isExpirationEditorOpen && (
+                <div id={expirationEditorId} className="mt-3">
+                  <label
+                    htmlFor={`expiration-${item.id}`}
+                    className="block text-sm font-medium text-slate-700"
                   >
-                    {isSavingExpiration ? "Sparar..." : "Spara datum"}
-                  </button>
+                    Utgångsdatum / kontrolldatum
+                  </label>
 
-                  {(expirationDate || item.expirationDate) && (
+                  <input
+                    id={`expiration-${item.id}`}
+                    type="date"
+                    value={expirationDate}
+                    onChange={handleExpirationDateChange}
+                    aria-describedby={
+                      expirationError
+                        ? `expiration-error-${item.id}`
+                        : expirationMessage
+                          ? `expiration-message-${item.id}`
+                          : undefined
+                    }
+                    aria-invalid={Boolean(expirationError)}
+                    className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800   "
+                  />
+
+                  {expirationStatus === "expired" && !hasExpirationChanges && (
+                    <p className="mt-2 text-sm font-medium text-red-800">
+                      Det är dags att kontrollera saken igen.
+                    </p>
+                  )}
+
+                  {expirationError && (
+                    <p
+                      id={`expiration-error-${item.id}`}
+                      className="mt-2 text-sm font-medium text-red-800"
+                      role="alert"
+                    >
+                      {expirationError}
+                    </p>
+                  )}
+
+                  {expirationMessage && (
+                    <p
+                      id={`expiration-message-${item.id}`}
+                      className="mt-2 text-sm font-medium text-green-800"
+                      role="status"
+                    >
+                      <span aria-hidden="true" className="mr-2">
+                        ✓
+                      </span>
+                      {expirationMessage}
+                    </p>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => handleExpirationSave("")}
-                      disabled={isSavingExpiration}
-                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-base font-semibold text-blue-900 hover:bg-blue-50 active:bg-blue-50 disabled:opacity-60"
+                      onClick={() => handleExpirationSave()}
+                      disabled={isSavingExpiration || !hasExpirationChanges}
+                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 text-base font-semibold text-white hover:bg-blue-950 active:bg-blue-950 disabled:cursor-not-allowed"
                     >
-                      {isSavingExpiration ? "Sparar..." : "Rensa datum"}
+                      {isSavingExpiration ? "Sparar..." : "Spara datum"}
                     </button>
-                  )}
+
+                    {(expirationDate || item.expirationDate) && (
+                      <button
+                        type="button"
+                        onClick={() => handleExpirationSave("")}
+                        disabled={isSavingExpiration}
+                        className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-base font-semibold text-blue-900 hover:bg-blue-50 active:bg-blue-50 disabled:cursor-not-allowed"
+                      >
+                        {isSavingExpiration ? "Sparar..." : "Rensa datum"}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </article>

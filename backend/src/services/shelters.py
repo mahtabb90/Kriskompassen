@@ -13,7 +13,7 @@ from pathlib import Path
 from pydantic import TypeAdapter
 
 from src.core.errors import ShelterDataError
-from src.models.shelter import Shelter, ShelterListResponse, ShelterSource
+from src.models.shelter import Shelter, ShelterBoundsResponse, ShelterListResponse, ShelterSource
 
 SHELTERS_DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "shelters.json"
 _SHELTERS = TypeAdapter(list[Shelter])
@@ -104,3 +104,28 @@ def build_shelters_response(shelters: list[Shelter], lat: float, lon: float) -> 
         source=ShelterSource(),
         bboxRadiusMetersUsed=round(farthest_distance),
     )
+
+
+def shelters_within_bounds(
+    shelters: list[Shelter], *, north: float, south: float, east: float, west: float
+) -> list[Shelter]:
+    """Returns every shelter whose (lat, lon) falls within the given rectangle, in file order.
+
+    A naive per-axis range check. Does not special-case an antimeridian-crossing bbox
+    (west > east) - unreachable in practice, since every shelter is in Sweden (lat ~55-69,
+    lon ~11-24): a caller would have to pan nearly all the way around the globe to construct
+    such a bbox. An inverted rectangle (north < south or east < west) simply matches nothing.
+    """
+    return [
+        shelter
+        for shelter in shelters
+        if south <= shelter.lat <= north and west <= shelter.lon <= east
+    ]
+
+
+def build_shelters_bounds_response(
+    shelters: list[Shelter], *, north: float, south: float, east: float, west: float
+) -> ShelterBoundsResponse:
+    """Builds the within-bounds response for one map viewport from the full local snapshot."""
+    matches = shelters_within_bounds(shelters, north=north, south=south, east=east, west=west)
+    return ShelterBoundsResponse(shelters=matches, source=ShelterSource())

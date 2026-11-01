@@ -37,6 +37,11 @@ The project is in an early stage of development.
 
 Our initial focus is to establish the project structure and a working development-to-deployment workflow. Features, including offline support, will be developed incrementally based on priorities and feedback.
 
+A backend database is deferred for now and may be reconsidered in the future. Preparedness
+content is maintained in static files shipped with the backend; shelter information is fetched
+on demand and cached for reuse. Saved information remains local to the user's device in
+IndexedDB.
+
 The current version includes a home page, crisis preparedness summaries and detailed articles
 based on manually maintained preparedness information from Krisinformation.se. Online articles
 are delivered by the project’s server; this is not an automatic news feed. Users can save and
@@ -79,15 +84,41 @@ postal address, each shelter is shown by its free-text location description toge
 active address's municipality, worded as a location description rather than a verified address.
 MCF genuinely registers several separate shelters under one shared property - sometimes with the
 same coordinates and capacity too - so each shelter also shows its own official number (matching
-the number physically posted at its entrance) to stay distinguishable, plus a link to its exact
-position on a map, since the location description alone is not enough to actually find it.
-If no address is active yet, or the active address has no coordinates (a manually typed address
-is never geocoded), the page prompts the user to set one on "Min info" instead.
+the number physically posted at its entrance) to stay distinguishable, plus a link to its own
+detail page for more information. If no address is active yet, or the active address has no
+coordinates (a manually typed address is never geocoded), the page prompts the user to set one
+on "Min info" instead.
+
+"Kartan", reached via a link next to the "Skyddsrum i närheten"/"Sparade skyddsrum" tabs, lets
+users explore every one of Sweden's roughly 63,000 civil-defense shelters on an interactive,
+clustered map (MapLibre GL JS, OpenFreeMap's free, key-less vector tiles - no account, no request
+quota) - not just the nearest 5. Shelters are fetched for the visible area only, debounced as the
+user pans or zooms, against a backend endpoint that filters the already-loaded local snapshot by
+bounding box; MapLibre's own clustering (circles sized/coloured by count) groups them client-side,
+so panning the whole country never pulls in all 63,000 at once. Below a minimum zoom the fetch is
+skipped entirely - a hint asks the user to zoom in instead - since even clustering that many
+shelters at a glance would cost real time and payload for little visual benefit. When an active
+address is known, the map opens tightly framed on it and the same 5 nearest shelters shown
+elsewhere, each marked with its own icon (nearest, saved, or both), on top of the usual sign icon
+used for every other shelter; without one, it opens on a fixed view of the whole country. Clicking
+an individual shelter shows a short popup (distance, type, capacity) with a link to its detail
+page; that link also carries the map's exact position along, so its own "Tillbaka till kartan"
+link returns to the same spot instead of resetting the view. Like every map here, it is
+online-only and its library is lazy-loaded, only fetched the first time a user actually opens it.
+
+A shelter's own detail page embeds a simpler map of just that one shelter's exact location (and
+the user's position too, when known), replacing an earlier external link to openstreetmap.org.
+Like "Kartan", it is online-only, lazy-loaded, and falls back to the "Plats" text field already
+on the page while offline.
 
 Saving a geolocated address also fetches and caches its nearest shelters in the background right
 away, without the user needing to visit "Skyddsrum" first. This runs silently and never blocks or
 fails the address save itself; it exists so that addresses saved ahead of a crisis already have
 their nearby shelters available offline even if MCF's service later becomes unreachable.
+
+Fetched shelter records are cached on the device with a fetch timestamp and refreshed when the
+same shelter is fetched again. The backend keeps only a temporary in-memory cache of nearby
+search results; it does not maintain a persistent copy of the national shelter register.
 
 ## 🛠️ Tech stack
 

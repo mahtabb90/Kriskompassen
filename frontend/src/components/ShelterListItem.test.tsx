@@ -34,6 +34,7 @@ function renderItem(
     saved?: boolean
     onToggleSave?: () => void
     comment?: string | null
+    isNearest?: boolean
   } = {}
 ) {
   return render(
@@ -55,7 +56,7 @@ afterEach(() => {
 })
 
 describe("ShelterListItem with full data", () => {
-  it("renders distance, number, type, capacity and the map link", () => {
+  it("renders distance, number, type, capacity and the detail link", () => {
     renderItem(fullShelter, { distanceMeters: 350 })
 
     expect(screen.getByText("Kantarellen 11, Solna kommun")).toBeTruthy()
@@ -67,9 +68,12 @@ describe("ShelterListItem with full data", () => {
 
     const detailLink = screen.getByRole("link", { name: "Visa detaljer" })
     expect(detailLink.getAttribute("href")).toBe(`/skyddsrum/${fullShelter.id}`)
+  })
 
-    const mapLink = screen.getByRole("link", { name: /Visa på karta/ })
-    expect(mapLink.getAttribute("target")).toBe("_blank")
+  it("has no link to an external map - the detail page's own embedded map covers that", () => {
+    renderItem(fullShelter, { distanceMeters: 350 })
+
+    expect(screen.queryByText(/Visa på karta/)).toBeNull()
   })
 
   it("omits the distance line entirely when no position is known", () => {
@@ -128,6 +132,20 @@ describe("ShelterListItem save toggle", () => {
 
     expect(screen.getByRole("button", { name: "Spara skyddsrum" })).toBeTruthy()
     expect(screen.getByRole("link", { name: "Visa detaljer" })).toBeTruthy()
+  })
+})
+
+describe("ShelterListItem nearest badge", () => {
+  it("shows a 'Närmast' badge only when isNearest is set", () => {
+    renderItem(fullShelter, { isNearest: true })
+
+    expect(screen.getByText("Närmast")).toBeTruthy()
+  })
+
+  it("shows no badge when isNearest is omitted", () => {
+    renderItem(fullShelter)
+
+    expect(screen.queryByText("Närmast")).toBeNull()
   })
 })
 

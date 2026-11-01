@@ -68,6 +68,21 @@ describe("getCrisisKitItems", () => {
     expect(savedItem?.name).toBe(RECOMMENDED_CRISIS_KIT[0].name)
   })
 
+  it("loads previously saved items without an expiration date", async () => {
+    vi.mocked(table.toArray).mockResolvedValue([
+      {
+        ...RECOMMENDED_CRISIS_KIT[0],
+        isOwned: true,
+      },
+    ])
+
+    const items = await getCrisisKitItems()
+    const savedItem = items.find((item) => item.id === RECOMMENDED_CRISIS_KIT[0].id)
+
+    expect(savedItem?.isOwned).toBe(true)
+    expect(savedItem?.expirationDate).toBeUndefined()
+  })
+
   it("includes saved custom items", async () => {
     vi.mocked(table.toArray).mockResolvedValue([customItem])
 
