@@ -343,25 +343,26 @@ function CrisisKitItem({
             <div className="min-w-0">
               <Heading className="font-semibold text-blue-900">{item.name}</Heading>
               <p className="mt-1 text-sm text-slate-600">{item.category}</p>
-              {item.isCustom && (
-                <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 20 20"
-                    className="h-4 w-4 shrink-0"
-                    fill="none"
-                  >
-                    <circle cx="10" cy="6" r="3" stroke="currentColor" strokeWidth="1.5" />
-                    <path
-                      d="M4 17c.5-3.2 2.5-5 6-5s5.5 1.8 6 5"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  Tillagd av användaren
-                </p>
-              )}
+              <p
+                className="mt-1 flex items-center gap-1.5 text-sm text-slate-600"
+                aria-hidden={item.isCustom ? undefined : true}
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 20 20"
+                  className={`h-4 w-4 shrink-0 ${item.isCustom ? "" : "invisible"}`}
+                  fill="none"
+                >
+                  <circle cx="10" cy="6" r="3" stroke="currentColor" strokeWidth="1.5" />
+                  <path
+                    d="M4 17c.5-3.2 2.5-5 6-5s5.5 1.8 6 5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span className={item.isCustom ? undefined : "invisible"}>Tillagd av användaren</span>
+              </p>
             </div>
 
             <span
