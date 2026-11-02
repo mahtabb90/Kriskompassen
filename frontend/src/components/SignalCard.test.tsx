@@ -54,6 +54,26 @@ describe("SignalCard", () => {
     expect(container.querySelector("svg g rect")!.closest("[aria-hidden='true']")).toBeTruthy()
   })
 
+  it("groups the icon, pattern description and timeline in one panel apart from the rest", () => {
+    const { container } = render(<SignalCard signal={full} isOnline />)
+    const icon = container.querySelector("svg[viewBox='0 0 24 24']")!
+    const timeline = container.querySelector("svg g")!.closest("svg")!
+    let panel: HTMLElement = screen.getByText("Beskrivning av mönstret.")
+    while (!panel.contains(timeline)) panel = panel.parentElement!
+    expect(panel.contains(icon)).toBe(true)
+    expect(panel.querySelector("h2, h3, ol, a")).toBeNull()
+    expect(panel.textContent).not.toContain("Signalens betydelse.")
+  })
+
+  it("keeps each h3 section in its own block with its content", () => {
+    render(<SignalCard signal={full} isOnline />)
+    const [meaning, actions] = screen.getAllByRole("heading", { level: 3 })
+    expect(meaning.parentElement!.textContent).toContain("Signalens betydelse.")
+    expect(meaning.parentElement!.contains(actions)).toBe(false)
+    expect(actions.parentElement!.querySelector("ol")).toBeTruthy()
+    expect(actions.parentElement!.contains(meaning)).toBe(false)
+  })
+
   it("puts a decorative loudspeaker icon before the timeline", () => {
     const { container } = render(<SignalCard signal={full} isOnline />)
     const icon = container.querySelector("svg[viewBox='0 0 24 24']")!

@@ -56,20 +56,23 @@ function WarningSignalsPage() {
           <p className="mt-4 max-w-prose text-lg leading-relaxed text-slate-700">
             {state.data.summary}
           </p>
-          <ul className="mt-6 space-y-6">
-            {state.data.items.map((signal) => (
-              <li key={signal.id}>
-                <SignalCard signal={signal} isOnline={isOnline} />
-              </li>
-            ))}
-          </ul>
+          {/* One narrower column, so each card's text and drawing share its width. */}
+          <div className="max-w-2xl">
+            <ul className="mt-6 space-y-6">
+              {state.data.items.map((signal) => (
+                <li key={signal.id}>
+                  <SignalCard signal={signal} isOnline={isOnline} />
+                </li>
+              ))}
+            </ul>
 
-          <KrisinfoSourcesCard
-            headingId="signal-sources-heading"
-            intro="Signalerna och texterna bygger på följande källor:"
-            sources={collectSources([...state.data.items, state.data])}
-            isOnline={isOnline}
-          />
+            <KrisinfoSourcesCard
+              headingId="signal-sources-heading"
+              intro="Signalerna och texterna bygger på följande källor:"
+              sources={collectSources([...state.data.items, state.data])}
+              isOnline={isOnline}
+            />
+          </div>
         </>
       )}
     </section>

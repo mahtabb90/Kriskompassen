@@ -55,20 +55,23 @@ function PhoneNumbersPage() {
           <p className="mt-4 max-w-prose text-lg leading-relaxed text-slate-700">
             {state.data.summary}
           </p>
-          <ul className="mt-6 space-y-6">
-            {state.data.items.map((phone) => (
-              <li key={phone.number}>
-                <PhoneCard phone={phone} />
-              </li>
-            ))}
-          </ul>
+          {/* The same column width as the warning signals page, so the krisinfo pages match. */}
+          <div className="max-w-2xl">
+            <ul className="mt-6 space-y-6">
+              {state.data.items.map((phone) => (
+                <li key={phone.number}>
+                  <PhoneCard phone={phone} />
+                </li>
+              ))}
+            </ul>
 
-          <KrisinfoSourcesCard
-            headingId="phone-sources-heading"
-            intro="Numren och texterna bygger på följande källor:"
-            sources={collectSources([...state.data.items, state.data])}
-            isOnline={isOnline}
-          />
+            <KrisinfoSourcesCard
+              headingId="phone-sources-heading"
+              intro="Numren och texterna bygger på följande källor:"
+              sources={collectSources([...state.data.items, state.data])}
+              isOnline={isOnline}
+            />
+          </div>
         </>
       )}
     </section>
