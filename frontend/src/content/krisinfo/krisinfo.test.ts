@@ -7,6 +7,7 @@ import { krisinfoSections } from "./index"
 
 const KRISINFORMATION_PHONES_URL =
   "https://www.krisinformation.se/detta-gor-samhallet/viktiga-telefonnummer/"
+const VARDGUIDEN_1177_URL = "https://www.1177.se/om-1177/nar-du-ringer-1177/nar-du-ringer-1177/"
 const MCF_OUTDOOR_WARNING_URL =
   "https://www.mcf.se/sv/rad-till-privatpersoner/skyddsrum-utrymning-och-varningssystem/viktigt-meddelande-till-allmanheten-vma-och-andra-varningar/utomhusvarning--hesa-fredrik/"
 const KRISINFORMATION_VMA_URL =
@@ -26,12 +27,6 @@ const signalSection = krisinfoSections["warning-signals"]
 const phones = phoneSection.items
 const signals = signalSection.items
 
-function phone(number: string) {
-  const found = phones.find((item) => item.number === number)
-  if (!found) throw new Error(`Missing phone number ${number}`)
-  return found
-}
-
 function signal(id: string) {
   const found = signals.find((item) => item.id === id)
   if (!found) throw new Error(`Missing signal ${id}`)
@@ -48,10 +43,15 @@ describe("krisinfo content", () => {
     expect(new URL(post.source.url).protocol).toBe("https:")
   })
 
-  it("bases every phone post on Krisinformation.se and every signal post on MCF", () => {
-    for (const post of [phoneSection, ...phones]) {
-      expect(post.source).toEqual({ name: "Krisinformation.se", url: KRISINFORMATION_PHONES_URL })
-    }
+  it("bases each phone post on its own source and every signal post on MCF", () => {
+    const krisinformation = { name: "Krisinformation.se", url: KRISINFORMATION_PHONES_URL }
+    expect(phoneSection.source).toEqual(krisinformation)
+    expect(Object.fromEntries(phones.map((item) => [item.number, item.source]))).toEqual({
+      "112": krisinformation,
+      "1177": { name: "1177.se", url: VARDGUIDEN_1177_URL },
+      "113 13": krisinformation,
+      "114 14": krisinformation,
+    })
     for (const post of [signalSection, ...signals]) {
       expect(post.source).toEqual({
         name: "Myndigheten för civilt försvar (MCF)",
@@ -89,7 +89,7 @@ describe("krisinfo content", () => {
   })
 
   it("lists the four phone numbers with 112 as the only emergency number", () => {
-    expect(phones.map((item) => item.number)).toEqual(["112", "113 13", "114 14", "1177"])
+    expect(phones.map((item) => item.number)).toEqual(["112", "1177", "113 13", "114 14"])
     expect(phones.filter((item) => item.isEmergency).map((item) => item.number)).toEqual(["112"])
   })
 
@@ -97,9 +97,14 @@ describe("krisinfo content", () => {
     for (const item of phones) expect(item.whenToUse).toContain(item.number)
   })
 
-  it("gives the numbers for calls from abroad", () => {
-    expect(phone("113 13").description).toContain("+46 77 33 113 13")
-    expect(phone("114 14").description).toContain("+46 77 114 14 00")
+  it("gives the source's numbers for calls from abroad in their own field", () => {
+    expect(Object.fromEntries(phones.map((item) => [item.number, item.abroadNumber]))).toEqual({
+      "112": undefined,
+      "1177": "+46 771-11 77 00",
+      "113 13": "+46 77 33 113 13",
+      "114 14": "+46 77 114 14 00",
+    })
+    for (const item of phones) expect(item.description).not.toMatch(/\+46/)
   })
 
   it("does not repeat whenToUse as a phone's description", () => {

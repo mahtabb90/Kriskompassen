@@ -5,12 +5,18 @@ const KRISINFORMATION_PHONES: ContentSource = {
   url: "https://www.krisinformation.se/detta-gor-samhallet/viktiga-telefonnummer/",
 }
 
+const VARDGUIDEN_1177: ContentSource = {
+  name: "1177.se",
+  url: "https://www.1177.se/om-1177/nar-du-ringer-1177/nar-du-ringer-1177/",
+}
+
 const LAST_VERIFIED = "2026-11-02"
 
 /**
- * Phone numbers for help and information, in the order of the source page.
+ * Phone numbers for help and information, in the order of the section's source page.
  *
- * The texts are written in own words based on the source; numbers, facts and meaning match it.
+ * Each post names the page it is based on; the texts are written in own words based on that
+ * source, and numbers, facts and meaning match it.
  */
 export const phoneNumbersSection: ListSection<Phone> = {
   id: "phone-numbers",
@@ -32,33 +38,35 @@ export const phoneNumbersSection: ListSection<Phone> = {
       lastVerified: LAST_VERIFIED,
     },
     {
-      number: "113 13",
-      label: "Information om olyckor och kriser",
+      number: "1177",
+      label: "Vårdråd per telefon",
       description:
-        "För samtal från utlandet eller från en utländsk mobil i Sverige använder du numret +46 77 33 113 13.",
-      whenToUse: "På 113 13 får du information om större olyckor och kriser i Sverige.",
+        "Du får hjälp att avgöra om du behöver söka vård och i så fall var, och råd om hur du kan göra. Det är en sjuksköterska som svarar. Du kan ringa när som helst på dygnet.",
+      whenToUse: "Känner du dig sjuk men behöver inte akut hjälp, kan du ringa 1177 och få råd.",
       isEmergency: false,
+      abroadNumber: "+46 771-11 77 00",
+      source: VARDGUIDEN_1177,
+      lastVerified: LAST_VERIFIED,
+    },
+    {
+      number: "113 13",
+      label: "Upplysningar vid kriser och olyckor",
+      description: "Numret är inte till för att larma. Behöver någon akut hjälp ringer du 112.",
+      whenToUse:
+        "Undrar du vad som gäller vid en större olycka eller kris i Sverige kan du ringa 113 13.",
+      isEmergency: false,
+      abroadNumber: "+46 77 33 113 13",
       source: KRISINFORMATION_PHONES,
       lastVerified: LAST_VERIFIED,
     },
     {
       number: "114 14",
-      label: "Polisen vid icke-akuta händelser",
-      description:
-        "För samtal från utlandet eller från en utländsk mobil i Sverige använder du numret +46 77 114 14 00.",
+      label: "Kontakt med polisen utan brådska",
+      description: "Pågår brottet just nu är det en nödsituation. Ring då 112.",
       whenToUse:
-        "Du når polisen på 114 14 i ärenden som inte är akuta, exempelvis om du vill lämna tips eller anmäla ett brott som inte pågår.",
+        "Ring 114 14 för polisärenden som kan vänta, till exempel om du har ett tips eller vill anmäla ett brott som redan har skett.",
       isEmergency: false,
-      source: KRISINFORMATION_PHONES,
-      lastVerified: LAST_VERIFIED,
-    },
-    {
-      number: "1177",
-      label: "Råd om sjukvård och hälsa",
-      description:
-        "Du får prata med en sjuksköterska som bedömer dina symtom och ger råd. Vid behov får du även hjälp att hitta rätt mottagning.",
-      whenToUse: "När du behöver råd vid sjukdom som inte är akut kan du ringa 1177.",
-      isEmergency: false,
+      abroadNumber: "+46 77 114 14 00",
       source: KRISINFORMATION_PHONES,
       lastVerified: LAST_VERIFIED,
     },

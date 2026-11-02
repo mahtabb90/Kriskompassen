@@ -60,11 +60,15 @@ export interface ListSection<T> extends InfoSection {
  * A Swedish phone number for help or information during a crisis.
  *
  * @property number The number as it is displayed, with the source's spacing (e.g. "113 13").
- * Views building a `tel:` link strip the whitespace themselves.
- * @property label Short name of the service, e.g. "Information om olyckor och kriser".
+ * Views building a `tel:` link keep only its digits, so spaces and hyphens never reach the link.
+ * @property label Short name of the service, in own wording.
  * @property description What the service is, in own wording based on the source.
  * @property whenToUse When to call, in own wording based on the source.
  * @property isEmergency True only for emergency numbers that should be called in acute danger.
+ * @property abroadNumber The number the source gives for calls from abroad or from a phone
+ * registered outside Sweden, in international format with the source's spacing
+ * (e.g. "+46 77 33 113 13"). Views building a `tel:` link keep the leading `+` and the digits.
+ * Absent when the source gives no such number.
  */
 export interface Phone extends VerifiedContent {
   number: string
@@ -72,6 +76,7 @@ export interface Phone extends VerifiedContent {
   description: string
   whenToUse: string
   isEmergency: boolean
+  abroadNumber?: string
 }
 
 /**

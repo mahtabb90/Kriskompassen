@@ -18,7 +18,7 @@ rendering.
 | Preparedness articles | Manually maintained summaries attributed to Krisinformation.se | File-backed article API; no automatic source fetching |
 | Civil-defense shelters | Myndigheten för civilt försvar (MCF), open OGC API Features | File-backed snapshot API and browser-local offline cache; refreshed by a manual script, no automatic daily sync yet |
 | General crisis news | Krisinformation.se news API v3 | Chosen source for future work; no news fetching service or route is implemented |
-| Phone numbers and outdoor warning signals (krisinfo) | Krisinformation.se and Myndigheten för civilt försvar (MCF) | Static TypeScript content bundled with the frontend and precached by the service worker; no backend API, fetching or IndexedDB copy. See [Frontend krisinfo content](#frontend-krisinfo-content) |
+| Phone numbers and outdoor warning signals (krisinfo) | Krisinformation.se, 1177.se (the 1177 post) and Myndigheten för civilt försvar (MCF) | Static TypeScript content bundled with the frontend and precached by the service worker; no backend API, fetching or IndexedDB copy. See [Frontend krisinfo content](#frontend-krisinfo-content) |
 
 Do not feed news records into the VMA validator or silently fall back to news if VMA fetching fails.
 The former assumption that Krisinformation VMA records have the news format is no longer used.
@@ -177,6 +177,11 @@ the backend serves from `src/data/crisis.json`.
   carries `source` (name and `https` URL) and `lastVerified` (`YYYY-MM-DD`).
 - **Files:** `phones.ts` and `signals.ts` hold the content; `index.ts` maps each section ID to
   its content.
+- **Phone numbers:** `number` and `abroadNumber` keep the source's spacing for display.
+  `abroadNumber` is the source's international number for calls from abroad or from a phone
+  registered outside Sweden; it is absent when the source gives none. Phone numbers follow the
+  order of the section's source page. A post whose facts come from another page names that page
+  as its own `source`; for example, the 1177 post is based on 1177.se.
 - **Reading:** pages call `useKrisinfo(sectionId)`, which reads through `getKrisinfoSection` in
   `frontend/src/services/krisinfoService.ts`. Do not import the content files directly, so the
   source can later move to IndexedDB or a backend without changing pages.
@@ -206,8 +211,8 @@ the backend serves from `src/data/crisis.json`.
    Whoever changes a post makes that comparison and updates the date in the same change.
    `lastVerified` in the content files is the only record of when a post was verified.
 3. Update `frontend/src/content/krisinfo/krisinfo.test.ts` when a fact changes. These content
-   tests pin facts (phone numbers, signal timings, links, MP3 links, sources and `lastVerified`),
-   not wording, so a rewording alone needs no test change.
+   tests pin facts (phone numbers and their order, numbers for calls from abroad, signal
+   timings, links, MP3 links, sources and `lastVerified`), not wording, so a rewording alone needs no test change.
 4. To add a section, add its ID and type to `KrisinfoSections` and its content to
    `krisinfoSections` in `index.ts`. The section's `id` must equal its key.
 5. Run the frontend checks: `npm run lint`, `npm run format:check`, `npm run test` and
