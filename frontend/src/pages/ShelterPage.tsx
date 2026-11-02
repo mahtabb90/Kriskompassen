@@ -25,9 +25,9 @@ interface NearestSheltersProps {
 
 /**
  * Loads and renders the nearest shelters for a known position, as a plain list; never mounted
- * without one. There is no map here - "Kartan" (see ShelterPage's outer tablist row) covers
- * every map need, including the nearest shelters (highlighted there), so this component no
- * longer duplicates that experience with its own list/map toggle.
+ * without one. There is no map here - the "Visa på karta" link above the tab row covers every
+ * map need, including the nearest shelters (highlighted there), so this component no longer
+ * duplicates that experience with its own list/map toggle.
  */
 function NearestShelters({
   origin,
@@ -93,6 +93,15 @@ const tabButtonClassName = (active: boolean) =>
     ? "border-blue-900 text-blue-900"
     : "border-transparent text-slate-600 hover:border-slate-300 hover:text-blue-900")
 
+// The tertiary text-button variant (DESIGN_SYSTEM.md section 6.2.3): no border or fill at rest,
+// underline and blue text mark it as interactive, and the `after` pseudo-element extends the
+// 32px-high visible box to the project's 48×48px touch-target standard (section 6.1) without
+// adding layout height.
+const mapLinkClassName =
+  "relative inline-flex min-h-8 shrink-0 cursor-pointer items-baseline gap-2 rounded-xl px-2 " +
+  "py-1.5 text-sm font-semibold text-blue-900 underline underline-offset-4 hover:bg-blue-50 " +
+  "active:bg-blue-50 after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']"
+
 /**
  * Lists the nearest civil-defense shelters to the user's active saved position, and - on a
  * separate tab - the shelters bookmarked on this device ("Sparade skyddsrum").
@@ -156,7 +165,46 @@ function ShelterPage() {
         </div>
       )}
 
-      <div className="mt-6 flex items-center justify-between gap-6 border-b border-slate-200">
+      {/* A real navigation link to its own page, not a third role="tab" - it leaves this
+          page's tablist and panels entirely rather than switching between them, so it gets its
+          own row and the tertiary text-button style instead of looking like a third tab. The
+          only map in the whole Skyddsrum section - it highlights the user's nearest/saved
+          shelters itself, so neither tab below needs its own separate map anymore. */}
+      <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
+        <p className="text-slate-600">
+          Hela Sveriges skyddsrumsregister finns på kartan, med dina närmaste och sparade skyddsrum
+          särskilt markerade.
+        </p>
+        <Link to="/skyddsrum/karta" className={mapLinkClassName}>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+            focusable="false"
+            className="shrink-0 self-center"
+          >
+            <path
+              d="M9 4 4 6v14l5-2 6 2 5-2V4l-5 2-6-2Z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M9 4v14M15 6v14"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Visa på karta
+        </Link>
+      </div>
+
+      <div className="mt-6 border-b border-slate-200">
         <div role="tablist" aria-label="Skyddsrumsvyer" className="flex gap-6">
           <button
             type="button"
@@ -183,15 +231,6 @@ function ShelterPage() {
             Sparade skyddsrum
           </button>
         </div>
-
-        {/* A real navigation link to its own page, not a third role="tab" - it leaves this
-            tablist's panels entirely rather than switching between them, so it's styled like a
-            tab for visual consistency without claiming tab semantics it doesn't have. The only
-            map in the whole Skyddsrum section - it highlights the user's nearest/saved shelters
-            itself, so neither tab below needs its own separate map anymore. */}
-        <Link to="/skyddsrum/karta" className={tabButtonClassName(false)}>
-          Kartan
-        </Link>
       </div>
 
       {activeTab === "nearest" && (
