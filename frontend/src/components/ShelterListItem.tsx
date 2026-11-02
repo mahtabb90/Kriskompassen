@@ -75,17 +75,12 @@ function ShelterListItem({
         <p className="mt-1 text-sm text-slate-500 italic" aria-hidden={comment ? undefined : true}>
           {comment || " "}
         </p>
-        <p
-          className="mt-1 text-sm text-slate-600"
-          aria-hidden={shelter.number ? undefined : true}
-        >
+        <p className="mt-1 text-sm text-slate-600" aria-hidden={shelter.number ? undefined : true}>
           {shelter.number ? `Skyddsrumsnummer ${shelter.number}` : " "}
         </p>
         <p
           className="mt-1 text-sm text-slate-600"
-          aria-hidden={
-            distanceMeters !== undefined || otherDetails.length > 0 ? undefined : true
-          }
+          aria-hidden={distanceMeters !== undefined || otherDetails.length > 0 ? undefined : true}
         >
           {distanceMeters !== undefined && <ShelterDistance meters={distanceMeters} />}
           {distanceMeters !== undefined && otherDetails.length > 0 && " · "}

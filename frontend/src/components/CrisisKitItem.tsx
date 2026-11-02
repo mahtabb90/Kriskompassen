@@ -361,7 +361,9 @@ function CrisisKitItem({
                     strokeLinecap="round"
                   />
                 </svg>
-                <span className={item.isCustom ? undefined : "invisible"}>Tillagd av användaren</span>
+                <span className={item.isCustom ? undefined : "invisible"}>
+                  Tillagd av användaren
+                </span>
               </p>
             </div>
 
