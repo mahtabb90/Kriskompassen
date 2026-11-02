@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen } from "@testing-library/react"
+import { act, cleanup, render, screen, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { krisinfoSections } from "../content/krisinfo/index"
 import { getKrisinfoSection, KrisinfoError } from "../services/krisinfoService"
@@ -12,6 +12,36 @@ vi.mock("../services/krisinfoService", async (importOriginal) => {
 
 const readSection = vi.mocked(getKrisinfoSection)
 const section = krisinfoSections["phone-numbers"]
+
+// Facts pinned here: the numbers, their order and their tel: links. Labels and texts come from
+// the content, so rewording them needs no change in this file.
+const NUMBERS_AND_HREFS = [
+  ["112", "tel:112"],
+  ["1177", "tel:1177"],
+  ["113 13", "tel:11313"],
+  ["114 14", "tel:11414"],
+  ["116 111", "tel:116111"],
+  ["020-22 11 44", "tel:020221144"],
+]
+
+function phone(number: string) {
+  const found = section.items.find((item) => item.number === number)
+  if (!found) throw new Error(`Missing phone number ${number}`)
+  return found
+}
+
+async function renderReady() {
+  const view = render(<PhoneNumbersPage />)
+  await screen.findByText(section.summary)
+  return view
+}
+
+function telLinks(container: HTMLElement, selector: string) {
+  return [...container.querySelectorAll<HTMLAnchorElement>(selector)].map((link) => [
+    link.textContent,
+    link.getAttribute("href"),
+  ])
+}
 
 afterEach(() => {
   cleanup()
@@ -32,36 +62,102 @@ describe("PhoneNumbersPage", () => {
     expect(screen.queryByRole("status")).toBeNull()
   })
 
-  it("lists every number from the content in order with its guidance", async () => {
-    render(<PhoneNumbersPage />)
-    await screen.findByText(section.summary)
-    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(
-      section.items.map((phone) => `${phone.number} – ${phone.label}`)
+  it("names each number's heading with both the number and its label, in order", async () => {
+    await renderReady()
+    for (const [number] of NUMBERS_AND_HREFS) {
+      const { label } = phone(number)
+      expect(screen.getByRole("heading", { level: 2, name: `${number} ${label}` })).toBeTruthy()
+    }
+    const numberHeadings = screen
+      .getAllByRole("heading", { level: 2 })
+      .filter((heading) => heading.id !== "phone-sources-heading")
+    expect(numberHeadings.map((heading) => heading.querySelector("span")?.textContent)).toEqual(
+      NUMBERS_AND_HREFS.map(([number]) => number)
     )
-    for (const phone of section.items) {
-      expect(screen.getByText(phone.whenToUse)).toBeTruthy()
-      expect(screen.getByText(phone.description)).toBeTruthy()
+  })
+
+  it("shows each number's guidance from the content", async () => {
+    await renderReady()
+    for (const item of section.items) {
+      expect(screen.getByText(item.whenToUse)).toBeTruthy()
+      expect(screen.getByText(item.description)).toBeTruthy()
     }
   })
 
-  it("shows the source, opening in a new tab, and the verification date", async () => {
-    render(<PhoneNumbersPage />)
-    const link = await screen.findByRole("link", {
-      name: "Krisinformation.se (öppnas i ny flik)",
-    })
-    expect(link.getAttribute("href")).toBe(section.source.url)
-    expect(link.getAttribute("target")).toBe("_blank")
-    expect(link.getAttribute("rel")).toBe("noopener noreferrer")
-    expect(screen.getByText("Senast kontrollerad: 2 november 2026")).toBeTruthy()
+  it("links every number in order to a tel: href without spaces, hyphens or +46", async () => {
+    const { container } = await renderReady()
+    expect(telLinks(container, 'a[href^="tel:"]:not([href^="tel:+"])')).toEqual(
+      NUMBERS_AND_HREFS.map(([number, href]) => [`Ring ${number}`, href])
+    )
   })
 
-  it("offers no tel: links and makes no network request", async () => {
+  it("gives each call link a descriptive name that starts with its visible text", async () => {
+    await renderReady()
+    const emergency = screen.getByRole("link", { name: "Ring 112, akut nödnummer" })
+    expect(emergency.getAttribute("href")).toBe("tel:112")
+    for (const [number, href] of NUMBERS_AND_HREFS.slice(1)) {
+      const link = screen.getByRole("link", { name: `Ring ${number}, ${phone(number).label}` })
+      expect(link.getAttribute("href")).toBe(href)
+    }
+  })
+
+  it("marks 112, and only 112, as the emergency number", async () => {
+    await renderReady()
+    const marker = screen.getByText("Akut nödnummer")
+    const item = marker.closest("li")!
+    expect(within(item).getByRole("heading", { level: 2 }).textContent).toContain("112")
+    expect(within(item).getByRole("link", { name: "Ring 112, akut nödnummer" })).toBeTruthy()
+    expect(item.parentElement!.firstElementChild).toBe(item)
+    expect(screen.getAllByText("Akut nödnummer")).toHaveLength(1)
+  })
+
+  it("links the numbers for calls from abroad with +46 for 1177, 113 13 and 114 14 only", async () => {
+    const { container } = await renderReady()
+    expect(telLinks(container, 'a[href^="tel:+"]')).toEqual([
+      ["Ring från utlandet", "tel:+46771117700"],
+      ["Ring från utlandet", "tel:+46773311313"],
+      ["Ring från utlandet", "tel:+46771141400"],
+    ])
+    for (const number of ["1177", "113 13", "114 14"]) {
+      const { abroadNumber } = phone(number)
+      const link = screen.getByRole("link", {
+        name: `Ring från utlandet eller med utländsk telefon till ${number}, ${abroadNumber}`,
+      })
+      expect(link.getAttribute("href")?.startsWith("tel:+46")).toBe(true)
+    }
+  })
+
+  it("shows every number as plain text outside its links so it can be copied", async () => {
+    await renderReady()
+    for (const item of section.items) {
+      const shown = screen.getByText(item.number, { selector: "h2 span" })
+      expect(shown.closest("a")).toBeNull()
+      if (item.abroadNumber) expect(screen.getByText(item.abroadNumber).closest("a")).toBeNull()
+    }
+  })
+
+  it("lists each source once, opening in a new tab, with its verification date", async () => {
+    await renderReady()
+    const sources = within(screen.getByRole("region", { name: "Källor" }))
+    const links = sources.getAllByRole("link")
+    expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+      ["SOS Alarm (öppnas i ny flik)", phone("112").source.url],
+      ["1177.se (öppnas i ny flik)", phone("1177").source.url],
+      ["Krisinformation.se (öppnas i ny flik)", section.source.url],
+      ["Bris (öppnas i ny flik)", phone("116 111").source.url],
+      ["Teletal (öppnas i ny flik)", phone("020-22 11 44").source.url],
+    ])
+    for (const link of links) {
+      expect(link.getAttribute("target")).toBe("_blank")
+      expect(link.getAttribute("rel")).toBe("noopener noreferrer")
+    }
+    expect(sources.getAllByText("Senast kontrollerad: 2 november 2026")).toHaveLength(5)
+  })
+
+  it("makes no network request", async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
-    const { container } = render(<PhoneNumbersPage />)
-    await screen.findByText(section.summary)
-    expect(container.querySelector('a[href^="tel:"]')).toBeNull()
-    expect(screen.getAllByRole("link")).toHaveLength(1)
+    await renderReady()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
