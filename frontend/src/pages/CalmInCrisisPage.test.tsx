@@ -1,13 +1,22 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react"
+import { MemoryRouter } from "react-router-dom"
 import { afterEach, describe, expect, it } from "vitest"
 import CalmInCrisisPage from "./CalmInCrisisPage"
 
 afterEach(cleanup)
 
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <CalmInCrisisPage />
+    </MemoryRouter>
+  )
+}
+
 describe("CalmInCrisisPage", () => {
   it("has one focusable page heading and only h2 section headings", () => {
-    const { container } = render(<CalmInCrisisPage />)
+    const { container } = renderPage()
     const h1s = screen.getAllByRole("heading", { level: 1 })
     expect(h1s).toHaveLength(1)
     expect(h1s[0].id).toBe("page-heading")
@@ -25,7 +34,7 @@ describe("CalmInCrisisPage", () => {
   })
 
   it("shows the tagline, emergency notice and disclaimer as plain text", () => {
-    render(<CalmInCrisisPage />)
+    renderPage()
     expect(screen.getByText("Andas. Fokusera. Ta nästa steg.").tagName).toBe("P")
     expect(
       screen.getByText(
@@ -40,22 +49,32 @@ describe("CalmInCrisisPage", () => {
   })
 
   it("keeps the source-based advice wording", () => {
-    render(<CalmInCrisisPage />)
+    renderPage()
     expect(
       screen.getByText(/Ta tre lugna andetag och rikta hela din uppmärksamhet mot hur det känns/)
     ).toBeTruthy()
     expect(screen.getByText(/Prata med någon som du litar på/)).toBeTruthy()
     expect(screen.getByText(/begränsa din nyhetskonsumtion/)).toBeTruthy()
     expect(
-      screen.getByText(
-        "Följ aktuella säkerhetsinstruktioner och börja med det viktigaste. Du kan också gå till Krisinformation för aktuella råd eller läsa information som du tidigare har sparat offline."
-      )
+      screen.getByText(/Följ aktuella säkerhetsinstruktioner och börja med det viktigaste./)
+    ).toBeTruthy()
+    expect(
+      screen.getByText(/för aktuella råd eller läsa information som du tidigare har sparat/)
     ).toBeTruthy()
   })
 
+  it("links Krisinformation internally to /crisis in the same tab", () => {
+    renderPage()
+    const link = screen.getByRole("link", { name: "Krisinformation" })
+    expect(link.getAttribute("href")).toBe("/crisis")
+    expect(link.getAttribute("target")).toBeNull()
+  })
+
   it("offers only the three official source links, opening in a new tab", () => {
-    render(<CalmInCrisisPage />)
-    const links = screen.getAllByRole("link")
+    renderPage()
+    const links = screen
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("href") !== "/crisis")
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "https://www.1177.se/liv--halsa/stresshantering-och-somn/mindfulness/",
       "https://www.krisinformation.se/din-beredskap/stod-vid-oro-och-kris/stodlinjer/",
@@ -70,14 +89,14 @@ describe("CalmInCrisisPage", () => {
   })
 
   it("adds no buttons or other interaction", () => {
-    const { container } = render(<CalmInCrisisPage />)
+    const { container } = renderPage()
     expect(screen.queryAllByRole("button")).toHaveLength(0)
     expect(container.querySelector('a[href^="tel:"]')).toBeNull()
     expect(container.querySelectorAll("input, select, textarea, form")).toHaveLength(0)
   })
 
   it("hides every decorative graphic from assistive technology and does not animate", () => {
-    const { container } = render(<CalmInCrisisPage />)
+    const { container } = renderPage()
     const svgs = container.querySelectorAll("svg")
     expect(svgs).toHaveLength(5)
     for (const svg of svgs) {
@@ -88,13 +107,13 @@ describe("CalmInCrisisPage", () => {
   })
 
   it("uses a small amber dot in the hero motif and in the divider", () => {
-    const { container } = render(<CalmInCrisisPage />)
+    const { container } = renderPage()
     expect(container.querySelectorAll("svg circle.text-amber-400")).toHaveLength(1)
     expect(container.querySelectorAll("span.size-2.bg-amber-400")).toHaveLength(1)
   })
 
   it("puts the blue/amber accent bar on the hero, advice and sources cards but not the emergency panel", () => {
-    const { container } = render(<CalmInCrisisPage />)
+    const { container } = renderPage()
     const bars = container.querySelectorAll("div.h-1\\.5[aria-hidden='true']")
     expect(bars).toHaveLength(6)
     for (const bar of bars) {

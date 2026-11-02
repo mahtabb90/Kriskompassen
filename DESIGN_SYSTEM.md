@@ -281,7 +281,7 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
 - **Hero motif:** an inline SVG of two light rings (`text-blue-200`), one darker inner ring with a gentle wave (`text-blue-900`) and one small amber dot (`text-amber-400`). Keep it to three rings so it reads as stillness, not a target. It is `aria-hidden`, `focusable="false"`, titleless and not animated.
 - **Emergency panel:** `rounded-2xl border-2 border-blue-900 bg-blue-50` with an `h2` label ("Vid akut fara") and plain text. It uses no red and no warning triangle, which stay reserved for VMA (section 2.4.1). The visible label, not colour, carries the meaning. It contains no link or control.
 - **Advice cards:** section 5.1 cards. Each `h2` is preceded by a `CalmIcon` (same 24×24, 1.8 stroke, `currentColor` style as section 5.3, `text-blue-900`, `aria-hidden`) in a 48px `rounded-full bg-blue-50` circle. `CalmIcon` is separate from `CrisisIcon`, so the article and kit mapping in section 5.3 is unaffected.
-- **Divider:** a decorative row of two thin `bg-blue-200` lines around a `size-2` amber dot, placed before the sources section and hidden from assistive technology.
+- **Divider:** a decorative row of two thin `bg-blue-900/30` lines around a `size-2` amber dot, placed before the sources section and hidden from assistive technology.
 - **Amber:** only the hero dot and the divider dot. Amber stays a small accent and never signals urgency.
 
 ---
