@@ -198,6 +198,36 @@ the backend serves from `src/data/crisis.json`.
   `useKrisinfo` and renders each number with `PhoneCard`, which receives it as props and reads
   nothing itself. The page lists each distinct `source` once with the oldest `lastVerified`
   among the posts that use it. It has no navigation entry yet.
+- **Warning signals page:** `/varningssignaler` (`WarningSignalsPage`) reads the section through
+  `useKrisinfo` and browser connectivity through `useMode()`, and renders each signal with
+  `SignalCard`, which receives the signal and `isOnline` as props. It shows the signals in
+  content order with a decorative timeline (`SignalPattern`), `patternDescription` as text,
+  `meaning` only when present (with `meaningSource` as its own link), and `whatToDo` as an
+  ordered list that is left out when empty. `audioLinkUrl` is not shown on the page. It has no
+  navigation entry yet.
+- **External links:** every external link on the krisinfo pages, including the sources, uses
+  `ExternalLink` (`frontend/src/components/ExternalLink.tsx`). It opens a new tab with
+  `rel="noopener noreferrer"`, says so in its accessible name and adds "Kräver
+  internetanslutning." while the browser reports no connection. Pages pass `isOnline` from
+  `useMode()`: browser connectivity, not the "Sparad information" mode, decides the note.
+- **Signal patterns:** `computeSignalStrokes` in `frontend/src/utils/signalPattern.ts` turns a
+  `SignalPattern` into one stroke per tone and a `timelineSeconds` to draw them on.
+  - With `totalDurationSeconds` it counts the whole tones that fit, with no pause after the
+    last one, and the timeline lasts that duration. Viktigt meddelande (7 s tone, 14 s pause,
+    2 minutes) is drawn as 6 tones on a 2-minute timeline, Flyglarm (2 s, 2 s, 1 minute) as 15
+    and Beredskapslarm (30 s, 15 s, 5 minutes) as 7.
+  - With `repeatCount` it draws that many tones, and the timeline ends with the last one, as for
+    Faran över (one 30-second tone).
+  - Prefer `totalDurationSeconds` when the source states a duration, so the timeline's end label
+    matches the text. Viktigt meddelande's source states both 6 repeats and 2 minutes; the
+    duration is used, and the content test pins the resulting 6 tones.
+  - `formatSignalSeconds` writes the labels: whole minutes as "N min", other times as "N s".
+  - Both throw `RangeError` for invalid values, and the tests run every bundled signal through
+    them.
+- **Sources on pages:** `collectSources` and `formatVerifiedDate` in
+  `frontend/src/utils/krisinfoSources.ts` and the `KrisinfoSourcesCard` component are shared by
+  the krisinfo pages. A signal's `meaningSource` is listed after its `source`, with the signal's
+  `lastVerified`.
 - **Offline:** the content ships in the JavaScript bundle, which the service worker precaches.
   It needs no network request, IndexedDB copy or `vite.config.ts` change, and it is shown in
   both online mode and "Sparad information" mode.
