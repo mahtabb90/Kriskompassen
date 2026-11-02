@@ -370,9 +370,7 @@ describe("CrisisKitItem interactions", () => {
     renderItem(excludedItem)
 
     expect(screen.queryByText("Saknas")).toBeNull()
-    expect(
-      screen.queryByText("Deaktiverad – räknas inte med i beredskapsöversikten.")
-    ).toBeNull()
+    expect(screen.queryByText("Deaktiverad – räknas inte med i beredskapsöversikten.")).toBeNull()
 
     expect(
       (

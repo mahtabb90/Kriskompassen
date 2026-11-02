@@ -200,9 +200,7 @@ describe("CrisisKitPage ownership changes", () => {
     })
 
     expect(await screen.findByText("Markerad: Behövs inte")).toBeTruthy()
-    expect(
-      screen.queryByText("Deaktiverad – räknas inte med i beredskapsöversikten.")
-    ).toBeNull()
+    expect(screen.queryByText("Deaktiverad – räknas inte med i beredskapsöversikten.")).toBeNull()
 
     expect(
       (
@@ -515,13 +513,9 @@ describe("CrisisKitPage expiration summary", () => {
   it("hides the expiration summary when no owned items need review", async () => {
     mountPage()
 
-    expect(
-      await screen.findByRole("heading", { name: "Min krislåda" })
-    ).toBeTruthy()
+    expect(await screen.findByRole("heading", { name: "Min krislåda" })).toBeTruthy()
 
-    expect(
-      screen.queryByLabelText("Utgångsdatum att se över")
-    ).toBeNull()
+    expect(screen.queryByLabelText("Utgångsdatum att se över")).toBeNull()
   })
 })
 
@@ -676,10 +670,7 @@ describe("CrisisKitPage category sections", () => {
       isNotNeeded: true,
     }
 
-    vi.mocked(getCrisisKitItems).mockResolvedValue([
-      activeItem,
-      deactivatedItem,
-    ])
+    vi.mocked(getCrisisKitItems).mockResolvedValue([activeItem, deactivatedItem])
 
     mountPage()
 
