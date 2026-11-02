@@ -22,8 +22,27 @@ describe("ExternalLink", () => {
     render(<ExternalLink href={HREF} label="Testsida" isOnline />)
     const link = screen.getByRole("link")
     expect(link.hasAttribute("aria-label")).toBe(false)
-    expect(link.firstElementChild?.firstChild?.textContent).toBe("Testsida")
-    expect(screen.getByText("(öppnas i ny flik)", { exact: false }).className).toContain("sr-only")
+    expect(link.textContent).toBe("Testsida (öppnas i ny flik)")
+    expect(screen.getByText("(öppnas i ny flik)").className).toContain("sr-only")
+  })
+
+  it("keeps the icon on the same line as the last word of a long label", () => {
+    render(<ExternalLink href={HREF} label="Sveriges Radio – lokala P4-kanaler" isOnline />)
+    const link = screen.getByRole("link", {
+      name: "Sveriges Radio – lokala P4-kanaler (öppnas i ny flik)",
+    })
+    const icon = link.querySelector("svg")!
+    const unbreakable = icon.parentElement!
+    expect(unbreakable.className).toContain("whitespace-nowrap")
+    expect(unbreakable.textContent).toBe("P4-kanaler")
+    expect(link.className).not.toContain("flex")
+  })
+
+  it("keeps the icon beside a one-word label", () => {
+    render(<ExternalLink href={HREF} label="Testsida" isOnline />)
+    expect(screen.getByRole("link").querySelector("svg")!.parentElement!.textContent).toBe(
+      "Testsida"
+    )
   })
 
   it("shows a decorative icon that adds nothing to the accessible name", () => {
