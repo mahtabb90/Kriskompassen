@@ -226,6 +226,7 @@ function CrisisKitPage() {
         Ange utgångsdatum för att hålla koll på när saker behöver kontrolleras eller bytas ut.
       </p>
 
+    {totalItemsToReview > 0 && (
       <section
         aria-label="Utgångsdatum att se över"
         className="mt-6 rounded-2xl border border-blue-200/80 bg-white p-5 shadow-sm sm:p-6"
@@ -494,6 +495,7 @@ function CrisisKitPage() {
           </div>
         </details>
       </section>
+    )}
 
       <form
         onSubmit={handleAddItem}
@@ -620,6 +622,18 @@ function CrisisKitPage() {
             return (
               <details
                 key={category}
+                onToggle={(event) => {
+                  const categoryDetails = event.currentTarget
+
+                  if (event.target !== categoryDetails || !categoryDetails.open) return
+
+                  categoryDetails
+                    .querySelectorAll<HTMLDetailsElement>(".subcategory-group")
+                    .forEach((subcategoryDetails) => {
+                      subcategoryDetails.open =
+                        subcategoryDetails.dataset.hasActiveItems === "true"
+                    })
+                }}
                 className="group rounded-2xl border border-blue-200/80 bg-white shadow-sm"
               >
                 <summary className="relative flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl p-4 pt-5 font-semibold text-blue-900 focus-visible:outline-3 focus-visible:outline-blue-900 focus-visible:outline-offset-4 sm:p-5 sm:pt-6">
@@ -655,6 +669,9 @@ function CrisisKitPage() {
                       return (
                         <details
                           key={subcategory}
+                          data-has-active-items={subcategoryItems.some(
+                            (item) => !item.isNotNeeded
+                          )}
                           className="subcategory-group rounded-xl border border-blue-100 bg-slate-50"
                         >
                           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-xl p-4 font-semibold text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">

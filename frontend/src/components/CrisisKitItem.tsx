@@ -453,12 +453,6 @@ function CrisisKitItem({
               Vill du markera saken som något du inte behöver?
             </h2>
 
-            <p className="mt-3 text-base leading-relaxed text-slate-700">
-              Saken markeras som "Behövs inte" och räknas inte med i din beredskapsöversikt eller
-              kategorins sammanställning. Den finns kvar i listan och du kan ändra tillbaka när som
-              helst.
-            </p>
-
             {notNeededError && (
               <p className="mt-3 text-sm font-medium text-red-800" role="alert">
                 {notNeededError}
@@ -572,15 +566,6 @@ function CrisisKitItem({
                       : "Behövs inte"}
                 </span>
               </label>
-
-              {item.isNotNeeded && (
-                <p className="ml-8 flex items-center gap-2 text-sm font-medium text-slate-600">
-                  <span aria-hidden="true" className="font-bold text-red-700">
-                    ✕
-                  </span>
-                  Deaktiverad – räknas inte med i beredskapsöversikten.
-                </p>
-              )}
 
               {notNeededError && (
                 <p className="mt-2 text-sm font-medium text-red-800" role="alert">
