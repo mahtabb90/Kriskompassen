@@ -1,3 +1,5 @@
+import type { ReactNode } from "react"
+import { Link } from "react-router-dom"
 import CalmHeroMotif from "../components/CalmHeroMotif"
 import CalmIcon, { type CalmIconName } from "../components/CalmIcon"
 
@@ -5,7 +7,7 @@ interface AdviceCard {
   id: string
   icon: CalmIconName
   title: string
-  text: string
+  text: ReactNode
 }
 
 const ADVICE_CARDS: readonly AdviceCard[] = [
@@ -25,7 +27,15 @@ const ADVICE_CARDS: readonly AdviceCard[] = [
     id: "one-step",
     icon: "steps",
     title: "Ta en sak i taget",
-    text: "Följ aktuella säkerhetsinstruktioner och börja med det viktigaste. Du kan också gå till Krisinformation för aktuella råd eller läsa information som du tidigare har sparat offline.",
+    text: (
+      <>
+        Följ aktuella säkerhetsinstruktioner och börja med det viktigaste. Du kan också gå till{" "}
+        <Link to="/crisis" className="font-medium text-blue-900 underline underline-offset-4">
+          Krisinformation
+        </Link>{" "}
+        för aktuella råd eller läsa information som du tidigare har sparat offline.
+      </>
+    ),
   },
   {
     id: "support",
@@ -123,9 +133,9 @@ function CalmInCrisisPage() {
       </p>
 
       <div aria-hidden="true" className="my-10 flex items-center gap-4">
-        <span className="h-px flex-1 bg-blue-200" />
+        <span className="h-px flex-1 bg-blue-900/30" />
         <span className="size-2 rounded-full bg-amber-400" />
-        <span className="h-px flex-1 bg-blue-200" />
+        <span className="h-px flex-1 bg-blue-900/30" />
       </div>
 
       <section aria-labelledby="calm-sources-heading" className={CARD_CLASSES}>
