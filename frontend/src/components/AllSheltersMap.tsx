@@ -18,12 +18,10 @@ import { useSheltersWithinBounds } from "../hooks/useSheltersWithinBounds"
 // documented Vite+MapLibre v6 worker-loading incompatibility - see mapConfig.ts.
 import { mapConfig } from "../config/mapConfig"
 import type { Shelter } from "../types/shelter"
-import { formatShelterCapacity } from "../utils/formatCapacity"
-import { describeShelterLocation } from "../utils/shelterLabel"
-import { describeShelterType } from "../utils/shelterType"
-import { formatDistanceMeters, type GeoPoint } from "../utils/distance"
+import type { GeoPoint } from "../utils/distance"
 import { registerShelterIcons, shelterIconIdFor } from "../utils/shelterMapImages"
 import { originMarkerElement } from "../utils/shelterMapIcons"
+import { buildPopupContent } from "./shelterMapPopup"
 
 /** The map's own camera, independent of any particular shelter - round-tripped through
  * react-router's navigation state so a visit to a shelter's detail page can hand it back on
@@ -43,6 +41,11 @@ interface AllSheltersMapProps {
   /** Performs the actual SPA navigation - this component has no router context of its own
    * (its popups are plain DOM, not a React tree), so the caller (which does) does it. */
   onNavigate: (path: string, options?: { state?: unknown }) => void
+  /** Backs the popup's save/remove button - same useSavedShelters() this component's
+   * savedShelterIds marker-icon highlighting is already derived from (see ShelterMapPage.tsx). */
+  isSaved: (id: string) => boolean
+  save: (shelter: Pick<Shelter, "id" | "address" | "lat" | "lon">) => Promise<void>
+  remove: (id: string) => Promise<void>
 }
 
 const SOURCE_ID = "shelters"
@@ -84,68 +87,6 @@ function featureToShelter(feature: MapGeoJSONFeature): Shelter {
     capacity: properties.capacity,
     type: properties.type,
   }
-}
-
-/**
- * Builds a click location's popup content as plain DOM - not a React render - since the popup
- * is attached to the map outside React's tree, where react-router's context (needed by a real
- * navigation link) is not available. Groups whatever map.queryRenderedFeatures(e.point, ...)
- * returned at the click point into one popup listing every shelter there, since shelters sharing
- * (practically) the same coordinate - a real MCF data pattern - render as overlapping,
- * individually unaddressable symbol-layer points rather than separate DOM markers.
- */
-function buildPopupContent(
-  shelters: Shelter[],
-  municipality: string | null | undefined,
-  distanceById: ReadonlyMap<string, number>,
-  onNavigate: (path: string) => void
-): HTMLElement {
-  const container = document.createElement("div")
-  container.className = "flex flex-col gap-3"
-  for (const shelter of shelters) {
-    const entry = document.createElement("div")
-    entry.className = "flex flex-col gap-1"
-
-    const location = document.createElement("p")
-    location.className = "font-semibold text-blue-900"
-    location.textContent = describeShelterLocation(shelter, municipality)
-    entry.appendChild(location)
-
-    if (shelter.number) {
-      const number = document.createElement("p")
-      number.className = "text-sm"
-      number.textContent = `Skyddsrumsnummer ${shelter.number}`
-      entry.appendChild(number)
-    }
-
-    // One combined line, same ordering/separator as ShelterListItem's own "otherDetails" line,
-    // for a consistent reading order between the map popup and the list view.
-    const distanceMeters = distanceById.get(shelter.id)
-    const detailParts = [
-      distanceMeters !== undefined ? formatDistanceMeters(distanceMeters) : null,
-      shelter.type ? describeShelterType(shelter.type) : null,
-      shelter.capacity !== null ? formatShelterCapacity(shelter.capacity) : null,
-    ].filter((value): value is string => Boolean(value))
-    if (detailParts.length > 0) {
-      const details = document.createElement("p")
-      details.className = "text-sm"
-      details.textContent = detailParts.join(" · ")
-      entry.appendChild(details)
-    }
-
-    const detailsLink = document.createElement("a")
-    detailsLink.href = `/skyddsrum/${shelter.id}`
-    detailsLink.textContent = "Visa detaljer"
-    detailsLink.className = "text-sm font-semibold text-blue-900 underline underline-offset-2"
-    detailsLink.addEventListener("click", (event) => {
-      event.preventDefault()
-      onNavigate(`/skyddsrum/${shelter.id}`)
-    })
-    entry.appendChild(detailsLink)
-
-    container.appendChild(entry)
-  }
-  return container
 }
 
 type ShelterFeature = Feature<Point, ShelterFeatureProperties>
@@ -207,6 +148,9 @@ function AllSheltersMap({
   savedShelterIds,
   initialView,
   onNavigate,
+  isSaved,
+  save,
+  remove,
 }: AllSheltersMapProps) {
   const { activeAddress } = useAddresses()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -215,11 +159,17 @@ function AllSheltersMap({
   const requestBoundsRef = useRef(requestBounds)
   const onNavigateRef = useRef(onNavigate)
   const activeAddressRef = useRef(activeAddress)
+  const isSavedRef = useRef(isSaved)
+  const saveRef = useRef(save)
+  const removeRef = useRef(remove)
   useEffect(() => {
     requestBoundsRef.current = requestBounds
     onNavigateRef.current = onNavigate
     activeAddressRef.current = activeAddress
-  }, [requestBounds, onNavigate, activeAddress])
+    isSavedRef.current = isSaved
+    saveRef.current = save
+    removeRef.current = remove
+  }, [requestBounds, onNavigate, activeAddress, isSaved, save, remove])
 
   const initialCenter = initialView?.center ?? origin ?? DEFAULT_CENTER
   const initialZoom = initialView?.zoom ?? (origin ? LOCAL_ZOOM : DEFAULT_ZOOM)
@@ -317,7 +267,10 @@ function AllSheltersMap({
             shelters,
             activeAddressRef.current?.municipality,
             distanceByIdRef.current,
-            (path) => onNavigateRef.current(path, { state: { mapView } })
+            (path) => onNavigateRef.current(path, { state: { mapView } }),
+            (id) => isSavedRef.current(id),
+            (shelter) => saveRef.current(shelter),
+            (id) => removeRef.current(id)
           )
         )
         .addTo(map)
