@@ -235,7 +235,7 @@ Content cards represent units of crisis information. They are clean, distinct su
 
 ### 5.2 The Signature Crisis Indicator Bar
 
-The signature top accent bar applies specifically to **crisis-information cards (`CrisisCard`) and crisis-detail surfaces (`DetailedCrisisCard`)**, not to every generic card, panel, empty state, or settings container in the application. The one other use is the white content cards of the static "Lugn i kris" page (section 5.4):
+The signature top accent bar applies specifically to **crisis-information cards (`CrisisCard`) and crisis-detail surfaces (`DetailedCrisisCard`)**, not to every generic card, panel, empty state, or settings container in the application. Other uses are the white content cards of the static "Lugn i kris" page (section 5.4) and the home page hero and feature cards (section 5.5):
 
 ```html
 <div className="flex h-1.5 w-full" aria-hidden="true">
@@ -283,6 +283,50 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
 - **Advice cards:** section 5.1 cards. Each `h2` is preceded by a `CalmIcon` (same 24×24, 1.8 stroke, `currentColor` style as section 5.3, `text-blue-900`, `aria-hidden`) in a 48px `rounded-full bg-blue-50` circle. `CalmIcon` is separate from `CrisisIcon`, so the article and kit mapping in section 5.3 is unaffected.
 - **Divider:** a decorative row of two thin `bg-blue-900/30` lines around a `size-2` amber dot, placed before the sources section and hidden from assistive technology.
 - **Amber:** only the hero dot and the divider dot. Amber stays a small accent and never signals urgency.
+
+### 5.5 Home Page Hero and Feature Overview (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in `HomePage`. It adds
+> no colours, gradients or animation; the hero heading size is a documented exception.
+
+- **Hero:** a white content card (section 5.1) with the section 5.2 accent bar (local to the page).
+  The `h1` reads **"Din kompass i en kris"**, so the document title follows it. A
+  `text-base sm:text-lg font-semibold text-blue-900` supporting line (**"Förbered dig. Hitta
+  rätt. Behåll lugnet."**) and a lead paragraph follow, then two calls to action and a
+  non-interactive value row (`text-sm text-slate-600`, wrapping; **✓ Ingen inloggning**, **✓
+  Spara viktig information offline**, **✓ Tydliga källor**). The `✓` is a decorative
+  `aria-hidden` glyph in `text-blue-900`; the list items are plain text with no background or
+  control styling. The `h1` and supporting line are centred below `sm` and, with the lead
+  paragraph, calls to action and value row, left-aligned from `sm`; the lead paragraph is always
+  left-aligned and the value row is centred below `sm`. From `md` the text sits beside the motif; below `md` only the text and calls to
+  action are shown.
+- **Hero heading exception:** the home `h1` is `text-3xl sm:text-4xl`. The page-heading rule in
+  section 3.2 (`text-3xl`) is unchanged for every other route.
+- **Calls to action:** **Se krisinformation** uses the primary button (section 6.2.1) and **Öppna
+  min krislåda** the secondary outlined button (section 6.2.2). Both are React Router links. They
+  stack at full width below `sm` and sit side by side from `sm`.
+- **Hero motif:** `CompassHeroMotif` draws a subtle `text-blue-200` outer ring, a slightly stronger
+  `text-blue-300` inner ring, four short `text-blue-900` directional ticks, a two-point needle
+  (longer half filled, shorter half outline) anchored by a white hub with a `text-blue-900`
+  outline, and one `text-amber-400` dot near the long needle point. It has no lettering or
+  gradient, is `aria-hidden`, `focusable="false"`, titleless and not animated, and is hidden below
+  `md` (`hidden md:block`).
+- **Feature overview:** an `h2` (**"Det här kan du göra i KrisKompassen"**) above five cards whose
+  `h3` titles are the shared `navigationItems` labels. Each whole card is one link; its accessible
+  name is the title (`aria-labelledby`) and its description is `aria-describedby`.
+- **Bento hierarchy:** from `md`, a six-column grid places Krisinformation and Min krislåda
+  (`col-span-3`, larger padding, `text-2xl` title, 56px icon circle with a `border-blue-200` edge
+  on `bg-blue-100`) on one row and Skyddsrum, Min info and Lugn i kris (`col-span-2`, `text-xl`
+  title, 48px `bg-blue-50` icon circle without border) on the next. Every card ends with the same
+  decorative cue, pinned to the card bottom: the text **Öppna** and a 20px inline outline arrow
+  (section 5.3 style, `currentColor`, `gap-2`), hidden from assistive technology as a whole
+  because the link name comes from the title. Below `md` the cards stack in one column. Cards stretch to equal height within a
+  row (`h-full`, no fixed heights), so zoom and enlarged text reflow.
+- **Card surface:** section 5.1 with the section 5.2 bar including its hover colour; the focus
+  outline is drawn inside the clipped card. No transforms.
+- **Icons:** the section 5.3 outline style in a `bg-blue-50` circle (as in section 5.4). Min
+  krislåda reuses `CrisisIcon` (`other`), Lugn i kris reuses `CalmIcon` (`breath`); Krisinformation,
+  Skyddsrum and Min info use `HomeFeatureIcon`. All are `aria-hidden` and `text-blue-900`.
 
 ---
 
