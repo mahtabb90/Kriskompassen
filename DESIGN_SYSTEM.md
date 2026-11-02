@@ -328,6 +328,51 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   krislåda reuses `CrisisIcon` (`other`), Lugn i kris reuses `CalmIcon` (`breath`); Krisinformation,
   Skyddsrum and Min info use `HomeFeatureIcon`. All are `aria-hidden` and `text-blue-900`.
 
+### 5.6 Phone Numbers Page (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in `PhoneNumbersPage`
+> and `PhoneCard`. It reuses existing tokens only; adopting it as a recurring pattern requires
+> the team's agreement.
+
+- **Emergency number:** the emergency panel from section 5.4 (`rounded-2xl border-2
+  border-blue-900 bg-blue-50`), a visible `text-sm font-semibold text-blue-900` label **"Akut
+  nödnummer"** above the heading, and the primary button (section 6.2.1). No red, warning
+  triangle or amber: red and the triangle stay reserved for VMA (section 2.4.1), and amber is
+  never an urgency cue. The label, panel border and button fill set it apart together, so
+  colour is never the only cue. The content's `isEmergency` alone selects this variant.
+- **Other numbers:** section 5.1 cards without the accent bar or hover state, with the
+  secondary button (section 6.2.2). One column at every width, in content order.
+- **Heading:** each `h2` holds the number (`text-3xl font-bold tabular-nums`, on its own line)
+  and the label below it (`text-lg font-semibold`), so heading navigation names the service, not
+  only the digits. A space between the two lines keeps the accessible name readable, for example
+  "112 Larmnummer vid nöd".
+- **Call links:** visible text **"Ring {nummer}"** and a `tel:` link with digits only (a leading
+  `+` only for numbers for calls from abroad). The accessible name starts with the visible text:
+  **"Ring 112, akut nödnummer"** or **"Ring {nummer}, {etikett}"**. At least 48×48px
+  (`min-h-12 min-w-12`) with `wrap-anywhere`.
+- **Copyable numbers:** every number is plain text outside its links, so it can be selected and
+  copied on devices that cannot place calls. There is no copy button.
+- **Numbers for calls from abroad:** below a 1px `border-slate-200` divider, a `text-sm
+  text-slate-600` line **"Från utlandet eller utländsk telefon:"** with the number in
+  `font-semibold text-slate-800 tabular-nums`, and a secondary-button link **"Ring från
+  utlandet"** named **"Ring från utlandet eller med utländsk telefon till {nummer},
+  {utlandsnummer}"**.
+- **Sources:** a section 5.1 card at the bottom with the `h2` **"Källor"**, listing each
+  distinct source once as a text link (section 6.3) with "(öppnas i ny flik)", followed by
+  **"Senast kontrollerad: {datum}"** in the metadata style (section 3.2). A source used by
+  several posts shows the oldest date among them.
+- **Contrast:** calculated with the WCAG 2.2 relative-luminance formula from the installed
+  Tailwind 4.3.3 values (`index.css` does not override them), converted from OKLCH to the
+  8-bit sRGB colour the browser paints. Each pair meets WCAG AA (4.5:1) for normal text.
+
+  | Foreground | Background | sRGB | Ratio |
+  | --- | --- | --- | --- |
+  | `blue-900` `oklch(37.9% 0.146 265.522)` | `blue-50` `oklch(97% 0.014 254.604)` | `#1c398e` on `#eff6ff` | 9.53:1 |
+  | `slate-700` `oklch(37.2% 0.044 257.287)` | `blue-50` | `#314158` on `#eff6ff` | 9.52:1 |
+  | `white` `#fff` | `blue-900` | `#ffffff` on `#1c398e` | 10.37:1 |
+
+  Recalculate these values when the tokens or the Tailwind version change.
+
 ---
 
 ## 6. Interactive Elements and Controls

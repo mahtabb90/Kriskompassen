@@ -186,9 +186,18 @@ the backend serves from `src/data/crisis.json`.
   Krisinformation.se for 113 13 and 114 14, Bris for 116 111 and Teletal for 020-22 11 44.
   Service details that change, such as Teletal's opening hours, are text only and are not
   pinned by the tests; check them against the source whenever the post is verified.
+  `number` and `abroadNumber` must be groups of digits separated by single spaces or hyphens;
+  only `abroadNumber` starts with `+`, and domestic numbers are never written in +46 format.
+  `toTelHref` in `frontend/src/utils/phoneLink.ts` builds the `tel:` links and throws for any
+  other format. The tests run every bundled number through it, so a malformed number fails CI
+  instead of becoming a broken link.
 - **Reading:** pages call `useKrisinfo(sectionId)`, which reads through `getKrisinfoSection` in
   `frontend/src/services/krisinfoService.ts`. Do not import the content files directly, so the
   source can later move to IndexedDB or a backend without changing pages.
+- **Phone numbers page:** `/telefonnummer` (`PhoneNumbersPage`) reads the section through
+  `useKrisinfo` and renders each number with `PhoneCard`, which receives it as props and reads
+  nothing itself. The page lists each distinct `source` once with the oldest `lastVerified`
+  among the posts that use it. It has no navigation entry yet.
 - **Offline:** the content ships in the JavaScript bundle, which the service worker precaches.
   It needs no network request, IndexedDB copy or `vite.config.ts` change, and it is shown in
   both online mode and "Sparad information" mode.
@@ -216,7 +225,8 @@ the backend serves from `src/data/crisis.json`.
    `lastVerified` in the content files is the only record of when a post was verified.
 3. Update `frontend/src/content/krisinfo/krisinfo.test.ts` when a fact changes. These content
    tests pin facts (phone numbers and their order, numbers for calls from abroad, signal
-   timings, links, MP3 links, sources and `lastVerified`), not wording, so a rewording alone needs no test change.
+   timings, links, MP3 links, sources and `lastVerified`), not wording, so a rewording alone
+   needs no test change.
 4. To add a section, add its ID and type to `KrisinfoSections` and its content to
    `krisinfoSections` in `index.ts`. The section's `id` must equal its key.
 5. Run the frontend checks: `npm run lint`, `npm run format:check`, `npm run test` and
