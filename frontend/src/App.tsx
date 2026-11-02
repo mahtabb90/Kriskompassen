@@ -10,6 +10,7 @@ import HomePage from "./pages/HomePage"
 import IndexedDbTest from "./pages/IndexedDbTest"
 import MyInfoPage from "./pages/MyInfoPage"
 import NotFoundPage from "./pages/NotFoundPage"
+import PhoneNumbersPage from "./pages/PhoneNumbersPage"
 import ShelterDetailPage from "./pages/ShelterDetailPage"
 import ShelterMapPage from "./pages/ShelterMapPage"
 import ShelterPage from "./pages/ShelterPage"
@@ -36,6 +37,7 @@ function App() {
               <Route path="/skyddsrum/:id" element={<ShelterDetailPage />} />
               <Route path="/lugn-i-kris" element={<CalmInCrisisPage />} />
               <Route path="/min-info" element={<MyInfoPage />} />
+              <Route path="/telefonnummer" element={<PhoneNumbersPage />} />
               {import.meta.env.DEV && <Route path="/dev/indexeddb" element={<IndexedDbTest />} />}
               <Route path="*" element={<NotFoundPage />} />
             </Route>
