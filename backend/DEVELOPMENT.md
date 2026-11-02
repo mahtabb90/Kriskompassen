@@ -18,7 +18,7 @@ rendering.
 | Preparedness articles | Manually maintained summaries attributed to Krisinformation.se | File-backed article API; no automatic source fetching |
 | Civil-defense shelters | Myndigheten för civilt försvar (MCF), open OGC API Features | File-backed snapshot API and browser-local offline cache; refreshed by a manual script, no automatic daily sync yet |
 | General crisis news | Krisinformation.se news API v3 | Chosen source for future work; no news fetching service or route is implemented |
-| Phone numbers and outdoor warning signals (krisinfo) | Krisinformation.se and Myndigheten för civilt försvar (MCF) | Static TypeScript content bundled with the frontend and precached by the service worker; no backend API, fetching or IndexedDB copy. See [Frontend krisinfo content](#frontend-krisinfo-content) |
+| Phone numbers and outdoor warning signals (krisinfo) | Krisinformation.se, with per-post sources SOS Alarm (112), 1177.se (1177), Bris (116 111) and Teletal (020-22 11 44), and Myndigheten för civilt försvar (MCF) | Static TypeScript content bundled with the frontend and precached by the service worker; no backend API, fetching or IndexedDB copy. See [Frontend krisinfo content](#frontend-krisinfo-content) |
 
 Do not feed news records into the VMA validator or silently fall back to news if VMA fetching fails.
 The former assumption that Krisinformation VMA records have the news format is no longer used.
@@ -177,9 +177,27 @@ the backend serves from `src/data/crisis.json`.
   carries `source` (name and `https` URL) and `lastVerified` (`YYYY-MM-DD`).
 - **Files:** `phones.ts` and `signals.ts` hold the content; `index.ts` maps each section ID to
   its content.
+- **Phone numbers:** `number` and `abroadNumber` keep the source's spacing for display.
+  `abroadNumber` is the source's international number for calls from abroad or from a phone
+  registered outside Sweden; it is absent when the source gives none. 112, 1177, 113 13 and
+  114 14 follow the order of the section's source page (Krisinformation.se); Bris (116 111) and
+  Teletal (020-22 11 44), which that page does not list with a number, follow them. Each post
+  names the page its facts come from as its own `source`: SOS Alarm for 112, 1177.se for 1177,
+  Krisinformation.se for 113 13 and 114 14, Bris for 116 111 and Teletal for 020-22 11 44.
+  Service details that change, such as Teletal's opening hours, are text only and are not
+  pinned by the tests; check them against the source whenever the post is verified.
+  `number` and `abroadNumber` must be groups of digits separated by single spaces or hyphens;
+  only `abroadNumber` starts with `+`, and domestic numbers are never written in +46 format.
+  `toTelHref` in `frontend/src/utils/phoneLink.ts` builds the `tel:` links and throws for any
+  other format. The tests run every bundled number through it, so a malformed number fails CI
+  instead of becoming a broken link.
 - **Reading:** pages call `useKrisinfo(sectionId)`, which reads through `getKrisinfoSection` in
   `frontend/src/services/krisinfoService.ts`. Do not import the content files directly, so the
   source can later move to IndexedDB or a backend without changing pages.
+- **Phone numbers page:** `/telefonnummer` (`PhoneNumbersPage`) reads the section through
+  `useKrisinfo` and renders each number with `PhoneCard`, which receives it as props and reads
+  nothing itself. The page lists each distinct `source` once with the oldest `lastVerified`
+  among the posts that use it. It has no navigation entry yet.
 - **Offline:** the content ships in the JavaScript bundle, which the service worker precaches.
   It needs no network request, IndexedDB copy or `vite.config.ts` change, and it is shown in
   both online mode and "Sparad information" mode.
@@ -206,8 +224,9 @@ the backend serves from `src/data/crisis.json`.
    Whoever changes a post makes that comparison and updates the date in the same change.
    `lastVerified` in the content files is the only record of when a post was verified.
 3. Update `frontend/src/content/krisinfo/krisinfo.test.ts` when a fact changes. These content
-   tests pin facts (phone numbers, signal timings, links, MP3 links, sources and `lastVerified`),
-   not wording, so a rewording alone needs no test change.
+   tests pin facts (phone numbers and their order, numbers for calls from abroad, signal
+   timings, links, MP3 links, sources and `lastVerified`), not wording, so a rewording alone
+   needs no test change.
 4. To add a section, add its ID and type to `KrisinfoSections` and its content to
    `krisinfoSections` in `index.ts`. The section's `id` must equal its key.
 5. Run the frontend checks: `npm run lint`, `npm run format:check`, `npm run test` and
