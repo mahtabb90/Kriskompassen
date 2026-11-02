@@ -490,6 +490,16 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 - **Focus:** The card never takes focus on its own and has no live region. Closing moves focus to
   `#page-heading`.
 
+- **Permanent backup on Min info:** `InstallHelpSection` follows the address form, outside it,
+  using a section 5.1 card with `mt-8 p-6 sm:p-8`. Its `h2` **Installera appen** names the section
+  through `aria-labelledby`. The native `details` summary **Visa installationshjälp** retains
+  its disclosure marker and has a minimum 48px target, visible focus and underline. It starts
+  closed on every page visit, uses no storage and opens inline without taking focus elsewhere.
+  Instructions for **Chrome på dator**, **iPhone och iPad** and **Safari på Mac** have `h3`
+  labels. All variants remain available regardless of browser install offers, platform detection
+  or a dismissed automatic card. The automatic card and backup share `InstallInstructionsContent`;
+  no automatic visibility, dismissal or install-button behaviour changes.
+
 ---
 
 ## 7. Navigation Patterns
