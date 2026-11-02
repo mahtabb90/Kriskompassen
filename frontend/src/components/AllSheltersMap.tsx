@@ -43,6 +43,11 @@ interface AllSheltersMapProps {
   /** Performs the actual SPA navigation - this component has no router context of its own
    * (its popups are plain DOM, not a React tree), so the caller (which does) does it. */
   onNavigate: (path: string, options?: { state?: unknown }) => void
+  /** Backs the popup's save/remove button - same useSavedShelters() this component's
+   * savedShelterIds marker-icon highlighting is already derived from (see ShelterMapPage.tsx). */
+  isSaved: (id: string) => boolean
+  save: (shelter: Pick<Shelter, "id" | "address" | "lat" | "lon">) => Promise<void>
+  remove: (id: string) => Promise<void>
 }
 
 const SOURCE_ID = "shelters"
@@ -87,6 +92,62 @@ function featureToShelter(feature: MapGeoJSONFeature): Shelter {
 }
 
 /**
+ * Builds one shelter's save/remove button as plain DOM, mirroring ShelterSaveToggle's labels
+ * and styling (✓/○ status line, "Spara skyddsrum" / "Ta bort sparat skyddsrum" button) so the
+ * popup's control looks and reads the same as the list/detail page's. Unlike ShelterSaveToggle,
+ * there is no React re-render to pick up the saved state afterward, so the click handler flips
+ * its own local `saved` flag and re-renders the label itself once save()/remove() resolves -
+ * the marker icon's own update still comes separately, from savedShelterIds flowing back through
+ * the data-sync effect below.
+ */
+function buildSaveToggleElement(
+  shelter: Shelter,
+  initialSaved: boolean,
+  save: (shelter: Pick<Shelter, "id" | "address" | "lat" | "lon">) => Promise<void>,
+  remove: (id: string) => Promise<void>
+): HTMLElement {
+  const wrapper = document.createElement("div")
+  wrapper.className = "flex flex-col gap-2"
+
+  const status = document.createElement("p")
+  status.className = "flex items-center gap-2 text-sm font-semibold text-slate-700"
+
+  const button = document.createElement("button")
+  button.type = "button"
+
+  let saved = initialSaved
+
+  const render = () => {
+    status.textContent = ""
+    const icon = document.createElement("span")
+    icon.setAttribute("aria-hidden", "true")
+    icon.textContent = saved ? "✓" : "○"
+    status.appendChild(icon)
+    status.appendChild(document.createTextNode(saved ? "Sparat skyddsrum" : "Inte sparat"))
+
+    button.textContent = saved ? "Ta bort sparat skyddsrum" : "Spara skyddsrum"
+    button.className =
+      "inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 " +
+      "border-blue-900 px-5 py-3 text-center font-semibold " +
+      (saved
+        ? "bg-white text-blue-900 hover:bg-blue-50"
+        : "bg-blue-900 text-white hover:bg-blue-950")
+  }
+  render()
+
+  button.addEventListener("click", () => {
+    void (saved ? remove(shelter.id) : save(shelter)).then(() => {
+      saved = !saved
+      render()
+    })
+  })
+
+  wrapper.appendChild(status)
+  wrapper.appendChild(button)
+  return wrapper
+}
+
+/**
  * Builds a click location's popup content as plain DOM - not a React render - since the popup
  * is attached to the map outside React's tree, where react-router's context (needed by a real
  * navigation link) is not available. Groups whatever map.queryRenderedFeatures(e.point, ...)
@@ -98,7 +159,10 @@ function buildPopupContent(
   shelters: Shelter[],
   municipality: string | null | undefined,
   distanceById: ReadonlyMap<string, number>,
-  onNavigate: (path: string) => void
+  onNavigate: (path: string) => void,
+  isSaved: (id: string) => boolean,
+  save: (shelter: Pick<Shelter, "id" | "address" | "lat" | "lon">) => Promise<void>,
+  remove: (id: string) => Promise<void>
 ): HTMLElement {
   const container = document.createElement("div")
   container.className = "flex flex-col gap-3"
@@ -142,6 +206,7 @@ function buildPopupContent(
       onNavigate(`/skyddsrum/${shelter.id}`)
     })
     entry.appendChild(detailsLink)
+    entry.appendChild(buildSaveToggleElement(shelter, isSaved(shelter.id), save, remove))
 
     container.appendChild(entry)
   }
@@ -207,6 +272,9 @@ function AllSheltersMap({
   savedShelterIds,
   initialView,
   onNavigate,
+  isSaved,
+  save,
+  remove,
 }: AllSheltersMapProps) {
   const { activeAddress } = useAddresses()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -215,11 +283,17 @@ function AllSheltersMap({
   const requestBoundsRef = useRef(requestBounds)
   const onNavigateRef = useRef(onNavigate)
   const activeAddressRef = useRef(activeAddress)
+  const isSavedRef = useRef(isSaved)
+  const saveRef = useRef(save)
+  const removeRef = useRef(remove)
   useEffect(() => {
     requestBoundsRef.current = requestBounds
     onNavigateRef.current = onNavigate
     activeAddressRef.current = activeAddress
-  }, [requestBounds, onNavigate, activeAddress])
+    isSavedRef.current = isSaved
+    saveRef.current = save
+    removeRef.current = remove
+  }, [requestBounds, onNavigate, activeAddress, isSaved, save, remove])
 
   const initialCenter = initialView?.center ?? origin ?? DEFAULT_CENTER
   const initialZoom = initialView?.zoom ?? (origin ? LOCAL_ZOOM : DEFAULT_ZOOM)
@@ -317,7 +391,10 @@ function AllSheltersMap({
             shelters,
             activeAddressRef.current?.municipality,
             distanceByIdRef.current,
-            (path) => onNavigateRef.current(path, { state: { mapView } })
+            (path) => onNavigateRef.current(path, { state: { mapView } }),
+            (id) => isSavedRef.current(id),
+            (shelter) => saveRef.current(shelter),
+            (id) => removeRef.current(id)
           )
         )
         .addTo(map)
