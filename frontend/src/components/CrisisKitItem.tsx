@@ -376,7 +376,7 @@ function CrisisKitItem({
                     : "border-red-300 bg-red-100 text-red-800"
               }`}
             >
-              {item.isNotNeeded ? "Deaktiverad" : item.isOwned ? "Finns" : "Saknas"}
+              {item.isNotNeeded ? "Inaktiverad" : item.isOwned ? "Finns" : "Saknas"}
             </span>
           </div>
 
