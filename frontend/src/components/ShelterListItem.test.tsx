@@ -74,7 +74,11 @@ describe("ShelterListItem with full data", () => {
     renderItem(fullShelter, { distanceMeters: 350 })
 
     const links = screen.getAllByRole("link")
-    const cardLink = links.find((link) => link.getAttribute("href") === `/skyddsrum/${fullShelter.id}` && link.textContent !== "Visa detaljer")
+    const cardLink = links.find(
+      (link) =>
+        link.getAttribute("href") === `/skyddsrum/${fullShelter.id}` &&
+        link.textContent !== "Visa detaljer"
+    )
     expect(cardLink).toBeTruthy()
     expect(cardLink?.className).toContain("focus-visible:-outline-offset-4")
     expect(cardLink?.textContent).toContain("Kantarellen 11, Solna kommun")

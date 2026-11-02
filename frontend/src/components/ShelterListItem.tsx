@@ -91,9 +91,7 @@ function ShelterListItem({
           {otherDetails.length > 0 ? otherDetails.join(" · ") : distanceMeters === undefined && " "}
         </p>
       </Link>
-      <div
-        className={`px-5 pb-5 sm:px-6 sm:pb-6 ${onToggleSave ? "pt-4" : "pt-3"}`}
-      >
+      <div className={`px-5 pb-5 sm:px-6 sm:pb-6 ${onToggleSave ? "pt-4" : "pt-3"}`}>
         {onToggleSave ? (
           <ShelterSaveToggle saved={Boolean(saved)} onToggle={onToggleSave} actions={detailsLink} />
         ) : (
