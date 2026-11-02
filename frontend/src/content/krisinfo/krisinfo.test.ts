@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { VerifiedContent } from "../../types/krisinfo"
+import { computeSignalStrokes } from "../../utils/signalPattern"
 import { krisinfoSections } from "./index"
 
 // These tests pin facts (numbers, timings, links, sources and dates), not wording. The texts
@@ -134,11 +135,15 @@ describe("krisinfo content", () => {
       "all-clear",
     ])
     expect(Object.fromEntries(signals.map((item) => [item.name, item.pattern]))).toEqual({
-      "Viktigt meddelande": { toneSeconds: 7, pauseSeconds: 14, repeatCount: 6 },
+      "Viktigt meddelande": { toneSeconds: 7, pauseSeconds: 14, totalDurationSeconds: 120 },
       Flyglarm: { toneSeconds: 2, pauseSeconds: 2, totalDurationSeconds: 60 },
       Beredskapslarm: { toneSeconds: 30, pauseSeconds: 15, totalDurationSeconds: 300 },
       "Faran över": { toneSeconds: 30, pauseSeconds: 0, repeatCount: 1 },
     })
+  })
+
+  it("fits the source's 6 tones of Viktigt meddelande into its 2-minute duration", () => {
+    expect(computeSignalStrokes(signal("important-message").pattern).strokes).toHaveLength(6)
   })
 
   it("gives every signal a usable pattern with exactly one end condition", () => {

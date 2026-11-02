@@ -63,7 +63,9 @@ export const warningSignalsSection: ListSection<Signal> = {
         },
         { text: "För ytterligare information kan du även ringa informationsnumret 113 13." },
       ],
-      pattern: { toneSeconds: 7, pauseSeconds: 14, repeatCount: 6 },
+      // The source states both 6 repeats and a 2-minute total; the duration is kept because the
+      // drawn timeline ends there, and 6 whole tones fit in it.
+      pattern: { toneSeconds: 7, pauseSeconds: 14, totalDurationSeconds: 120 },
       audioLinkUrl: `${MCF_AUDIO_BASE}/01-viktigt-meddelande.mp3`,
       source: MCF_OUTDOOR_WARNING,
       lastVerified: LAST_VERIFIED,
