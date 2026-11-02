@@ -3,7 +3,9 @@ import { Outlet, useLocation } from "react-router-dom"
 import { useVmaBanner } from "../hooks/useVmaBanner"
 import { usePwaUpdate } from "../hooks/usePwaUpdate"
 import BottomNavigation from "./BottomNavigation"
+import Footer from "./Footer"
 import Header from "./Header"
+import InstallInstructions from "./InstallInstructions"
 import MobileMenu from "./MobileMenu"
 import VmaBanner from "./VmaBanner"
 import PwaUpdateNotice from "./PwaUpdateNotice"
@@ -17,8 +19,9 @@ import type { VmaMessage } from "../types/vma"
  * the document title. Path changes focus that heading and scroll only as needed to
  * reveal it; initial loads and hash-only changes preserve browser focus. This is the only route
  * focus owner; the mobile menu closes without focusing anything when a route is selected. The
- * measured mobile menu button, VMA and app-update heights reserve scroll space around focused
- * content, and the button reserves none from 48rem upwards. VMA requests and the update
+ * measured mobile menu bar, VMA and app-update heights reserve scroll space around focused
+ * content, and the bar reserves none from 48rem upwards. The shared `Footer` follows `main`
+ * and is followed by a spacer for the menu bar's reserve, so it ends visibly above the bar. VMA requests and the update
  * subscription belong to this persistent layout, not individual routes.
  * Resize notifications defer measurement to avoid resizing observed elements during delivery.
  * A selected CAP snapshot, opened from the banner headline or its message list, stays readable
@@ -29,7 +32,7 @@ function AppLayout() {
   const previousPathname = useRef(pathname)
   const mainRef = useRef<HTMLElement>(null)
   const navigationRef = useRef<HTMLElement>(null)
-  const menuTriggerRef = useRef<HTMLButtonElement>(null)
+  const mobileFooterRef = useRef<HTMLElement>(null)
   const bannerRef = useRef<HTMLDivElement>(null)
   const updateRef = useRef<HTMLDivElement>(null)
   const vma = useVmaBanner()
@@ -59,10 +62,10 @@ function AppLayout() {
   useLayoutEffect(() => {
     const main = mainRef.current
     const navigation = navigationRef.current
-    const menuTrigger = menuTriggerRef.current
+    const mobileFooter = mobileFooterRef.current
     const banner = bannerRef.current
     const updateNotice = updateRef.current
-    if (!main || !navigation || !menuTrigger || !banner || !updateNotice) return
+    if (!main || !navigation || !mobileFooter || !banner || !updateNotice) return
 
     const root = document.documentElement
     const previousHeight = root.style.getPropertyValue("--navigation-height")
@@ -71,8 +74,8 @@ function AppLayout() {
     let focusFrame = 0
     let measurementFrame = 0
 
-    // The menu button is fixed below 48rem and display: none from there upwards.
-    const menuTriggerVisible = () => getComputedStyle(menuTrigger).display !== "none"
+    // The footer is fixed below 48rem and display: none from there upwards.
+    const mobileFooterVisible = () => getComputedStyle(mobileFooter).display !== "none"
 
     const keepFocusedContentVisible = () => {
       const focused = document.activeElement
@@ -93,8 +96,8 @@ function AppLayout() {
       const updateBounds = updateNotice.getBoundingClientRect()
       const updateBottom = stickyUpdate && updateBounds.height > 0 ? updateBounds.bottom : 0
       const visibleTop = Math.max(bannerBottom, updateBottom) + 8
-      const visibleBottom = menuTriggerVisible()
-        ? menuTrigger.getBoundingClientRect().top - 8
+      const visibleBottom = mobileFooterVisible()
+        ? mobileFooter.getBoundingClientRect().top - 8
         : window.innerHeight - 8
       const focusedBounds = focused.getBoundingClientRect()
       if (focusedBounds.top < visibleTop) {
@@ -114,9 +117,9 @@ function AppLayout() {
     }
 
     const updateReservedSpace = () => {
-      // Measuring from the viewport bottom includes the button's safe-area offset and gap.
-      const height = menuTriggerVisible()
-        ? Math.max(0, Math.ceil(window.innerHeight - menuTrigger.getBoundingClientRect().top))
+      // The footer's own height includes its safe-area padding.
+      const height = mobileFooterVisible()
+        ? Math.ceil(mobileFooter.getBoundingClientRect().height)
         : 0
 
       root.style.setProperty("--navigation-height", `${height}px`)
@@ -137,7 +140,7 @@ function AppLayout() {
       // Changing placement during resize delivery can resize the observed bar again.
       measurementFrame = requestAnimationFrame(updateReservedSpace)
     })
-    observer.observe(menuTrigger)
+    observer.observe(mobileFooter)
     observer.observe(banner)
     observer.observe(updateNotice)
     const onViewportResize = () => {
@@ -208,7 +211,7 @@ function AppLayout() {
   return (
     <div
       className={
-        "min-h-dvh bg-[#D7E2EF] text-slate-800 " +
+        "flex min-h-dvh flex-col bg-[#D7E2EF] text-slate-800 " +
         "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
       }
     >
@@ -229,22 +232,24 @@ function AppLayout() {
       </div>
       <Header reserveTopInset={!noticeVisible} />
       <BottomNavigation navigationRef={navigationRef} />
-      <MobileMenu triggerRef={menuTriggerRef} />
+      <MobileMenu footerRef={mobileFooterRef} />
       <main
         id="main-content"
         ref={mainRef}
         tabIndex={-1}
         aria-labelledby="page-heading"
         className={
-          "mx-auto w-full max-w-4xl scroll-mt-4 px-4 pt-8 wrap-anywhere " +
-          "pb-[calc(var(--navigation-height,0px)+2rem)] sm:px-6 sm:pt-10"
+          "mx-auto w-full max-w-4xl flex-1 scroll-mt-4 px-4 pt-8 pb-8 wrap-anywhere " +
+          "sm:px-6 sm:pt-10"
         }
       >
         <div ref={updateRef} className="pwa-update-slot">
           <PwaUpdateNotice {...update} />
         </div>
+        <InstallInstructions />
         <Outlet />
       </main>
+      <Footer />
       {openedVma ? (
         <VmaMessageDialog
           key={openedVma.message.id}

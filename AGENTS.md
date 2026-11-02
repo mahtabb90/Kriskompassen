@@ -20,21 +20,34 @@ The team updates the repo continuously, so this file can fall behind. **The repo
 - It answers three questions: *What has happened? What should I do? Where should I go?*
 - Planned scope: Swedish public warning messages (VMA) and local information about floods, gas leaks, contaminated drinking water, etc.
 - Users can save important information locally and read it offline.
+- **Current storage decision:** a backend database is deferred for now and may be reconsidered
+  in the future. Curated content is maintained in static files shipped with the backend
+  (`backend/src/data/crisis.json` for articles, `backend/src/data/shelters.json` for a snapshot
+  of MCF's shelter register, refreshed manually as described in §7); there is no database setup
+  and runtime requests never write to these files. Browser-local Dexie/IndexedDB storage remains in use for saved information
+  and offline caches. Do not introduce a backend database as part of routine feature work
+  without an explicit decision to revisit this approach.
 - Installed app versions are checked on startup and visible foreground/connectivity events.
   A completed update offers a Swedish, user-selected reload and retains saved articles. App
   versions and build timestamps are not displayed in the user interface. Physical verification
   on an existing iPhone installation is pending. This change uses one production publication
   and a manual check on the existing device.
-- The app is installable through browsers' built-in install features (Chromium, Safari iOS "Add to Home Screen", Safari macOS "Add to Dock") and its precached shell starts offline after one online visit. Where the browser fires `beforeinstallprompt`, an **Installera app** button opens the browser's own install prompt (see §7). Browsers without that event rely on their own install features.
+- The app is installable through browsers' built-in install features (Chromium, Safari iOS "Add to Home Screen", Safari macOS "Add to Dock") and its precached shell starts offline after one online visit. Where the browser fires `beforeinstallprompt`, an **Installera app** button opens the browser's own install prompt (see §7). Browsers without that event rely on their own install features; on iOS/iPadOS and macOS Safari, `InstallInstructions` shows a short, dismissible instruction for them (see §7).
 - Target users: the general public in Sweden.
 - **Binding product decision: KrisKompassen is intentionally account-free.** End-user accounts, account registration, sign-in/login, account-based profiles and account-based cloud persistence are out of scope and must not be implemented. A development ticket, issue or task description alone never overrides this decision. See §11 for what to do when a task asks for them, and §10 for how this relates to other authentication changes.
-- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`) and a not-found page. A header-level "Sparad information" switch (`ModeToggle`, backed by `ModeContext`; on = offline mode, off = online mode) controls whether `/crisis` and `/crisis/:id` show articles fetched from the backend API or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
+- Status: early development. The UI has a home page (`/`), a crisis information list (`/crisis`), a crisis detail page (`/crisis/:id`), a static "Lugn i kris" page (`/lugn-i-kris`, source-based calming advice from 1177, Krisinformation.se and SOS Alarm; no storage, forms or I/O) and a not-found page. A header-level "Sparad information" switch (`ModeToggle`, backed by `ModeContext`; on = offline mode, off = online mode) controls whether `/crisis` and `/crisis/:id` show articles fetched from the backend API or items saved in IndexedDB — there are no separate offline routes. Shared navigation sits at the bottom on mobile and above the content on wider or short viewports. The IndexedDB test page is available only in development at `/dev/indexeddb`.
 - A FastAPI backend and a reusable frontend service fetch, validate and map VMA from Sveriges Radio's documented v3 CAP API into a shared frontend model with lifecycle and source/API metadata. A shared sticky banner displays the most recent active VMA with source attribution, a count and expandable list of any other active warnings, and explicit error/partial-data states. Krisinformation.se is the chosen source for future general news integration; curated preparedness articles are served from a backend JSON file through a separate article API. While the app is open, the banner polls our backend (see §7); offline VMA storage is not implemented. The user has confirmed successful empty-feed handling against the deployed backend and a working live frontend integration; displaying a real active warning in production remains unverified.
-- Users save one or more addresses on the `/min-info` page, each composed by typing it or by fetching the device's position through the browser's Geolocation API (permission requested only on that button click). The backend reverse-geocodes fetched coordinates through OpenStreetMap Nominatim and returns a normalized `{found, address, municipality, county, lat, lon, source}` shape; `found: false` is a resolvable-but-unknown result, not an upstream error. Each saved address carries a label (`hem`, `arbete`, or `annan` with free text) and is persisted in IndexedDB (`savedAddresses` table; see §9's documented exception for storing this personal data locally). Exactly one saved address is active at a time — the one other features (e.g. future shelter search) use as the starting point; saving the first address activates it automatically, and `AddressIndicator` shows the active one as a discreet link in the header once one exists. **A manually typed address is never forward-geocoded or validated** — composing it only resolves the typed/fetched text, with coordinates present solely for a geolocated result; forward-geocoding/validating manual text is separate future work. **Exception:** typed/pasted text that is shaped like a latitude/longitude pair (decimal degrees, separated by a comma and/or whitespace, e.g. copied from another map service) is range-validated client-side (`frontend/src/utils/coordinates.ts`) and, if within range, reverse-geocoded through the same backend endpoint as a device position, producing `source: "coordinates"` — approximate and re-lookupable like `"geolocated"`, but with no `accuracy`. Out-of-range text shows an inline error before any network call; text not shaped like coordinates falls through to the normal manual path unchanged.
+- Users save one or more addresses on the `/min-info` page, each composed by typing it or by fetching the device's position through the browser's Geolocation API (permission requested only on that button click). The backend reverse-geocodes fetched coordinates through OpenStreetMap Nominatim and returns a normalized `{found, address, municipality, county, lat, lon, source}` shape; `found: false` is a resolvable-but-unknown result, not an upstream error. Each saved address carries a label (`hem`, `arbete`, or `annan` with free text) and is persisted in IndexedDB (`savedAddresses` table; see §9's documented exception for storing this personal data locally). Exactly one saved address is active at a time — the starting point for nearest-shelter searches when it has coordinates; saving the first address activates it automatically, and `AddressIndicator` shows the active one as a discreet link in the header once one exists. **A manually typed address is never forward-geocoded or validated** — composing it only resolves the typed/fetched text, with coordinates present solely for a geolocated result; forward-geocoding/validating manual text is separate future work. **Exception:** typed/pasted text that is shaped like a latitude/longitude pair (decimal degrees, separated by a comma and/or whitespace, e.g. copied from another map service) is range-validated client-side (`frontend/src/utils/coordinates.ts`) and, if within range, reverse-geocoded through the same backend endpoint as a device position, producing `source: "coordinates"` — approximate and re-lookupable like `"geolocated"`, but with no `accuracy`. Out-of-range text shows an inline error before any network call; text not shaped like coordinates falls through to the normal manual path unchanged.
 - The banner title opens the full selected warning in an accessible native dialog with complete
   Swedish text, instructions, source, CAP issue/update time and available affected areas. Closing
   returns to the previous view. Local tests/browser checks do not establish live iPhone or spoken
   VoiceOver verification.
+- The `/skyddsrum` page lists the five nearest shelters for an active address with coordinates
+  and a separate tab of saved shelters. `/skyddsrum/:id` reads the locally cached shelter detail.
+  The backend serves them from its bundled MCF snapshot; the frontend validates each response and
+  caches it in IndexedDB with a fetch timestamp; later fetches replace records with the same ID. Saving an address with
+  coordinates also starts a best-effort background shelter fetch. Offline lookups use only
+  previously cached records. Saved shelter bookmarks and their short notes remain device-local.
 
 ## 2. Tech stack
 
@@ -42,16 +55,17 @@ Frontend versions are taken from `frontend/package-lock.json`.
 
 | Area | Technology | Version |
 | --- | --- | --- |
-| UI | React / React DOM | 19.3.0 |
-| Routing | React Router (`react-router-dom`) | 7.18.4 |
+| UI | React / React DOM | 19.3.1 |
+| Routing | React Router (`react-router-dom`) | 7.18.5 |
 | Language | TypeScript | 6.0.3 |
-| Build/dev server | Vite (+ `@vitejs/plugin-react` 6.1.1) | 8.3.0 |
+| Build/dev server | Vite (+ `@vitejs/plugin-react` 6.1.2) | 8.3.5 |
 | Styling | Tailwind CSS (via `@tailwindcss/vite`) | 4.3.3 |
-| Local storage | Dexie (IndexedDB) | 4.4.6 |
+| Local storage | Dexie (IndexedDB) | 4.4.7 |
+| Maps | MapLibre GL JS (no React wrapper), OpenFreeMap tiles (free, key-less) | 6.16.0 |
 | PWA | vite-plugin-pwa | 1.3.0 |
-| Linting | ESLint + typescript-eslint 8.70.0 | 10.10.0 |
-| Formatting | Prettier (+ `eslint-config-prettier` 10.1.8) | 3.9.9 |
-| Unit tests | Vitest | 4.1.11 |
+| Linting | ESLint + typescript-eslint 8.72.1 | 10.13.0 |
+| Formatting | Prettier (+ `eslint-config-prettier` 10.1.8) | 3.9.10 |
+| Unit tests | Vitest | 4.1.12 |
 | Component tests | React Testing Library / DOM Testing Library | 16.3.3 / 10.4.2 |
 | DOM test environment | jsdom | 27.4.0 |
 | E2E tests | Playwright (Node/TypeScript) | planned, not installed |
@@ -85,19 +99,20 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 │   └── workflows/
 │       ├── backend-ci.yml   # backend Ruff and pytest when backend/ changes; PRs into dev/main and pushes to dev
 │       └── frontend-ci.yml  # frontend lint, format check, tests and build when frontend/ changes; same triggers
-├── backend/             # FastAPI articles, VMA and geocoding API
-│   ├── DEVELOPMENT.md  # backend and VMA integration development guide
+├── backend/             # FastAPI articles, VMA, geocoding and file-backed shelter API; no database
+│   ├── DEVELOPMENT.md  # backend sources, storage, API contracts and development guide
 │   ├── .python-version # Python 3.13
 │   ├── .env.example    # backend variable names only
 │   ├── requirements.txt / requirements-dev.txt  # pinned dependencies
 │   ├── pyproject.toml  # Ruff and pytest configuration
+│   ├── scripts/        # fetch_shelters.py: one-off manual MCF sync, not run by the app or CI
 │   ├── src/
 │   │   ├── app.py      # application factory, lifespan and exported app
 │   │   ├── api/        # routers and dependencies
-│   │   ├── core/       # settings, upstream and article errors
-│   │   ├── data/       # curated articles (crisis.json), published with the backend
+│   │   ├── core/       # settings, upstream and article/shelter-data errors
+│   │   ├── data/       # curated articles (crisis.json) and the shelter snapshot (shelters.json, shelters.meta.json), published with the backend
 │   │   ├── models/     # Pydantic response models
-│   │   └── services/   # article file reading, upstream fetching and the shared VMA cache
+│   │   └── services/   # article and shelter-snapshot file reading, upstream fetching and per-instance in-memory caches
 │   └── tests/          # pytest API, CORS and upstream response tests
 └── frontend/            # Vite + React + TypeScript PWA
     ├── .env.example    # frontend variable names only
@@ -109,16 +124,17 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs and Cache-Control headers
     ├── vitest.config.ts # Node default; component tests opt into jsdom; no application plugins or .env loading
     └── src/
-        ├── components/  # shared layout/header/navigation (desktop `BottomNavigation`, mobile `MobileMenu`, shared `navigationItems`), VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice, InstallAppButton and crisis/offline controls
-        ├── config/      # backend address, article/VMA/geocode endpoints and request timeout
+        ├── components/  # shared layout/header/footer/navigation (desktop `BottomNavigation`, mobile `MobileFooter` and `MobileMenu`, shared `navigationItems`), VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice, InstallAppButton, InstallInstructions, crisis/offline controls, AllSheltersMap.tsx (the one shelter map in the app - every shelter nationally, GeoJSONSource clustering, viewport-fetched via `useSheltersWithinBounds`, nearest/saved shelters marked with their own `map.addImage()` icons) and ShelterLocationMap.tsx (ShelterDetailPage's simpler single-shelter map, no popups/clustering) - both plain maplibre-gl, no React wrapper, mirroring the sister project IntresseKlubben's LocationPickerMap.jsx pattern; both lazy-loaded via `React.lazy` (one of two lazy-loaded components in the app, alongside `pages/ShelterMapPage.tsx`'s own lazy import of `AllSheltersMap.tsx`) and mocked with `vi.mock` in tests, since the real map is verified manually
+        ├── components/  # shared layout/header/navigation (desktop `BottomNavigation`, mobile `MobileFooter` and `MobileMenu`, shared `navigationItems`), VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice, InstallAppButton, InstallInstructions, crisis/offline controls, AllSheltersMap.tsx (the one shelter map in the app - every shelter nationally, GeoJSONSource clustering, viewport-fetched via `useSheltersWithinBounds`, nearest/saved shelters marked with their own `map.addImage()` icons) and ShelterLocationMap.tsx (ShelterDetailPage's simpler single-shelter map, no popups/clustering) - both plain maplibre-gl, no React wrapper, mirroring the sister project IntresseKlubben's LocationPickerMap.jsx pattern; both lazy-loaded via `React.lazy` (one of two lazy-loaded components in the app, alongside `pages/ShelterMapPage.tsx`'s own lazy import of `AllSheltersMap.tsx`) and mocked with `vi.mock` in tests, since the real map is verified manually; AllSheltersMap.tsx's click-popup content (including its save/remove button, mirroring ShelterSaveToggle) is built as plain DOM by `shelterMapPopup.ts`, split out of the component file to satisfy react-refresh/only-export-components and so it has its own direct `shelterMapPopup.test.tsx` coverage under jsdom - the real map needs a WebGL canvas jsdom can't provide
+        ├── config/      # backend address, article/VMA/geocode endpoints, request timeout, and mapConfig.ts (OpenFreeMap style URL - free, key-less vector tiles, no quota)
         ├── context/     # ModeProvider.tsx + modeContext.ts and AddressProvider.tsx + addressContext.ts (context object, hook — split to satisfy react-refresh/only-export-components)
         ├── data/        # predefined emergency-kit recommendations (recommendedCrisisKit.ts)
-        ├── db/          # Dexie database (db.ts)
-        ├── hooks/       # keyed article requests (useCrisisResource), VMA state/validity, address composition (useAddress), saved-addresses list/active state (useSavedAddresses) and shared PWA update and install prompt subscriptions; adjacent tests
-        ├── pages/       # HomePage, CrisisInfoPage, CrisisKitPage, MyInfoPage (/min-info), NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
-        ├── services/    # article transport/validation, offline storage, PWA updates and install prompts, VMA, geocoding, geolocation and address storage; adjacent unit tests (addressStorageService has none yet — see §8)
+        ├── db/          # browser-local Dexie database (db.ts), schema version 5
+        ├── hooks/       # keyed article requests (useCrisisResource), VMA state/validity, address composition (useAddress), saved-addresses list/active state (useSavedAddresses), shared PWA update and install prompt subscriptions and the shared install state (useInstallState); adjacent tests
+        ├── pages/       # HomePage (`/`, static hero and feature overview with decorative `CompassHeroMotif` and `HomeFeatureIcon` SVGs; no storage or I/O), CrisisInfoPage, CrisisKitPage, MyInfoPage (/min-info), CalmInCrisisPage (/lugn-i-kris, static, source-based advice with decorative `CalmHeroMotif` and `CalmIcon` SVGs; no storage or I/O), NotFoundPage, IndexedDbTest and placeholders (SettingsPage)
+        ├── services/    # article/VMA/shelter transport and validation, offline storage, shelter caching/bookmarks/prefetch, PWA updates/install prompts, install instruction dismissal, geocoding, geolocation and address storage; adjacent unit tests (addressStorageService has none yet — see §8)
         ├── types/       # shared crisis/VMA/address/PWA types
-        └── utils/       # small pure presentational and validation helpers (e.g. describeAddressLabel, parseCoordinates)
+        └── utils/       # small pure presentational and validation helpers (e.g. describeAddressLabel, parseCoordinates, shelterMapIcons.ts's inline-SVG marker elements for maplibre-gl) and install platform detection
 ```
 
 - New frontend code goes under `frontend/src/` in the matching folder above.
@@ -306,6 +322,18 @@ Frontend conventions visible in the existing code:
     activation. A decline or `appinstalled` hides the offer until the browser fires a new event.
   - `useInstallPrompt()` subscribes to it; `InstallAppButton` renders nothing while `canInstall`
     is false. Placement and focus follow [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) §6.6.
+- Manual install instructions are a deliberate exception to feature detection, because Safari and
+  iOS/iPadOS browsers fire no install event:
+  - All user-agent logic lives in `utils/installPlatform.ts`; `installPromptService` stays free of it.
+  - `useInstallState()` returns one of `"button"`, `"ios-instructions"`, `"macos-instructions"` or
+    `"none"`, so the install button and instructions never show together.
+  - `InstallInstructions` is a normal-flow card in `main`. Closing it hides it for 30 days through
+    `services/installInstructionsDismissal.ts`. Dismissal never affects the install button.
+- `InstallHelpSection` provides permanent, on-demand help after the address form on `/min-info`.
+  Its native `details` starts closed on each mount and shows instructions for desktop Chrome,
+  iPhone/iPad (including Chrome) and macOS Safari. It does not read platform detection, install
+  offers or dismissal storage, and performs no I/O. `InstallInstructionsContent` shares the typed
+  platform-specific text with the automatic card; automatic offer and dismissal rules stay unchanged.
 - PWA generation uses `generateSW`, `registerType: "prompt"`, `injectRegister: false`,
   `skipWaiting: false` and `clientsClaim: true`, retaining `/sw.js`, scope `/` and manifest identity.
   Bootstrap starts registration only in secure production builds. The updater never accesses
@@ -347,11 +375,11 @@ Navigation and accessibility:
   See `DESIGN_SYSTEM.md` sections 6.5–6.6 for padding, spacing and target details.
 - Each routed page supplies one `h1` with `id="page-heading"` and `tabIndex={-1}`. The layout derives the document title from that heading and focuses it on pathname changes, including back/forward navigation. Initial loads and hash-only changes preserve browser focus.
 - Add public links to the typed `navigationItems` list in `components/navigationItems.ts` and register their routes in `App.tsx`. Navigation currently uses exact matching. The desktop `BottomNavigation` and the mobile `MobileMenu` both render that one list; never duplicate labels or paths.
-- From `48rem` viewport width the navigation (`BottomNavigation`) stays in normal flow beneath the header with wrapping links. Below `48rem`, regardless of viewport height, it is hidden (`display: none`) and `MobileMenu` shows one fixed, horizontally centred **Meny** button (hamburger icon plus visible text, `bottom: max(0.75rem, env(safe-area-inset-bottom))`) instead.
+- From `48rem` viewport width the navigation (`BottomNavigation`) stays in normal flow beneath the header with wrapping links. Below `48rem`, regardless of viewport height, it is hidden (`display: none`) and `MobileMenu` renders `MobileFooter` instead: a fixed, full-width `<nav aria-label="Huvudmeny">` with an `amber-300` surface and a 2px `blue-900` top border. Its single native **Meny** button fills the width, with a centred decorative 24px hamburger icon and normal-weight label separated by 12px. The button has no rounded frame, has a minimum 48px height, and owns the safe-area padding: at least 16px horizontally and `max(0.75rem, env(safe-area-inset-bottom))` below. The full button surface opens the menu. Its 3px focus outline sits 4px inward to stay visible at the viewport edges. The dialog stays outside this landmark.
 - `MobileMenu` opens a full-screen native modal `<dialog>` (`showModal()`) named **Meny** with a **Stäng menyn** button and the shared links in list order; the current route has `aria-current="page"` plus a non-colour cue. The button has `aria-expanded`/`aria-controls`. The modal makes the page inert, locks root/body scroll, wraps Tab at its boundaries and scrolls its link list internally, so it works on short screens and with enlarged text. It covers the VMA notice by design. Closed, it is out of the tab order and accessibility tree.
 - Menu focus: Escape or **Stäng menyn**, or selecting the current route, returns focus to the **Meny** button. Selecting another route closes the menu without focusing anything; the `AppLayout` pathname effect stays the only route-focus owner and focuses `#page-heading`. Crossing `48rem` while open closes the menu without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating).
-- `AppLayout` measures the **Meny** button (distance from its top to the viewport bottom, 0 while it is `display: none`) with `ResizeObserver` and maintains `--navigation-height` for content and scroll spacing and for revealing focused content above the button. ResizeObserver notifications defer layout measurement to an animation frame.
-- The VMA notice is sticky above the header and limited to 40dvh, with complete text in a keyboard-scrollable region. The layout measures `--vma-banner-height`, reserves top scroll padding and reveals focused main/navigation content between the notice and the fixed mobile menu button. Only the first visible region owns the top safe-area inset. VMA live announcements persist across routes; the warning never takes focus when it arrives.
+- `AppLayout` measures `MobileFooter`'s height (0 while it is `display: none`) with `ResizeObserver` and maintains `--navigation-height` for content and scroll spacing and for revealing focused content above the footer. The shared `Footer` (`contentinfo`, rendered after `main` on every route) is followed by a spacer of that height. ResizeObserver notifications defer layout measurement to an animation frame.
+- The VMA notice is sticky above the header and limited to 40dvh, with complete text in a keyboard-scrollable region. The layout measures `--vma-banner-height`, reserves top scroll padding and reveals focused main/navigation content between the notice and the fixed mobile footer. Only the first visible region owns the top safe-area inset. VMA live announcements persist across routes; the warning never takes focus when it arrives.
 - The banner heading contains a 48px underlined button with `aria-haspopup="dialog"` and a pointer
   cursor; the dialog's close button also uses a pointer cursor. The native
   modal sits outside `main`, uses `showModal()` and initially focuses its labelled heading. Its
@@ -364,6 +392,7 @@ Navigation and accessibility:
   and its region is limited to `25dvh` with keyboard scrolling; lower viewports use normal flow.
   `AppLayout` measures `--pwa-update-height` for scroll/focus spacing. The update's persistent,
   polite `Appuppdatering` status does not take focus or reannounce on route changes.
+- Stacking order: VMA 30, sticky app update 10, mobile footer 5, page content without a z-index. Native modals sit above all of these in the top layer.
 - Active VMA warnings pair the red/white surface with a visible VMA label and an inline SVG warning triangle. The redundant icon inherits `currentColor`, is hidden from assistive technology and is not focusable. Loading, failure and uncertainty alone use the neutral status surface without a warning icon; they never imply an active warning or an all-clear result.
 - Target WCAG 2.2 AA with at least 48 by 48 CSS pixel navigation targets, 3px focus outlines and a non-colour active indicator. Verify keyboard use, zoom/reflow and actual screen-reader output; do not infer conformance from an accessibility tree alone.
 - Keep UI and accessible names in Swedish. Use English comments and documentation as specified in section 6.
@@ -386,6 +415,20 @@ Documentation (frontend/TypeScript):
 
 Backend conventions:
 
+- Curated content comes from static deployment files; backend database integration is deferred
+  (see §1). Upstream results use per-instance in-memory caches, lost on cold start. Runtime
+  endpoints do not write to deployment files or a persistent database.
+- `GET /api/v1/shelters/nearest?lat=&lon=` returns `{shelters, source, bboxRadiusMetersUsed}`
+  for the five nearest shelters in the bundled `src/data/shelters.json` snapshot:
+  - `LocalShelterStore` loads the snapshot once per process, on first use; a failed load is not
+    cached. A missing or invalid file returns `500 shelters_data_unavailable`, never a live MCF call.
+  - `scripts/fetch_shelters.py` refreshes the snapshot manually; there is no automatic sync yet.
+  - Responses use `Cache-Control: no-store`. `bboxRadiusMetersUsed` is the rounded distance to the
+    farthest returned shelter.
+  - The frontend validates the response, writes the returned records to IndexedDB's `shelterCache`
+    with `fetchedAt` and ranks the five nearest. Offline mode ranks previously cached records only,
+    so the device cache is not a complete shelter dataset.
+  - See `backend/DEVELOPMENT.md`, "Storage and shelter caching" and "Civil-defense shelters".
 - Type hints on all functions. Docstrings on public functions, classes and modules.
 - Pydantic models for request and response bodies.
 - Ruff decides formatting and lint rules. `ruff check .` and `ruff format --check .` must pass.
@@ -426,7 +469,7 @@ Decided tooling:
 - Frontend VMA tests cover validation, mapping, transport, banner selection, request state, polling (interval, overlap, offline/visibility pause and reconnection), status text, local time transitions and shared layout integration with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Component/hook integration tests replace `fetch` while retaining real validation/mapping, so no backend is required. No test page or mock mode is bundled with the app. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Manual browser layout checks complement these tests; jsdom does not verify real rendering or spoken screen-reader output.
 - Layout integration tests mount the real `ModeProvider`, "Sparad information" switch and connectivity status alongside the VMA banner. They cover mode changes from the focused switch, title updates, connection loss and recovery while preserving the warning and its single request.
 - `ModeToggle` tests cover switch semantics, clicks on the switch and its label, `aria-checked`, the help text, the automatic switch on connection loss, the `aria-disabled` restriction with its explanation and the retained saved mode after reconnection. jsdom does not turn Space/Enter into a native button click, so the tests assert a native `<button>` and keyboard activation is verified manually in a browser.
-- Navigation tests: `BottomNavigation` tests cover the shared list, `aria-current` and the absence of scroll controls. `MobileMenu` tests cover the closed state, `aria-expanded`/`aria-controls`, link order, `aria-current`, Stäng menyn and native-close focus return, route selection (a different route leaves focus to the layout; the current route returns it to the button), scroll lock and restoration, Tab wrapping, closing when the viewport reaches desktop width, offline navigation and cleanup. Layout tests cover the reserved space and focus reveal above the button, no reserved space while it is hidden, and route-heading focus after selecting a menu link. jsdom does not apply CSS breakpoints, inertness, Escape handling, the top layer or safe-area insets; those, touch use and spoken screen-reader output require browser/device checks.
+- Navigation tests: `BottomNavigation` tests cover the shared list, `aria-current` and the absence of scroll controls. `MobileMenu` tests cover the closed state, `aria-expanded`/`aria-controls`, link order, `aria-current`, Stäng menyn and native-close focus return, route selection (a different route leaves focus to the layout; the current route returns it to the button), scroll lock and restoration, Tab wrapping, closing when the viewport reaches desktop width, offline navigation and cleanup. `MobileFooter` tests cover the named landmark holding only the button, `aria-controls`, `aria-expanded`, the open callback and the decorative icon. Layout tests cover the reserved space and focus reveal above the footer, no reserved space while it is hidden, and route-heading focus after selecting a menu link. jsdom does not apply CSS breakpoints, inertness, Escape handling, the top layer or safe-area insets; those, touch use and spoken screen-reader output require browser/device checks.
 - Article tests cover strict response validation, safe links, transport/total deadlines, cancellation, fresh loads across mode/ID changes, retries, late results and StrictMode replay. Synthetic article fixtures live in `frontend/src/services/__fixtures__/crisis.ts` and are never an app data source. Component tests retain real fetching/validation with mocked HTTP and offline storage, covering save payloads, legacy copies without `savedAt`, missing-item redirects, mode-bound notices, removal focus, stable detail headings and asynchronous document titles. Backend article tests cover the bundled file, malformed/missing/unreadable data, duplicate IDs, complete-source validation, per-request reads and CORS on success, 404 and 500. Real IndexedDB and browser checks complement these tests.
 - VMA detail tests cover complete content/metadata, escaped markup, safe links, validity/request
   notices, selection retention, repeat opening and explicit focus/scroll cleanup. The adjacent
@@ -439,6 +482,13 @@ Decided tooling:
   do not establish those results.
 - `pwaUpdateService.test.ts` covers registration failure only: a throwing or missing container, rejected `register`/`getRegistration`, and disabled bootstrap outside secure production builds. Update/activation flow tests remain out of scope.
 - Install prompt tests cover the service, hook, `InstallAppButton` and its focus handling in `Header` and `MobileMenu` with synthetic events from `services/__fixtures__/installPrompt.ts`. The browser's real prompt and install flow require manual checks.
+- Install instruction tests cover platform detection as a pure function, dismissal storage failures
+  and expiry, `useInstallState` and `InstallInstructions`. Real Safari, iOS and private-mode
+  behaviour requires manual device checks.
+- Permanent installation-help tests cover the native disclosure, all instruction variants, a closed
+  state on remount and independence from storage. The My info regression covers a dismissed automatic
+  instruction without a browser install offer; the service also accepts a fresh offer after
+  `appinstalled`. Native keyboard disclosure and actual reinstallation require browser/device checks.
 - The backend pytest suite runs in CI whenever `backend/` changes (see §4) and must not need network access or environment variables.
 - Backend CORS tests provide their own JSON origin environment variable and mock upstream transport. They check that approved frontend origins can read successful feeds and 502/504 errors, and that unlisted origins or unsupported methods do not pass preflight.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
@@ -457,7 +507,7 @@ Decided tooling:
 - Never commit secrets. `.env` and `.env.*` are git-ignored (except `.env.example`).
 - Do not read, print or edit `.env` files. Document new variables by name only in `frontend/.env.example` or `backend/.env.example`. Backend settings read process environment variables and do not automatically load `.env` files.
 - Anything in the frontend (including `VITE_*` env vars) ends up in the public bundle. Never put API keys or secrets there.
-- Data in IndexedDB is readable on the user's device. Do not store sensitive personal data there. **Documented exception:** saved addresses (`savedAddresses` table, via `addressStorageService.ts`) are deliberately stored locally — the team approved this because the feature is pointless without persistence, the data is device-local and only ever leaves the device as coordinates sent to the geocode endpoint the user themselves triggered, and nothing else in the app reads or transmits this table. Do not extend this exception to other personal data without the same explicit approval.
+- Data in IndexedDB is readable on the user's device. Do not store sensitive personal data there. **Documented exception:** saved addresses (`savedAddresses` table, via `addressStorageService.ts`) are deliberately stored locally — the team approved this because the feature is pointless without persistence. Saved addresses remain device-local; coordinates are sent for user-triggered geocoding and on-demand shelter searches, including the best-effort prefetch after saving an address with coordinates, while address labels remain local. Do not extend this exception to other personal data without the same explicit approval. **Second documented exception:** saved shelters (a device-local bookmark list of shelter ids) are approved on the same basis — the feature is pointless without persistence, the data never leaves the device (no account, no backend sync; KrisKompassen is account-free per §1), and it stores only a shelter id, an address/coordinate fallback, and a short (50-character max) user-authored comment to help relocate the shelter (e.g. "Kommunhuset") — not a category label like "Hemma"/"Jobbet" that would reveal why it was saved. Do not extend this exception further without the same explicit approval.
 - Treat data from external sources (VMA, etc.) as untrusted. Do not render it as raw HTML. Validate the feed envelope with Pydantic and individual records in the frontend before presentation.
 - VMA responses carry provider and API attribution. The banner and full-message dialog link to the provider; technical API metadata stays in the model. The usage review in `backend/DEVELOPMENT.md` supports intended onward publication, but current VMA-specific terms remain unconfirmed. Clarify terms with SR before public release or adding persistent/offline VMA storage; this integration adds no such storage.
 
@@ -465,10 +515,11 @@ Decided tooling:
 
 - Add, remove or upgrade dependencies, or change `package-lock.json` or `requirements*.txt`.
 - Scaffold the backend.
-- Change the Dexie schema in `frontend/src/db/db.ts`. The current schema is `version(3)`: `crisisItems: "id, title, source, fetchedAt, savedOffline"`, `crisisKitItems: "id, category, isOwned, isCustom"`, `savedAddresses: "id, isActive"`. Changes need a new version and a migration plan.
+- Change the Dexie schema in `frontend/src/db/db.ts`. The current browser-local schema is `version(5)`: `crisisItems: "id, title, source, fetchedAt, savedOffline"`, `crisisKitItems: "id, category, isOwned, isCustom"`, `savedAddresses: "id, isActive"`, `shelterCache: "id, fetchedAt"`, `savedShelters: "id"`. Changes need a new version and a migration plan. Deferring the backend database does not remove or replace this local storage.
 - Reintroduce separate online/offline routes (e.g. `/offline`, `/offline/:id`) or otherwise encode the selected mode in the URL. The team decided online/offline is a shared `ModeContext` read by `/crisis` and `/crisis/:id` instead (see §3) specifically so the URL never changes on a mode switch. If a task description points back toward separate routes, stop and ask, and remind them of this decision, rather than silently reintroducing it.
 - Change the PWA or service worker config (`VitePWA` in `vite.config.ts`, manifest, caching).
-- Create or change any backend database schema.
+- Introduce a backend database or create/change its schema. Backend database work is deferred
+  under the current storage decision in §1; it may be reconsidered explicitly in the future.
 - Add or change authentication or authorization that is not an end-user account system (for example protecting an operational or administrative endpoint). End-user accounts, registration and login are not subject to approval: they are out of scope under the account-free decision in §1 and cannot be introduced by a ticket or by approving a plan for one.
 - Touch deploy, hosting or CI config (`frontend/vercel.json`, `.github/workflows/`). The frontend has a Vercel SPA fallback. CI workflows are `backend-ci.yml` and `frontend-ci.yml`. Project creation, environment settings and actual deployment remain account-side work.
 - Delete, move or rename files.

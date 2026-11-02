@@ -1,5 +1,5 @@
 import { db } from "../db/db"
-import type { CachedShelter, Shelter } from "../types/shelter"
+import type { CachedShelter, SavedShelter, Shelter } from "../types/shelter"
 
 /**
  * Writes freshly fetched shelters into IndexedDB, tagging each with when it was cached.
@@ -34,4 +34,46 @@ export async function getAllCachedShelters(): Promise<Shelter[]> {
  */
 export async function getCachedShelterById(id: string): Promise<CachedShelter | undefined> {
   return db.shelterCache.get(id)
+}
+
+/**
+ * Bookmarks a shelter for quick access later, keyed by its id (AGENTS.md §9).
+ *
+ * Stores only the address and coordinates as a fallback, not the full shelter - overwrites any
+ * existing bookmark for the same id, refreshing its fallback fields and savedAt.
+ */
+export async function saveShelter(
+  shelter: Pick<Shelter, "id" | "address" | "lat" | "lon">
+): Promise<void> {
+  const saved: SavedShelter = {
+    id: shelter.id,
+    address: shelter.address,
+    lat: shelter.lat,
+    lon: shelter.lon,
+    savedAt: new Date().toISOString(),
+    comment: null,
+  }
+  await db.savedShelters.put(saved)
+}
+
+/** Removes a bookmarked shelter. Removing one that was never saved is a no-op. */
+export async function removeSavedShelter(id: string): Promise<void> {
+  await db.savedShelters.delete(id)
+}
+
+/** Returns every shelter the user has bookmarked on this device. */
+export async function getSavedShelters(): Promise<SavedShelter[]> {
+  return db.savedShelters.toArray()
+}
+
+/**
+ * Sets a bookmarked shelter's relocation comment (AGENTS.md §9), trimmed to 50 characters.
+ *
+ * A blank comment (after trimming) clears it back to null rather than storing an empty string.
+ * Updating a shelter that was never saved is a no-op - there is no record to attach the comment
+ * to.
+ */
+export async function setSavedShelterComment(id: string, comment: string): Promise<void> {
+  const trimmed = comment.trim().slice(0, 50)
+  await db.savedShelters.update(id, { comment: trimmed.length > 0 ? trimmed : null })
 }

@@ -1,16 +1,16 @@
-"""Exposes the nearest civil-defense shelters for one position as a single on-demand lookup."""
+"""Exposes the nearest civil-defense shelters for one position from the local snapshot."""
 
 from typing import Annotated
 
-import httpx
 from fastapi import APIRouter, Depends, Query, Response
 
-from src.api.dependencies import get_http_client, get_settings, get_shelter_cache
-from src.core.config import Settings
-from src.models.errors import ErrorResponse
-from src.models.shelter import ShelterListResponse
-from src.services.shelters import fetch_shelters_response
-from src.services.shelters_cache import ShelterAreaCache
+from src.api.dependencies import get_shelter_store
+from src.models.shelter import ShelterBoundsResponse, ShelterDataErrorResponse, ShelterListResponse
+from src.services.shelters import (
+    LocalShelterStore,
+    build_shelters_bounds_response,
+    build_shelters_response,
+)
 
 router = APIRouter(prefix="/shelters", tags=["shelters"])
 
@@ -18,28 +18,50 @@ router = APIRouter(prefix="/shelters", tags=["shelters"])
 @router.get(
     "/nearest",
     response_model=ShelterListResponse,
-    responses={
-        502: {"model": ErrorResponse, "description": "Upstream request or response failure."},
-        504: {"model": ErrorResponse, "description": "Upstream request timeout."},
-    },
+    responses={500: {"model": ShelterDataErrorResponse, "description": "Local data failure."}},
 )
-async def get_nearest_shelters(
+def get_nearest_shelters(
     response: Response,
     lat: Annotated[float, Query(ge=-90, le=90)],
     lon: Annotated[float, Query(ge=-180, le=180)],
-    client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
-    settings: Annotated[Settings, Depends(get_settings)],
-    cache: Annotated[ShelterAreaCache, Depends(get_shelter_cache)],
+    store: Annotated[LocalShelterStore, Depends(get_shelter_store)],
 ) -> ShelterListResponse:
-    """Returns the nearest civil-defense shelters found within a widening search radius.
+    """Returns the nearest civil-defense shelters to (lat, lon) from the bundled local snapshot.
 
-    An empty shelter list is a normal result for a sparsely covered area; it is not an
-    UpstreamError. Raises UpstreamError if the upstream WFS request or response itself fails.
-    A lookup within the same grid cell as a recent request is served from memory instead of
-    re-querying MCF.
+    An empty shelter list would only happen if the snapshot itself were empty; it is not an
+    error. Raises ShelterDataError if the bundled snapshot is missing or invalid. Synchronous,
+    like src/api/crisis.py, so the snapshot's disk I/O (only on first access; see
+    LocalShelterStore) runs in FastAPI's thread pool.
     """
-    result = await cache.get_or_fetch(
-        lat, lon, lambda: fetch_shelters_response(client, settings, lat, lon)
+    shelters = store.get_shelters()
+    result = build_shelters_response(shelters, lat, lon)
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
+@router.get(
+    "/within-bounds",
+    response_model=ShelterBoundsResponse,
+    responses={500: {"model": ShelterDataErrorResponse, "description": "Local data failure."}},
+)
+def get_shelters_within_bounds(
+    response: Response,
+    north: Annotated[float, Query(ge=-90, le=90)],
+    south: Annotated[float, Query(ge=-90, le=90)],
+    east: Annotated[float, Query(ge=-180, le=180)],
+    west: Annotated[float, Query(ge=-180, le=180)],
+    store: Annotated[LocalShelterStore, Depends(get_shelter_store)],
+) -> ShelterBoundsResponse:
+    """Returns every shelter from the bundled local snapshot inside one map viewport.
+
+    Synchronous like get_nearest_shelters, for the same thread-pool reason. An inverted
+    rectangle (north < south or east < west) is accepted and simply yields an empty result
+    rather than a 422 - a transient client-side bounds glitch during a fast pan should not
+    surface as an error.
+    """
+    shelters = store.get_shelters()
+    result = build_shelters_bounds_response(
+        shelters, north=north, south=south, east=east, west=west
     )
     response.headers["Cache-Control"] = "no-store"
     return result

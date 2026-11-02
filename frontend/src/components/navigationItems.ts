@@ -15,4 +15,5 @@ export const navigationItems: readonly NavigationItem[] = [
   { to: "/crisis-kit", label: "Min krislåda", end: true },
   { to: "/skyddsrum", label: "Skyddsrum", end: true },
   { to: "/min-info", label: "Min info", end: true },
+  { to: "/lugn-i-kris", label: "Lugn i kris", end: true },
 ]

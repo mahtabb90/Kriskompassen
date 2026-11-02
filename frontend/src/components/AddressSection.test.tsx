@@ -73,6 +73,7 @@ describe("AddressSection", () => {
 
     expect(screen.getByText("Testgatan 1, Exempelstad")).toBeTruthy()
     expect(screen.getByText("Angiven manuellt")).toBeTruthy()
+    expect(screen.queryByText(/Lägg till kommun eller postnummer och sök igen/)).toBeNull()
     expect(onResolved).toHaveBeenCalledExactlyOnceWith({
       text: "Testgatan 1, Exempelstad",
       source: "manual",
@@ -123,11 +124,13 @@ describe("AddressSection", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("heading", { name: /Flera adresser hittades/ })
     )
+    expect(screen.getByText(/Lägg till kommun eller postnummer och sök igen/)).toBeTruthy()
     const candidateButton = screen.getByRole("button", { name: "Storgatan 1, Uppsala" })
 
     fireEvent.click(candidateButton)
 
     expect(screen.queryByRole("heading", { name: /Flera adresser hittades/ })).toBeNull()
+    expect(screen.queryByText(/Lägg till kommun eller postnummer och sök igen/)).toBeNull()
     expect(screen.getByText("Storgatan 1, Uppsala")).toBeTruthy()
     expect(onResolved).toHaveBeenCalledExactlyOnceWith({
       text: "Storgatan 1, Uppsala",
@@ -139,6 +142,25 @@ describe("AddressSection", () => {
     })
   })
 
+  it("shows the same guidance text no matter how many candidates are listed (2-5)", async () => {
+    fetchMock.mockResolvedValue(
+      searchResponse(
+        Array.from({ length: 5 }, (_, index) => ({
+          address: `Storgatan 1, Ort ${index + 1}`,
+          municipality: `Ort ${index + 1} kommun`,
+          lat: 59 + index,
+          lon: 18 + index,
+        }))
+      )
+    )
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+
+    await confirmManualAddress("Storgatan 1")
+
+    expect(screen.getAllByRole("button", { name: /Storgatan 1, Ort/ })).toHaveLength(5)
+    expect(screen.getByText(/Lägg till kommun eller postnummer och sök igen/)).toBeTruthy()
+  })
+
   it("shows an accessible error when the address search finds no match", async () => {
     fetchMock.mockResolvedValue(searchResponse([]))
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
@@ -146,6 +168,7 @@ describe("AddressSection", () => {
     await confirmManualAddress("Obefintliggatan 999")
 
     expect(screen.getByRole("alert").textContent).toContain("Ingen adress hittades")
+    expect(screen.queryByText(/Lägg till kommun eller postnummer och sök igen/)).toBeNull()
   })
 
   it("fetches and labels an automatically retrieved address as approximate", async () => {
@@ -160,7 +183,7 @@ describe("AddressSection", () => {
 
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Hämta min position" }))
+      fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
     })
 
     expect(screen.getByText("Drottninggatan 1")).toBeTruthy()
@@ -169,7 +192,11 @@ describe("AddressSection", () => {
     expect(screen.getByRole("button", { name: "Hämta ny position" })).toBeTruthy()
   })
 
-  it("flags a particularly imprecise fix instead of the generic approximate message", async () => {
+  it("shows the imprecision toggle for a particularly imprecise fix, wired to the fetched accuracy", async () => {
+    // The toggle's own open/close behavior and content are covered by LowAccuracyNotice.test.tsx
+    // - this only confirms the fetched accuracy actually reaches it, and that the generic
+    // "ungefärlig position" description still shows alongside it (it's about provenance, not
+    // precision, so it applies to every geolocated address regardless of accuracy).
     getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
       onSuccess({
         coords: { latitude: 59.3, longitude: 18.0, accuracy: 18_000 },
@@ -181,12 +208,31 @@ describe("AddressSection", () => {
 
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Hämta min position" }))
+      fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
     })
 
-    expect(screen.getByText(/mycket osäker/)).toBeTruthy()
-    expect(screen.getByText(/±18\.0 km/)).toBeTruthy()
-    expect(screen.queryByText(/ungefärlig position/)).toBeNull()
+    expect(screen.getByText(/ungefärlig position/)).toBeTruthy()
+    const toggle = screen.getByRole("button", { name: /Ungefärlig position/ })
+    fireEvent.click(toggle)
+    expect(screen.getByText(/ca ±18\.0 km/)).toBeTruthy()
+  })
+
+  it("shows no imprecision toggle for an accurate fix", async () => {
+    getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
+      onSuccess({
+        coords: { latitude: 59.3, longitude: 18.0, accuracy: 30 },
+      } as GeolocationPosition)
+    })
+    fetchMock.mockResolvedValue(
+      Response.json({ found: true, address: "Drottninggatan 1", lat: 59.3, lon: 18.0 })
+    )
+
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
+    })
+
+    expect(screen.queryByRole("button", { name: /Ungefärlig position/ })).toBeNull()
   })
 
   it("shows an accessible error for a denied permission while manual entry stays usable", async () => {
@@ -198,7 +244,7 @@ describe("AddressSection", () => {
 
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Hämta min position" }))
+      fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
     })
 
     expect(screen.getByRole("alert").textContent).toContain("nekades")
@@ -214,7 +260,9 @@ describe("AddressSection", () => {
     vi.stubGlobal("navigator", {})
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
 
-    const button = screen.getByRole("button", { name: "Hämta min position" }) as HTMLButtonElement
+    const button = screen.getByRole("button", {
+      name: "Hämta aktuell position",
+    }) as HTMLButtonElement
     expect(button.disabled).toBe(true)
     expect(screen.getByText(/stöder inte platshämtning/)).toBeTruthy()
   })

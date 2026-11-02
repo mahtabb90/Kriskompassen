@@ -1,14 +1,22 @@
-import { useCallback, useEffect, useRef, type ReactNode } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react"
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
+import type { StoredMapView } from "../components/AllSheltersMap"
 import ShelterDistance from "../components/ShelterDistance"
+import ShelterGeneralInfo from "../components/ShelterGeneralInfo"
+import ShelterSaveToggle from "../components/ShelterSaveToggle"
 import { useAddresses } from "../context/addressContext"
+import { useMode } from "../context/modeContext"
 import { useCrisisResource } from "../hooks/useCrisisResource"
+import { useSavedShelters } from "../hooks/useSavedShelters"
 import { getCachedShelterById } from "../services/shelterStorageService"
 import { haversineDistanceMeters, type GeoPoint } from "../utils/distance"
 import { formatShelterCapacity } from "../utils/formatCapacity"
-import { buildOpenStreetMapUrl } from "../utils/mapLink"
 import { describeShelterLocation } from "../utils/shelterLabel"
 import { describeShelterType } from "../utils/shelterType"
+
+// Lazy-loaded so maplibre-gl is only fetched once this page actually renders a shelter, not on
+// first load of the route itself - same reasoning as ShelterPage.tsx's map tab.
+const ShelterLocationMap = lazy(() => import("../components/ShelterLocationMap"))
 
 interface FieldProps {
   label: string
@@ -25,19 +33,33 @@ function Field({ label, children }: FieldProps) {
 }
 
 /**
- * Shows one shelter's details - location, id, type, capacity and distance from the user - plus a
- * link to it on a map and general shelter guidance that works fully offline.
+ * Shows one shelter's details - location, id, type, capacity and distance from the user - plus
+ * an embedded map of its exact location and general shelter guidance that works fully offline.
  *
  * Shelters have no single-shelter backend endpoint, so the lookup always reads the local cache
- * that the nearest-shelters list already wrote through - the same data online and offline alike.
- * Redirects to the shelter list if the id was never cached, matching DetailedCrisisCard's
- * not-found pattern. Fields missing from the source data are omitted rather than shown empty.
+ * that the nearest-shelters list or the all-shelters map already wrote through - the same data
+ * online and offline alike. Redirects to the shelter list if the id was never cached, matching
+ * DetailedCrisisCard's not-found pattern. Fields missing from the source data are omitted rather
+ * than shown empty. The map itself is online-only (see ShelterLocationMap.tsx) - offline, this
+ * page falls back to the "Plats" field above it instead of attempting a broken/blank map.
+ *
+ * Arriving from AllSheltersMap.tsx's popup carries the map's camera as navigation state
+ * (mapView) - when present, the back link returns to "Kartan" with that exact view instead of
+ * the nearest-shelters list, so panning/zooming around the map to find a shelter isn't lost by
+ * looking at its details.
  */
 function ShelterDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { activeAddress } = useAddresses()
+  const { mode } = useMode()
+  const { shelters: savedShelters, isSaved, save, remove, updateComment } = useSavedShelters()
   const headingRef = useRef<HTMLHeadingElement>(null)
+
+  const mapView = (location.state as { mapView?: StoredMapView } | null)?.mapView
+  const backTo = mapView ? "/skyddsrum/karta" : "/skyddsrum"
+  const backLabel = mapView ? "Tillbaka till kartan" : "Tillbaka till skyddsrum i närheten"
 
   const load = useCallback(() => (id ? getCachedShelterById(id) : Promise.resolve(undefined)), [id])
   const { state, retry } = useCrisisResource(id ?? "", load)
@@ -46,13 +68,14 @@ function ShelterDetailPage() {
 
   useEffect(() => {
     if (status !== "ready" || shelter) return
-    navigate("/skyddsrum", {
+    navigate(backTo, {
       replace: true,
       state: {
+        ...(mapView ? { mapView } : {}),
         notice: "Det skyddsrummet är inte sparat lokalt. Sök i närheten igen för att hämta det.",
       },
     })
-  }, [status, shelter, navigate])
+  }, [status, shelter, navigate, backTo, mapView])
 
   const origin: GeoPoint | null =
     typeof activeAddress?.lat === "number" && typeof activeAddress?.lon === "number"
@@ -63,6 +86,25 @@ function ShelterDetailPage() {
   const locationLabel = shelter
     ? describeShelterLocation(shelter, activeAddress?.municipality)
     : undefined
+  const shelterSaved = shelter ? isSaved(shelter.id) : false
+  const savedRecord = shelter ? savedShelters.find((saved) => saved.id === shelter.id) : undefined
+  const [commentConfirmation, setCommentConfirmation] = useState("")
+  // Clears a stale confirmation when navigating to a different shelter, per React's "storing
+  // information from previous renders" pattern (see ShelterPage's mode-driven tab for the same
+  // approach) - avoids a lingering "Kommentar sparad." from the previous shelter's page.
+  const [confirmationForId, setConfirmationForId] = useState(id)
+  if (id !== confirmationForId) {
+    setConfirmationForId(id)
+    setCommentConfirmation("")
+  }
+  const handleToggleSave = useCallback(() => {
+    if (!shelter) return
+    if (isSaved(shelter.id)) {
+      void remove(shelter.id)
+    } else {
+      void save(shelter)
+    }
+  }, [shelter, isSaved, save, remove])
 
   return (
     <article className="overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm">
@@ -73,10 +115,12 @@ function ShelterDetailPage() {
 
       <div className="p-6 sm:p-8">
         <Link
-          to="/skyddsrum"
+          to={backTo}
+          state={mapView ? { mapView } : undefined}
           className="mb-6 inline-flex min-h-12 items-center gap-1 font-medium text-blue-900 underline underline-offset-4"
         >
-          <span aria-hidden="true">←</span>Tillbaka till skyddsrum i närheten
+          <span aria-hidden="true">←</span>
+          {backLabel}
         </Link>
 
         <h1
@@ -125,38 +169,64 @@ function ShelterDetailPage() {
               )}
             </dl>
 
-            <a
-              href={buildOpenStreetMapUrl(shelter)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-6 inline-flex min-h-12 items-center font-semibold text-blue-900 underline underline-offset-4 hover:text-blue-950"
-            >
-              Visa skyddsrummet på kartan
-              <span className="sr-only"> (öppnas i ny flik)</span>
-            </a>
+            <div className="mt-6">
+              <ShelterSaveToggle saved={shelterSaved} onToggle={handleToggleSave} />
+            </div>
+
+            {shelterSaved && (
+              <div className="mt-4">
+                <label
+                  htmlFor="shelter-comment"
+                  className="block text-sm font-medium text-slate-600"
+                >
+                  Kommentar som hjälper dig hitta hit (visas i listan, max 50 tecken)
+                </label>
+                <input
+                  key={savedRecord?.id ?? "unsaved"}
+                  id="shelter-comment"
+                  type="text"
+                  maxLength={50}
+                  defaultValue={savedRecord?.comment ?? ""}
+                  onChange={() => setCommentConfirmation("")}
+                  onBlur={(event) => {
+                    if (!shelter) return
+                    const value = event.target.value
+                    void updateComment(shelter.id, value).then(() =>
+                      setCommentConfirmation("Kommentar sparad.")
+                    )
+                  }}
+                  placeholder="T.ex. Kommunhuset"
+                  className="mt-1 w-full max-w-sm rounded-xl border-2 border-blue-900 px-4 py-3 font-medium text-blue-900 placeholder:font-normal placeholder:text-slate-400"
+                />
+                <div role="status" className="mt-2 text-sm font-medium text-green-800">
+                  {commentConfirmation}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 border-t border-slate-200 pt-6">
+              <h2 className="text-lg font-bold text-blue-900">Karta</h2>
+              {mode === "online" ? (
+                <div className="mt-3">
+                  <Suspense
+                    fallback={
+                      <p role="status" className="text-slate-600">
+                        Laddar karta…
+                      </p>
+                    }
+                  >
+                    <ShelterLocationMap shelter={shelter} origin={origin} />
+                  </Suspense>
+                </div>
+              ) : (
+                <p className="mt-3 text-slate-600">
+                  Kartan kräver internetanslutning. Platsen beskrivs ovan under "Plats".
+                </p>
+              )}
+            </div>
 
             <section className="mt-8 border-t border-slate-200 pt-6">
-              <h2 className="text-xl font-bold text-blue-900">Om skyddsrum</h2>
-              <p className="mt-3 max-w-prose text-slate-700">
-                Skyddsrum är utrymmen som ska skydda mot tryckvåg och splitter vid höjd beredskap
-                eller krig. De är märkta med en skylt vid entrén: en orange ruta med en blå
-                triangel.
-              </p>
-              <p className="mt-3 max-w-prose text-slate-700">
-                Om skyddsrummen behöver tas i bruk har fastighetsägaren upp till två dygn på sig att
-                ställa i ordning dem med vatten, värme, ventilation och toaletter. Ta själv med dig
-                mat, vatten, mediciner, hygienartiklar, varma kläder, ficklampa och mobiltelefon med
-                laddare.
-              </p>
-              <a
-                href="https://www.krisinformation.se/forbered-dig/skyddsrum-utrymning-och-varningssystem/skyddsrum/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-flex min-h-12 items-center font-medium text-blue-900 underline underline-offset-4"
-              >
-                Läs mer om skyddsrum hos Krisinformation.se
-                <span className="sr-only"> (öppnas i ny flik)</span>
-              </a>
+              <ShelterGeneralInfo />
             </section>
           </>
         )}

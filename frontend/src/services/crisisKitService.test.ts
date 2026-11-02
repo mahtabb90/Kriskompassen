@@ -49,13 +49,15 @@ describe("getCrisisKitItems", () => {
 
     expect(items).toHaveLength(RECOMMENDED_CRISIS_KIT.length)
     expect(items.every((item) => !item.isOwned)).toBe(true)
+    expect(items.every((item) => item.isNotNeeded === false)).toBe(true)
   })
 
-  it("merges saved ownership and expiry dates into recommendations", async () => {
+  it("merges saved ownership, exclusion status, and expiry dates into recommendations", async () => {
     vi.mocked(table.toArray).mockResolvedValue([
       {
         ...RECOMMENDED_CRISIS_KIT[0],
         isOwned: true,
+        isNotNeeded: true,
         expirationDate: "2099-12-31",
       },
     ])
@@ -64,8 +66,24 @@ describe("getCrisisKitItems", () => {
     const savedItem = items.find((item) => item.id === RECOMMENDED_CRISIS_KIT[0].id)
 
     expect(savedItem?.isOwned).toBe(true)
+    expect(savedItem?.isNotNeeded).toBe(true)
     expect(savedItem?.expirationDate).toBe("2099-12-31")
     expect(savedItem?.name).toBe(RECOMMENDED_CRISIS_KIT[0].name)
+  })
+
+  it("loads previously saved items without an expiration date", async () => {
+    vi.mocked(table.toArray).mockResolvedValue([
+      {
+        ...RECOMMENDED_CRISIS_KIT[0],
+        isOwned: true,
+      },
+    ])
+
+    const items = await getCrisisKitItems()
+    const savedItem = items.find((item) => item.id === RECOMMENDED_CRISIS_KIT[0].id)
+
+    expect(savedItem?.isOwned).toBe(true)
+    expect(savedItem?.expirationDate).toBeUndefined()
   })
 
   it("includes saved custom items", async () => {
@@ -103,6 +121,58 @@ describe("updateCrisisKitItem", () => {
       expect.objectContaining({
         ...recommendedItem,
         isOwned: true,
+      })
+    )
+  })
+
+  it("marks an item as not needed and clears its owned status", async () => {
+    vi.mocked(table.get).mockResolvedValue({
+      ...recommendedItem,
+      isOwned: true,
+      expirationDate: "2028-05-20",
+    })
+
+    await updateCrisisKitItem(recommendedItem.id, { isNotNeeded: true })
+
+    expect(table.put).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isOwned: false,
+        isNotNeeded: true,
+        expirationDate: "2028-05-20",
+      })
+    )
+  })
+
+  it("restores an excluded item as unowned", async () => {
+    vi.mocked(table.get).mockResolvedValue({
+      ...recommendedItem,
+      isOwned: false,
+      isNotNeeded: true,
+    })
+
+    await updateCrisisKitItem(recommendedItem.id, { isNotNeeded: false })
+
+    expect(table.put).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isOwned: false,
+        isNotNeeded: false,
+      })
+    )
+  })
+
+  it("clears the not-needed status when an item is marked as owned", async () => {
+    vi.mocked(table.get).mockResolvedValue({
+      ...recommendedItem,
+      isOwned: false,
+      isNotNeeded: true,
+    })
+
+    await updateCrisisKitItem(recommendedItem.id, { isOwned: true })
+
+    expect(table.put).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isOwned: true,
+        isNotNeeded: false,
       })
     )
   })
@@ -205,6 +275,40 @@ describe("addCustomCrisisKitItem", () => {
     expect(table.add).toHaveBeenCalledWith(item)
   })
 
+  it("saves a custom item in an existing subcategory", async () => {
+    const item = await addCustomCrisisKitItem(
+      "Extra batterier",
+      "Kommunikation",
+      "Batterier och laddning"
+    )
+
+    expect(item.subcategory).toBe("Batterier och laddning")
+    expect(table.add).toHaveBeenCalledWith(item)
+  })
+
+  it('saves a custom item in the special "Övrigt" grouping', async () => {
+    const item = await addCustomCrisisKitItem("Visselpipa", "Kommunikation", "Övrigt")
+
+    expect(item.subcategory).toBe("Övrigt")
+    expect(table.add).toHaveBeenCalledWith(item)
+  })
+
+  it("rejects a subcategory that does not belong to the selected category", async () => {
+    await expect(
+      addCustomCrisisKitItem("Extra batterier", "Mat", "Batterier och laddning")
+    ).rejects.toThrow("Välj en giltig underkategori.")
+
+    expect(table.add).not.toHaveBeenCalled()
+  })
+
+  it("rejects arbitrary subcategory names", async () => {
+    await expect(
+      addCustomCrisisKitItem("Visselpipa", "Kommunikation", "Min egen underkategori")
+    ).rejects.toThrow("Välj en giltig underkategori.")
+
+    expect(table.add).not.toHaveBeenCalled()
+  })
+
   it("rejects an empty name", async () => {
     await expect(addCustomCrisisKitItem("   ", "Mat")).rejects.toThrow("Namnet får inte vara tomt.")
 
@@ -239,6 +343,58 @@ describe("updateCustomCrisisKitItem", () => {
       name: "Nytt namn",
       category: "Mat",
     })
+  })
+
+  it("updates a custom item's subcategory", async () => {
+    vi.mocked(table.get).mockResolvedValue(customItem)
+
+    await updateCustomCrisisKitItem(
+      customItem.id,
+      customItem.name,
+      customItem.category,
+      undefined,
+      "Vattenförråd"
+    )
+
+    expect(table.put).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subcategory: "Vattenförråd",
+      })
+    )
+  })
+
+  it('allows the special "Övrigt" grouping when updating a custom item', async () => {
+    vi.mocked(table.get).mockResolvedValue(customItem)
+
+    await updateCustomCrisisKitItem(
+      customItem.id,
+      customItem.name,
+      customItem.category,
+      undefined,
+      "Övrigt"
+    )
+
+    expect(table.put).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subcategory: "Övrigt",
+      })
+    )
+  })
+
+  it("rejects an invalid subcategory when updating a custom item", async () => {
+    vi.mocked(table.get).mockResolvedValue(customItem)
+
+    await expect(
+      updateCustomCrisisKitItem(
+        customItem.id,
+        customItem.name,
+        customItem.category,
+        undefined,
+        "Not a real subcategory"
+      )
+    ).rejects.toThrow("Välj en giltig underkategori.")
+
+    expect(table.put).not.toHaveBeenCalled()
   })
 
   it("rejects empty names", async () => {

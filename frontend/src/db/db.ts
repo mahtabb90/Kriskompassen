@@ -2,7 +2,7 @@ import Dexie, { type Table } from "dexie"
 import type { SavedAddress } from "../types/address"
 import type { CrisisItem } from "../types/crisis"
 import type { CrisisKitItem } from "../types/crisisKit"
-import type { CachedShelter } from "../types/shelter"
+import type { CachedShelter, SavedShelter } from "../types/shelter"
 
 /**
  * Dexie wrapper for the app's local database.
@@ -15,6 +15,7 @@ class KrisKompassenDatabase extends Dexie {
   crisisKitItems!: Table<CrisisKitItem, string>
   savedAddresses!: Table<SavedAddress, string>
   shelterCache!: Table<CachedShelter, string>
+  savedShelters!: Table<SavedShelter, string>
 
   constructor() {
     super("KrisKompassenDB")
@@ -39,6 +40,14 @@ class KrisKompassenDatabase extends Dexie {
       crisisKitItems: "id, category, isOwned, isCustom",
       savedAddresses: "id, isActive",
       shelterCache: "id, fetchedAt",
+    })
+
+    this.version(5).stores({
+      crisisItems: "id, title, source, fetchedAt, savedOffline",
+      crisisKitItems: "id, category, isOwned, isCustom",
+      savedAddresses: "id, isActive",
+      shelterCache: "id, fetchedAt",
+      savedShelters: "id",
     })
   }
 }

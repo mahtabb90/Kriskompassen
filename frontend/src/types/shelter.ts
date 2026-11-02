@@ -34,6 +34,12 @@ export interface ShelterListResponse {
   bboxRadiusMetersUsed: number
 }
 
+/** Reports every shelter from the local snapshot inside one map viewport. */
+export interface ShelterBoundsResponse {
+  shelters: Shelter[]
+  source: ShelterSource
+}
+
 /**
  * Extends a shelter with when it was cached locally, for offline reuse.
  *
@@ -41,4 +47,24 @@ export interface ShelterListResponse {
  */
 export interface CachedShelter extends Shelter {
   fetchedAt: string
+}
+
+/**
+ * A shelter the user has deliberately bookmarked, stored only on this device (AGENTS.md §9).
+ *
+ * Holds only the id plus an address/coordinate fallback, not the full shelter - the rest (type,
+ * capacity, number) is re-derived from the shelter cache when available. The fallback keeps the
+ * bookmark showing a usable address and distance even if the shelter has since dropped out of
+ * that cache, e.g. on a device that never re-searched its area.
+ *
+ * @property comment A short (50-character max), user-authored note to help relocate the shelter
+ * (e.g. "Kommunhuset"), since MCF's address field is often not enough on its own. null when unset.
+ */
+export interface SavedShelter {
+  id: string
+  address: string | null
+  lat: number
+  lon: number
+  savedAt: string
+  comment: string | null
 }

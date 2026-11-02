@@ -18,17 +18,17 @@ function Pathname() {
 }
 
 function mountMenu(initialPath = "/") {
-  const triggerRef = createRef<HTMLButtonElement>()
+  const footerRef = createRef<HTMLElement>()
   const view = render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <MobileMenu triggerRef={triggerRef} />
+      <MobileMenu footerRef={footerRef} />
       <Pathname />
       <h1 id="page-heading" tabIndex={-1}>
         Sida
       </h1>
     </MemoryRouter>
   )
-  return { ...view, trigger: screen.getByRole("button", { name: "Meny" }), triggerRef }
+  return { ...view, trigger: screen.getByRole("button", { name: "Meny" }), footerRef }
 }
 
 function openMenu(initialPath = "/") {
@@ -84,6 +84,7 @@ describe("MobileMenu", () => {
       "Min krislåda",
       "Skyddsrum",
       "Min info",
+      "Lugn i kris",
     ])
     expect(links.map((link) => link.getAttribute("href"))).toEqual(
       navigationItems.map((item) => item.to)
@@ -115,6 +116,14 @@ describe("MobileMenu", () => {
     act(() => dialog.close())
     expect(trigger.getAttribute("aria-expanded")).toBe("false")
     expect(document.activeElement).toBe(trigger)
+  })
+
+  it("places the trigger in the footer landmark and keeps the dialog outside it", () => {
+    const { trigger, dialog, footerRef } = openMenu()
+    const footer = screen.getByRole("navigation", { name: "Huvudmeny", hidden: true })
+    expect(footerRef.current).toBe(footer)
+    expect(footer.contains(trigger)).toBe(true)
+    expect(footer.contains(dialog)).toBe(false)
   })
 
   it("can be reopened after closing", () => {
@@ -173,7 +182,7 @@ describe("MobileMenu", () => {
   it("wraps Tab and Shift+Tab between the first and last control", () => {
     const { dialog } = openMenu()
     const first = within(dialog).getByRole("button", { name: "Stäng menyn" })
-    const last = within(dialog).getByRole("link", { name: "Min info" })
+    const last = within(dialog).getByRole("link", { name: "Lugn i kris" })
     last.focus()
     fireEvent.keyDown(last, { key: "Tab" })
     expect(document.activeElement).toBe(first)
@@ -223,22 +232,56 @@ describe("MobileMenu install button", () => {
     return event
   }
 
-  it("is absent while the browser offers no installation", () => {
+  /** The footer follows the scrolling region that holds the link list. */
+  function footerOf(dialog: HTMLElement) {
+    const scrollRegion = within(dialog).getByRole("list").parentElement
+    return { scrollRegion, footer: scrollRegion?.nextElementSibling ?? null }
+  }
+
+  it("is absent while the browser offers no installation and leaves the footer empty", () => {
     const { dialog } = openMenu()
     expect(within(dialog).queryByRole("button", { name: "Installera app" })).toBe(null)
+    const { footer } = footerOf(dialog)
+    // The empty:hidden utility removes the footer and its divider while it has no content.
+    expect(footer?.matches(":empty")).toBe(true)
+    expect(footer?.classList.contains("empty:hidden")).toBe(true)
   })
 
-  it("follows the links and becomes the last control for Tab wrapping", () => {
+  it("sits in a fixed footer after the scrolling links, outside the link list", () => {
+    offerInstall()
+    const { dialog } = openMenu()
+    const install = within(dialog).getByRole("button", { name: "Installera app" })
+    const { scrollRegion, footer } = footerOf(dialog)
+    expect(within(dialog).getByRole("list").contains(install)).toBe(false)
+    expect(scrollRegion?.contains(install)).toBe(false)
+    expect(footer?.contains(install)).toBe(true)
+    expect(footer?.nextElementSibling).toBe(null)
+  })
+
+  it("uses the text button with a decorative icon, named by its visible label", () => {
+    offerInstall()
+    const { dialog } = openMenu()
+    const install = within(dialog).getByRole("button", { name: "Installera app" })
+    const icon = install.querySelector("svg")
+    expect(icon?.getAttribute("aria-hidden")).toBe("true")
+    expect(icon?.getAttribute("focusable")).toBe("false")
+    expect(install.hasAttribute("aria-label")).toBe(false)
+  })
+
+  it("is the last control in DOM order and for Tab wrapping in both directions", () => {
     offerInstall()
     const { dialog } = openMenu()
     const install = within(dialog).getByRole("button", { name: "Installera app" })
     const first = within(dialog).getByRole("button", { name: "Stäng menyn" })
-    expect(within(dialog).getByRole("list").contains(install)).toBe(false)
-    // The menu keeps the full-size secondary variant, which has no icon.
-    expect(install.querySelector("svg")).toBe(null)
+    const lastLink = within(dialog).getByRole("link", { name: "Lugn i kris" })
+    expect(
+      lastLink.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
     install.focus()
     fireEvent.keyDown(install, { key: "Tab" })
     expect(document.activeElement).toBe(first)
+    fireEvent.keyDown(first, { key: "Tab", shiftKey: true })
+    expect(document.activeElement).toBe(install)
   })
 
   it("prompts, closes the menu and returns focus to the trigger instead of the page heading", () => {

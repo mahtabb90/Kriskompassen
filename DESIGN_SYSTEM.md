@@ -11,7 +11,7 @@ Clarity, readability, accessibility, and resilience under stressful conditions t
 ## 1. Core Principles
 
 1. **Calm and Trustworthy Authority**
-   Emergencies cause stress and anxiety. The visual presentation must feel composed, official, and reassuring. Deep blue conveys stability and trust, paired with a soft light-blue content canvas and crisp white content cards. Header and navigation surfaces remain clean white.
+   Emergencies cause stress and anxiety. The visual presentation must feel composed, official, and reassuring. Deep blue conveys stability and trust, paired with a soft light-blue content canvas and crisp white content cards. The header, desktop navigation and opened mobile menu use white surfaces; the fixed mobile menu field uses the yellow brand accent.
 
 2. **Low Cognitive Load and High Legibility**
    Users in crisis situations may be stressed, distracted, or visually impaired. Visual hierarchy must be immediate. Headings, body copy, and interactive controls must have distinct weights, generous line heights, and restrained typography.
@@ -53,8 +53,8 @@ To ensure accessible contrast ratios, eliminate visual glare, and provide comfor
 
 - **UI Primary Blue (`#1E3A8A` / `blue-900`):** An adapted deep blue providing strong contrast (>= 4.5:1) for headings, text links, buttons, and focus indicators against white surfaces.
 - **Page Canvas (`#D7E2EF`):** A softened, muted tint of the brand light blue that provides a restful background canvas behind content cards and page content without causing eye strain.
-- **UI Accent Amber (`#FBBF24` / `amber-400`):** A warm yellow brand accent used in the signature crisis-information bar and, as the softer `amber-300` tint, the background of the fixed mobile **Meny** button (with dark blue text and icon).
-- **Surface White (`#FFFFFF` / `bg-white`):** Crisp white content cards and header/navigation surfaces for clear text presentation.
+- **UI Accent Amber (`#FBBF24` / `amber-400`):** A warm yellow brand accent used in the signature crisis-information bar and, as the softer `amber-300` tint, the full-width fixed mobile menu field (with dark blue text, icon and top border).
+- **Surface White (`#FFFFFF` / `bg-white`):** Crisp white content cards, header, desktop navigation and opened mobile menu surfaces for clear text presentation.
 
 | Token / Name | Hex / Value | Tailwind Class | Usage |
 | --- | --- | --- | --- |
@@ -64,8 +64,8 @@ To ensure accessible contrast ratios, eliminate visual glare, and provide comfor
 | **UI Blue Border** | `rgb(191 219 254 / 0.8)` | `border-blue-200/80` | Subtle card borders against white surfaces. |
 | **UI Blue Hover** | `#60A5FA` | `hover:border-blue-400` | Card border hover state. |
 | **UI Light Tint** | `#EFF6FF` | `hover:bg-blue-50` | Secondary/outline button hover background. |
-| **Page Canvas Background** | `#D7E2EF` | `bg-[#D7E2EF]` | Main application content canvas behind cards and page content. Soft, calming light blue. Header and navigation surfaces remain white. |
-| **Surface White** | `#FFFFFF` | `bg-white` | Content cards, header surface, navigation bar, panels. |
+| **Page Canvas Background** | `#D7E2EF` | `bg-[#D7E2EF]` | Main application content canvas behind cards and page content. Soft, calming light blue. Header, desktop navigation and opened mobile menu surfaces remain white. |
+| **Surface White** | `#FFFFFF` | `bg-white` | Content cards, header surface, desktop navigation, opened mobile menu, panels. |
 | **UI Accent Amber** | `#FBBF24` | `bg-amber-400` | Restrained decorative brand accent used in the signature crisis-information bar. Must not by itself communicate warning severity or urgency. |
 
 ### 2.3 Neutral and Typography Palette
@@ -199,16 +199,16 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
 - **Max Width Container:**
   All main content sections, header content, and navigation links are constrained to `max-w-4xl` (`56rem` / 896px) and horizontally centered with `mx-auto`.
 - **Canvas and Surfaces:**
-  `#D7E2EF` acts as the main application content canvas behind cards and page content. The header and navigation bars remain clean white surfaces.
+  `#D7E2EF` acts as the main application content canvas behind cards and page content. The header, desktop navigation and opened mobile menu use clean white surfaces; the fixed mobile menu field uses `amber-300`.
 - **Viewport Safe-Area Insets:**
   Modern mobile screens with rounded corners, notches, and home indicator bars require safe-area handling:
   - Header: `pt-[env(safe-area-inset-top)]`
   - Root container: `pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]`
-  - Fixed mobile menu button: `bottom: max(0.75rem, env(safe-area-inset-bottom))`; the full-screen menu pads all four edges with the matching insets
+  - Fixed mobile footer: its full-width button owns the padding, using `pb-[max(0.75rem,env(safe-area-inset-bottom))]`, `pl-[max(1rem,env(safe-area-inset-left))]` and `pr-[max(1rem,env(safe-area-inset-right))]`. This keeps the yellow field clickable through its padding. The full-screen menu pads all four edges with the matching insets.
 - **Dynamic Content Offset:**
-  When the **Meny** button is fixed at the bottom of the viewport on mobile (below `48rem`), the root element tracks `--navigation-height` dynamically via `ResizeObserver`. The main container applies:
-  `pb-[calc(var(--navigation-height,0px)+2rem)]`
-  This reserves sufficient scroll space so no content is obscured behind the fixed button. It is `0px` from `48rem` upwards, where the button is hidden.
+  When the mobile menu bar is fixed at the bottom of the viewport (below `48rem`), the root element tracks its measured height as `--navigation-height` via `ResizeObserver`. The shared page footer (section 6.8), the last element in the layout, is followed by an `aria-hidden` spacer of that height:
+  `h-[var(--navigation-height,0px)]`
+  This reserves sufficient scroll space so no content is obscured behind the bar, including its safe-area padding and enlarged text. It is `0px` from `48rem` upwards, where the bar is hidden. `main` itself uses a plain `pb-8`.
 
 ### 4.3 Responsive Content Grids
 
@@ -224,7 +224,7 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
 
 ### 5.1 Content Cards and Panels
 
-Content cards represent units of crisis information. They are clean, distinct surfaces floating on top of the `#D7E2EF` light blue main content canvas (while the header and navigation bars remain white surfaces).
+Content cards represent units of crisis information. They are clean, distinct surfaces floating on top of the `#D7E2EF` light blue main content canvas. The header, desktop navigation and opened mobile menu use white surfaces; the fixed mobile menu field uses `amber-300`.
 
 - **Background:** Crisp solid white (`bg-white`).
 - **Border Radius:** `rounded-2xl` (16px / 1.0rem) with `overflow-hidden`.
@@ -235,7 +235,7 @@ Content cards represent units of crisis information. They are clean, distinct su
 
 ### 5.2 The Signature Crisis Indicator Bar
 
-The signature top accent bar applies specifically to **crisis-information cards (`CrisisCard`) and crisis-detail surfaces (`DetailedCrisisCard`)**, not to every generic card, panel, empty state, or settings container in the application:
+The signature top accent bar applies specifically to **crisis-information cards (`CrisisCard`) and crisis-detail surfaces (`DetailedCrisisCard`)**, not to every generic card, panel, empty state, or settings container in the application. Other uses are the white content cards of the static "Lugn i kris" page (section 5.4) and the home page hero and feature cards (section 5.5):
 
 ```html
 <div className="flex h-1.5 w-full" aria-hidden="true">
@@ -249,6 +249,84 @@ The signature top accent bar applies specifically to **crisis-information cards 
   - A primary solid deep blue bar (`flex-1 bg-blue-900`) representing stability and official authority.
   - A warm yellow/amber end block (`w-8 bg-amber-400`) providing a restrained brand accent. It is decorative and does not denote warning level, severity, or urgency.
 - **Accessibility:** Marked with `aria-hidden="true"` as it is a decorative brand motif.
+
+### 5.3 Category Icons
+
+Crisis-information overview cards (`CrisisCard`) and the emergency-kit category accordions (`CrisisKitPage`) show one icon beside the heading to aid scanning. Crisis-detail surfaces do not.
+
+- **Source:** The dependency-free inline SVG component `CrisisIcon`; no icon library or downloaded asset. Names are chosen by `iconForArticleId()` and `iconForKitCategory()` in `utils/crisisIcons.ts`, so the same concept uses the same icon on both surfaces. Unknown or future article IDs use the generic `other` icon.
+- **Style:** One outline style for all icons: 24×24 viewBox, `fill="none"`, 1.8 stroke, round caps and joins, `stroke="currentColor"`.
+- **Colour:** `text-blue-900` only. No per-category colours, and no amber on icons; the amber accent bar stays the only amber element.
+- **Size and layout:** 24px (`size-6`, `shrink-0`), 12px gap (`gap-3`) before the heading. The heading keeps `min-w-0 flex-1` and wraps without truncation, so enlarged text and zoom reflow normally. The icon aligns to the first heading line on cards (`items-start`) and is centred in the accordion summary.
+- **Accessibility:** The icon only repeats the visible heading, so it is `aria-hidden="true"` and `focusable="false"`, has no `<title>` and creates no second accessible name. It sits outside the heading element, is not interactive and does not change the card link or summary focus behaviour.
+
+| Concept | Icon | Article ID | Kit category |
+| --- | --- | --- | --- |
+| Food | utensils | `food-in-crisis` | Mat |
+| Drinking water | water drop | `drinking-water-in-crisis` | Dricksvatten |
+| Hygiene | soap | `hygiene-in-crisis` | Toalett och hygien |
+| Heat | flame | `heating-in-crisis` | Värme |
+| Communication | radio | `communication-in-crisis` | Kommunikation |
+| Medicine | pill | `medication-in-crisis` | Läkemedel |
+| Payments | payment card | none | Betalningar |
+| Pets | paw | none | Husdjur |
+| Other / unknown | generic box | any other ID | Övrigt |
+
+### 5.4 Calm Page Motif and Panels ("Lugn i kris")
+
+The static `/lugn-i-kris` page uses a few decorative elements. They add no new colours, gradients or animation.
+
+- **Signature bar:** the hero, advice and sources cards carry the same blue/amber top bar as section 5.2 (without the hover colour), on an `overflow-hidden` card with padding on an inner element. The emergency panel does not.
+- **Hero:** a white content card (section 5.1) with the `h1`, a one-line `p` (`text-xl font-semibold text-blue-900`) and the lead paragraph. `CalmHeroMotif` sits beside the text from `sm`. On mobile it sits directly below the text with a tight `gap-3` and is smaller (`size-20`, `sm:size-40`) to keep the hero compact.
+- **Hero motif:** an inline SVG of two light rings (`text-blue-200`), one darker inner ring with a gentle wave (`text-blue-900`) and one small amber dot (`text-amber-400`). Keep it to three rings so it reads as stillness, not a target. It is `aria-hidden`, `focusable="false"`, titleless and not animated.
+- **Emergency panel:** `rounded-2xl border-2 border-blue-900 bg-blue-50` with an `h2` label ("Vid akut fara") and plain text. It uses no red and no warning triangle, which stay reserved for VMA (section 2.4.1). The visible label, not colour, carries the meaning. It contains no link or control.
+- **Advice cards:** section 5.1 cards. Each `h2` is preceded by a `CalmIcon` (same 24×24, 1.8 stroke, `currentColor` style as section 5.3, `text-blue-900`, `aria-hidden`) in a 48px `rounded-full bg-blue-50` circle. `CalmIcon` is separate from `CrisisIcon`, so the article and kit mapping in section 5.3 is unaffected.
+- **Divider:** a decorative row of two thin `bg-blue-900/30` lines around a `size-2` amber dot, placed before the sources section and hidden from assistive technology.
+- **Amber:** only the hero dot and the divider dot. Amber stays a small accent and never signals urgency.
+
+### 5.5 Home Page Hero and Feature Overview (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in `HomePage`. It adds
+> no colours, gradients or animation; the hero heading size is a documented exception.
+
+- **Hero:** a white content card (section 5.1) with the section 5.2 accent bar (local to the page).
+  The `h1` reads **"Din kompass i en kris"**, so the document title follows it. A
+  `text-base sm:text-lg font-semibold text-blue-900` supporting line (**"Förbered dig. Hitta
+  rätt. Behåll lugnet."**) and a lead paragraph follow, then two calls to action and a
+  non-interactive value row (`text-sm text-slate-600`, wrapping; **✓ Ingen inloggning**, **✓
+  Spara viktig information offline**, **✓ Tydliga källor**). The `✓` is a decorative
+  `aria-hidden` glyph in `text-blue-900`; the list items are plain text with no background or
+  control styling. The `h1` and supporting line are centred below `sm` and, with the lead
+  paragraph, calls to action and value row, left-aligned from `sm`; the lead paragraph is always
+  left-aligned and the value row is centred below `sm`. From `md` the text sits beside the motif; below `md` only the text and calls to
+  action are shown.
+- **Hero heading exception:** the home `h1` is `text-3xl sm:text-4xl`. The page-heading rule in
+  section 3.2 (`text-3xl`) is unchanged for every other route.
+- **Calls to action:** **Se krisinformation** uses the primary button (section 6.2.1) and **Öppna
+  min krislåda** the secondary outlined button (section 6.2.2). Both are React Router links. They
+  stack at full width below `sm` and sit side by side from `sm`.
+- **Hero motif:** `CompassHeroMotif` draws a subtle `text-blue-200` outer ring, a slightly stronger
+  `text-blue-300` inner ring, four short `text-blue-900` directional ticks, a two-point needle
+  (longer half filled, shorter half outline) anchored by a white hub with a `text-blue-900`
+  outline, and one `text-amber-400` dot near the long needle point. It has no lettering or
+  gradient, is `aria-hidden`, `focusable="false"`, titleless and not animated, and is hidden below
+  `md` (`hidden md:block`).
+- **Feature overview:** an `h2` (**"Det här kan du göra i KrisKompassen"**) above five cards whose
+  `h3` titles are the shared `navigationItems` labels. Each whole card is one link; its accessible
+  name is the title (`aria-labelledby`) and its description is `aria-describedby`.
+- **Bento hierarchy:** from `md`, a six-column grid places Krisinformation and Min krislåda
+  (`col-span-3`, larger padding, `text-2xl` title, 56px icon circle with a `border-blue-200` edge
+  on `bg-blue-100`) on one row and Skyddsrum, Min info and Lugn i kris (`col-span-2`, `text-xl`
+  title, 48px `bg-blue-50` icon circle without border) on the next. Every card ends with the same
+  decorative cue, pinned to the card bottom: the text **Öppna** and a 20px inline outline arrow
+  (section 5.3 style, `currentColor`, `gap-2`), hidden from assistive technology as a whole
+  because the link name comes from the title. Below `md` the cards stack in one column. Cards stretch to equal height within a
+  row (`h-full`, no fixed heights), so zoom and enlarged text reflow.
+- **Card surface:** section 5.1 with the section 5.2 bar including its hover colour; the focus
+  outline is drawn inside the clipped card. No transforms.
+- **Icons:** the section 5.3 outline style in a `bg-blue-50` circle (as in section 5.4). Min
+  krislåda reuses `CrisisIcon` (`other`), Lugn i kris reuses `CalmIcon` (`breath`); Krisinformation,
+  Skyddsrum and Min info use `HomeFeatureIcon`. All are `aria-hidden` and `text-blue-900`.
 
 ---
 
@@ -288,17 +366,18 @@ Used for toggled states or alternate actions (e.g. "Ta bort offlinekopia", "Visa
 
 #### 6.2.3 Text Button (tertiary)
 Used for secondary actions that should not compete with nearby controls (e.g. "Installera app" in
-the header).
+the header and in the mobile menu footer).
 
 - **Classes:**
-  `relative inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm
+  `relative inline-flex min-h-8 cursor-pointer items-baseline gap-2 rounded-xl px-2 py-1.5 text-sm
   font-semibold text-blue-900 underline underline-offset-4 hover:bg-blue-50 active:bg-blue-50
   after:absolute after:inset-x-0 after:-inset-y-2 after:content-['']`
 - **Visual:** No border or fill at rest; the underline and blue text mark it as interactive, like
-  standalone text links (section 6.3). The `px-2` aligns its content with switch and help-text
-  content that uses the same padding. An optional 20×20px inline SVG icon precedes the label,
-  uses `currentColor`, has `aria-hidden="true"` and `focusable="false"`, and never replaces the
-  visible label.
+  standalone text links (section 6.3). The `px-2` keeps the focus outline and hover tint clear of
+  the label. The label sets the baseline (`items-baseline`), so the button aligns with
+  neighbouring text such as the connection status. An optional 20×20px inline SVG icon precedes
+  the label, is vertically centred with `self-center`, uses `currentColor`, has
+  `aria-hidden="true"` and `focusable="false"`, and never replaces the visible label.
 - **Target size:** The visible box is 32px high; the `after` pseudo-element extends the hit area
   by 8px above and below to 48px, keeping the project's 48×48px standard (section 6.1). The
   extended hit area must not overlap other interactive targets, so keep at least 8px between the
@@ -364,10 +443,9 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 
 ### 6.6 Install App Button
 
-- **Variant:** In the header, the text button (section 6.2.3) with a decorative download icon, so
-  it has less visual weight than the "Sparad information" switch. In the mobile menu, the
-  secondary/outlined button (section 6.2.2) with compact `px-4 py-2` padding, so its 2px border
-  keeps the 48px minimum height (`min-h-12 min-w-12`), without an icon. The visible label
+- **Variant:** The text button (section 6.2.3) with a decorative download icon in both places. In
+  the header it has less visual weight than the "Sparad information" switch; in the mobile menu
+  the underline, blue text and icon distinguish it from the navigation links. The visible label
   **"Installera app"** is the accessible name in both; no `aria-label`.
 - **Placement:** From `48rem`, beside connectivity status in the header's left column, with a
   16px horizontal gap. The row wraps with an 8px vertical gap when space is limited. The button
@@ -379,13 +457,81 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
   first text baseline. The status dot and install icon use `self-center`, so the text supplies
   the baseline instead of the decorative shapes. The switch spans the preceding brand, tagline
   and flexible rows, so longer help text does not spread the brand and tagline apart. Below
-  `48rem`, last in the `MobileMenu` dialog, after the links in its scrolling region.
-  It is an action, not a page, so it is never part of the navigation links.
+  `48rem`, right-aligned in a fixed footer at the bottom of the `MobileMenu` dialog, separated
+  from the links by a 1px top border. The footer sits below the scrolling link region, so the
+  button stays visible while the links scroll above it, and it is the last control in DOM,
+  visual and Tab order. The footer's 12px vertical padding keeps the button's extended 48px hit
+  area clear of the links. It is an action, not a page, so it is never part of the navigation
+  links.
 - **Visibility:** Rendered only while the browser offers installation; no space is reserved
   otherwise. Placing it beside status avoids an additional row below the active address. The
   header still grows naturally when text or controls need to wrap, without overlap or clipping.
+  The menu footer uses `empty:hidden`, so neither the footer nor its divider is shown while the
+  button is not rendered.
 - **Focus:** Selecting it opens the browser's prompt and removes the button. In the header focus
   moves to `#page-heading`; in the menu the dialog closes and focus returns to the **Meny** button.
+
+### 6.7 Install Instructions (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in `InstallInstructions`.
+> It reuses existing tokens only.
+
+- **Surface:** A section 5.1 card without the hover state or accent bar, `p-4`, named **Installera
+  appen** with `aria-label`. It uses `text-slate-700` body text and no heading, because it precedes
+  the page `h1`.
+- **Placement:** In normal flow in `main`, after the app-update slot and before the page, with a
+  16px bottom margin. It is not fixed, so it covers no content and needs no safe-area or scroll
+  spacing.
+- **Icon:** A 20×20px inline SVG share icon in `text-blue-900` beside the word "Dela". It is
+  `aria-hidden="true"` and `focusable="false"`, because the text names it.
+- **Close:** The text button (section 6.2.3) with the visible label **Stäng** and the accessible
+  name **Stäng installationsinstruktionen**, at least 48×48px including its hit area. It wraps
+  below the text on narrow screens.
+- **Focus:** The card never takes focus on its own and has no live region. Closing moves focus to
+  `#page-heading`.
+
+### 6.8 Shared Footer (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in `Footer`. It reuses
+> existing tokens only.
+
+- **Placement:** a semantic `<footer>` (the `contentinfo` landmark) after `main` in `AppLayout`,
+  on every route. The layout root is a flex column and `main` is `flex-1`, so the footer sits at
+  the bottom of the viewport on short pages.
+- **Surface:** a slim, full-width, matte neutral band (`bg-slate-50` with a single `border-t
+  border-blue-200`), deliberately not a card and not a saturated block. Its content sits in the
+  `max-w-4xl` shell (`px-4 sm:px-6`) with `py-1.5` below `md` and `md:py-3` from `md`, and no fixed height, so enlarged text reflows.
+  It has no heading, link or other interactive element, no signature bar, no amber line and no
+  divider, so it stays quieter than the header and hero.
+- **Desktop (from `md`):** one row, `justify-between`, vertically centred. Left: a 20px compass
+  icon and the message. Right: the copyright line.
+- **Mobile:** stacked with no gap (`leading-snug` on the message): the icon and message first (icon aligned to the first text
+  line), the copyright line directly below, right-aligned to the content edge (`text-right`
+  at every width). The message is `text-[13px]` below `md` and `text-sm` from `md`; the copyright
+  stays `text-sm`. Text wraps normally.
+- **Compass icon:** an inline 24×24 outline SVG (a circle with a small needle, section 5.3
+  style, 1.8 stroke, `currentColor`) at `size-5 text-blue-900`, `aria-hidden`,
+  `focusable="false"` and titleless. It is drawn separately from `CompassHeroMotif`, which
+  would be unclear at this size.
+- **Message:** **"Din kompass till tydlig information och bättre beredskap – före och under en
+  kris."** in `text-sm text-slate-700`, regular weight.
+- **Copyright:** **"© 2026 KrisKompassen"**, `text-sm text-slate-600`. It makes no further legal
+  statement.
+- **Contrast:** `slate-700` and `slate-600` on `slate-50` are approximately 9.5:1 and 7.2:1,
+  computed from the palette values and still to be confirmed with a contrast checker
+  (section 2.5).
+- **Mobile bottom clearance:** a separate `aria-hidden` spacer after the `<footer>`, as tall as
+  the measured menu bar (`h-[var(--navigation-height,0px)]`, section 4.2), keeps the fixed bar
+  from covering the footer without adding empty space inside it. It is `0px` from 48rem upwards.
+- **Permanent backup on Min info:** `InstallHelpSection` follows the address form, outside it,
+  using a section 5.1 card with `mt-8 p-6 sm:p-8`. Its `h2` **Installera appen** names the section
+  through `aria-labelledby`. The native `details` summary **Visa installationshjälp** retains
+  its disclosure marker and has a minimum 48px target, visible focus and underline. It starts
+  closed on every page visit, uses no storage and opens inline without taking focus elsewhere.
+  Instructions for **Chrome på dator**, **iPhone och iPad** and **Safari på Mac** have `h3`
+  labels. All variants remain available regardless of browser install offers, platform detection
+  or a dismissed automatic card. The automatic card and backup share `InstallInstructionsContent`;
+  no automatic visibility, dismissal or install-button behaviour changes.
 
 ---
 
@@ -396,14 +542,14 @@ KrisKompassen shows the same primary links, from the shared `navigationItems` li
 ### 7.1 Responsive Placement
 
 - **Mobile Viewports (`width < 48rem`, any height):**
-  The in-flow navigation is hidden. One fixed **Meny** button sits at the bottom centre (`fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2`): a brand-accent amber button (`bg-amber-300`, `border-blue-900`, dark blue `text-blue-900` text and icon, `hover:bg-amber-200`, `active:bg-amber-400`, `rounded-xl`, `shadow-lg`, minimum 48×48px) with a decorative hamburger SVG (`aria-hidden`) and the visible text "Meny". It stays fixed while scrolling and in landscape.
+  The in-flow navigation is hidden. `MobileFooter` is a fixed, full-width `<nav aria-label="Huvudmeny">` at the bottom of the viewport (`fixed inset-x-0 bottom-0 z-5`) with a continuous yellow surface (`bg-amber-300`) and a 2px blue top border (`border-t-2 border-blue-900`). Its single native **Meny** button fills the width, including the safe-area padding described in section 4.2, without a separate rounded frame. The button centres a decorative 24×24px hamburger SVG (`aria-hidden`, `focusable="false"`) and the visible text "Meny" with a 12px gap (`gap-3`), normal-weight 16px text and a dark blue foreground (`text-blue-900`). It uses at least 48×48px targets, 12px top padding, `hover:bg-amber-200` and `active:bg-amber-400`. The whole button surface opens the menu. The field stays fixed while scrolling and in landscape; its measured height continues to reserve content space.
 - **Desktop & Wide Viewports (`width >= 48rem`):**
   `BottomNavigation` renders in standard document flow directly beneath the header, with a 2px top border in the page canvas colour (`border-t-2 border-t-[#D7E2EF]`) and a 1px bottom border (`border-b border-b-slate-200`). Links wrap onto further rows; there is no horizontal scrolling. The Meny button and dialog are not shown.
 
 ### 7.2 Mobile Menu Dialog
 
-- A native modal `<dialog>` named **Meny** covers the whole viewport, including the header and the VMA notice, on a white surface with safe-area padding. The dialog element itself is fullscreen (`.mobile-menu-dialog`: fixed, `inset: 0`, no margin or border, `width: 100%`, `height`/`min-height: 100dvh`, no max-width/max-height), not only its backdrop. A **Stäng menyn** outlined button (48×48px minimum) sits in a fixed top row beside the heading; the link list below scrolls internally (`overscroll-contain`), so short screens and enlarged text remain usable.
-- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Min info). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
+- A native modal `<dialog>` named **Meny** covers the whole viewport, including the header and the VMA notice, on a white surface with safe-area padding. The dialog element itself is fullscreen (`.mobile-menu-dialog`: fixed, `inset: 0`, no margin or border, `width: 100%`, `height`/`min-height: 100dvh`, no max-width/max-height), not only its backdrop. A **Stäng menyn** outlined button (48×48px minimum) sits in a fixed top row beside the heading; the link list below scrolls internally (`overscroll-contain`), so short screens and enlarged text remain usable. When the browser offers installation, a fixed footer below the list holds the **Installera app** button (section 6.6).
+- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Min info, Lugn i kris). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
 - The modal makes the page inert, locks page scrolling and wraps Tab at its boundaries. Escape and **Stäng menyn** return focus to the Meny button, as does selecting the current route. Selecting another route closes the menu and leaves focus to the layout page-heading focus. Crossing `48rem` while open closes it without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating). There is no animation.
 
 ---
@@ -423,6 +569,7 @@ A centralized, prominent focus outline is defined in `frontend/src/index.css`:
 
 - **Outline Width:** 3px solid deep blue (`#1e3a8a`).
 - **Outline Offset:** 4px spacing between element border and the focus line, preventing clipping against rounded corners.
+- **Mobile menu field:** `.mobile-menu-trigger:focus-visible` uses a 4px inward offset so the full-width button's 3px outline stays inside the viewport. It inherits the global blue outline and the system `Highlight` colour in forced-colours mode.
 - **Visibility:** Uses `:focus-visible` to display rings for keyboard navigation while suppressing them during mouse clicks.
 - **VMA warning surface:** Uses `--color-vma-focus` (white) instead of blue, as defined in section 2.4.1. The scrollable warning region uses a 4px inward offset to keep its outline within the viewport.
 
@@ -479,7 +626,7 @@ KrisKompassen performs offline storage operations and network calls that must be
   `rounded-2xl`, `shadow-sm`, blue heading and primary button. It is informational; it does not
   use the active VMA warning surface or icon.
 - The notice appears before routed content. At heights of at least `40rem`, its layout slot is
-  sticky below the measured VMA height with z-index 10 (VMA 30, Meny button 20). The visible region
+  sticky below the measured VMA height with z-index 10 (VMA 30, mobile footer 5). The visible region
   is limited to `25dvh` and scrolls internally. Lower viewports use unrestricted normal flow.
 - The layout includes the measured slot height in `--pwa-update-height` and root scroll padding.
   Focused page controls are revealed below both notices; update controls in normal flow receive

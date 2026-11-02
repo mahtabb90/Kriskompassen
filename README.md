@@ -37,6 +37,11 @@ The project is in an early stage of development.
 
 Our initial focus is to establish the project structure and a working development-to-deployment workflow. Features, including offline support, will be developed incrementally based on priorities and feedback.
 
+A backend database is deferred for now and may be reconsidered in the future. Preparedness
+content is maintained in static files shipped with the backend; shelter information is fetched
+on demand and cached for reuse. Saved information remains local to the user's device in
+IndexedDB.
+
 The current version includes a home page, crisis preparedness summaries and detailed articles
 based on manually maintained preparedness information from Krisinformation.se. Online articles
 are delivered by the project’s server; this is not an automatic news feed. Users can save and
@@ -67,25 +72,65 @@ and are the starting point for finding nearby shelters, below.
 
 On the "Skyddsrum" page, users see the 5 civil-defense shelters nearest to their active address,
 sorted closest first. Shelter data comes from Myndigheten för civilt försvar (MCF), the Swedish
-authority responsible for the national shelter register, through its open WFS / OGC API Features
-service (GeoJSON, delivered directly in WGS84 coordinates); the dataset's
+authority responsible for the national shelter register; the dataset's
 [Geodataportalen metadata record](https://www.geodata.se/geodataportalen/srv/swe/catalog.search#/metadata/6341813c-bfa3-45df-8234-13cf583bf533)
-states no access or reuse restrictions apply. The backend widens its search radius around the
-active address until enough shelters are found, and shelters fetched this way are cached on the
-device so a previously searched area remains available offline. Since MCF's source data has no
+states no access or reuse restrictions apply. The backend serves this from a bundled local
+snapshot of MCF's full register (`backend/src/data/shelters.json`, refreshed manually for now —
+see `backend/DEVELOPMENT.md`), not a live call per search, so results stay fast and available
+even if MCF's own service is slow or unreachable; an automatic daily refresh is planned but not
+built yet. Nearest-shelter results fetched this way are also cached on the device so a
+previously searched area remains available offline. Since MCF's source data has no
 postal address, each shelter is shown by its free-text location description together with the
 active address's municipality, worded as a location description rather than a verified address.
 MCF genuinely registers several separate shelters under one shared property - sometimes with the
 same coordinates and capacity too - so each shelter also shows its own official number (matching
-the number physically posted at its entrance) to stay distinguishable, plus a link to its exact
-position on a map, since the location description alone is not enough to actually find it.
-If no address is active yet, or the active address has no coordinates (a manually typed address
-is never geocoded), the page prompts the user to set one on "Min info" instead.
+the number physically posted at its entrance) to stay distinguishable, plus a link to its own
+detail page for more information. If no address is active yet, or the active address has no
+coordinates (a manually typed address is never geocoded), the page prompts the user to set one
+on "Min info" instead.
+
+"Kartan", reached via a link next to the "Skyddsrum i närheten"/"Sparade skyddsrum" tabs, lets
+users explore every one of Sweden's roughly 63,000 civil-defense shelters on an interactive,
+clustered map (MapLibre GL JS, OpenFreeMap's free, key-less vector tiles - no account, no request
+quota) - not just the nearest 5. Shelters are fetched for the visible area only, debounced as the
+user pans or zooms, against a backend endpoint that filters the already-loaded local snapshot by
+bounding box; MapLibre's own clustering (circles sized/coloured by count) groups them client-side,
+so panning the whole country never pulls in all 63,000 at once. Below a minimum zoom the fetch is
+skipped entirely - a hint asks the user to zoom in instead - since even clustering that many
+shelters at a glance would cost real time and payload for little visual benefit. When an active
+address is known, the map opens tightly framed on it and the same 5 nearest shelters shown
+elsewhere, each marked with its own icon (nearest, saved, or both), on top of the usual sign icon
+used for every other shelter; without one, it opens on a fixed view of the whole country. Clicking
+an individual shelter shows a short popup (distance, type, capacity) with a save/remove button -
+mirroring the same bookmarking control shown on the list and detail page - and a link to its
+detail page; that link also carries the map's exact position along, so its own "Tillbaka till
+kartan" link returns to the same spot instead of resetting the view. Like every map here, it is
+online-only and its library is lazy-loaded, only fetched the first time a user actually opens it.
+
+"Kartan" also has its own "Hämta aktuell position" button, letting a user fetch their device's
+position right there and recenter the map and its nearest-shelter highlighting on it immediately
+— for that session only, without creating, changing or saving any address; the active address
+used everywhere else (header, Min info, Skyddsrum) stays untouched. It shares the same
+permission/timeout/unsupported-browser handling as Min info's own position button, which now uses
+the same "Hämta aktuell position" label. When the resulting fix is imprecise, a collapsed
+"Ungefärlig position" disclosure (also shared with Min info) explains the likely distance and
+what can improve it, rather than a standing block of text. A separate recenter control pans the
+view back to the current marker without changing zoom or fetching a new position, for when the
+user has panned away from it.
+
+A shelter's own detail page embeds a simpler map of just that one shelter's exact location (and
+the user's position too, when known), replacing an earlier external link to openstreetmap.org.
+Like "Kartan", it is online-only, lazy-loaded, and falls back to the "Plats" text field already
+on the page while offline.
 
 Saving a geolocated address also fetches and caches its nearest shelters in the background right
 away, without the user needing to visit "Skyddsrum" first. This runs silently and never blocks or
 fails the address save itself; it exists so that addresses saved ahead of a crisis already have
 their nearby shelters available offline even if MCF's service later becomes unreachable.
+
+Fetched shelter records are cached on the device with a fetch timestamp and refreshed when the
+same shelter is fetched again. The backend keeps only a temporary in-memory cache of nearby
+search results; it does not maintain a persistent copy of the national shelter register.
 
 ## 🛠️ Tech stack
 
@@ -181,10 +226,14 @@ For configuration, alternative ports and further development instructions, see t
 ## Navigation and accessibility
 
 The main navigation links to **Hem** (Home), **Krisinformation** (Crisis information),
-**Min krislåda** (My emergency kit) and **Min info** (My information), and clearly marks the
-current page. On phones, the bottom menu scrolls sideways when its links do not fit; users
-can swipe or select the visible left/right arrows to reach more pages. Larger screens keep
-the navigation above the page content.
+**Min krislåda** (My emergency kit), **Skyddsrum** (Shelters), **Min info** (My information)
+and **Lugn i kris** (Calm in a crisis), and clearly marks the current page. On phones, a
+**Meny** button opens a full-screen menu with the same links. Larger screens keep the
+navigation above the page content.
+
+**Lugn i kris** is a short, static page with simple advice for staying focused during a
+crisis, based on 1177, Krisinformation.se and SOS Alarm. It works offline, stores nothing and
+does not replace healthcare, professional support or official emergency instructions.
 
 Keyboard navigation includes a link to skip directly to the page content and visible focus
 indicators. Pages have descriptive headings and titles.
@@ -197,14 +246,21 @@ technology has not yet been fully verified.
 KrisKompassen is being developed as a **Progressive Web App (PWA)**, with installation and offline access as core goals.
 
 On supported browsers and devices, users can install the app on their phone or computer. Where the
-browser supports it, KrisKompassen shows an **Installera app** button: in the header below
-**Sparad information** on wider screens and last in the **Meny** on phones. It is not shown once the
-app is installed or when it already runs as an installed app. Users can also use the browser's own
-install feature:
+browser supports it, KrisKompassen shows an **Installera app** button: in the header beside the
+connection status on wider screens and at the bottom of the **Meny** on phones. It is not shown once
+the app is installed or when it already runs as an installed app. Users can also use the browser's
+own install feature:
 
 - **Chrome and Edge (desktop and Android):** the install option in the address bar or browser menu.
 - **Safari on iPhone and iPad:** Share → **Add to Home Screen**.
 - **Safari on macOS:** File → **Add to Dock**.
+
+On iPhone, iPad and in Safari on macOS, where no install button is possible, the app shows a short
+instruction instead. It can be closed and then stays hidden for 30 days.
+
+If the install button or instruction is missing, open **Min info → Installera appen → Visa
+installationshjälp**. This help is always available and includes steps for Chrome on a computer,
+iPhone/iPad (including Chrome) and Safari on macOS, even after the automatic instruction was closed.
 
 The installed app opens as KrisKompassen in its own window, without browser controls. It currently
 uses the KrisKompassen logo as its icon; a maskable icon variant, which lets Android adapt the icon
