@@ -172,8 +172,8 @@ function ShelterPage() {
           shelters itself, so neither tab below needs its own separate map anymore. */}
       <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <p className="text-slate-600">
-          Hela Sveriges skyddsrumsregister finns på kartan, med dina närmaste och sparade
-          skyddsrum särskilt markerade.
+          Hela Sveriges skyddsrumsregister finns på kartan, med dina närmaste och sparade skyddsrum
+          särskilt markerade.
         </p>
         <Link to="/skyddsrum/karta" className={mapLinkClassName}>
           <svg
