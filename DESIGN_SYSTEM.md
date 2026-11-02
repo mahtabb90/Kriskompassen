@@ -206,9 +206,9 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
   - Root container: `pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]`
   - Fixed mobile footer: its full-width button owns the padding, using `pb-[max(0.75rem,env(safe-area-inset-bottom))]`, `pl-[max(1rem,env(safe-area-inset-left))]` and `pr-[max(1rem,env(safe-area-inset-right))]`. This keeps the yellow field clickable through its padding. The full-screen menu pads all four edges with the matching insets.
 - **Dynamic Content Offset:**
-  When the mobile footer is fixed at the bottom of the viewport (below `48rem`), the root element tracks its measured height as `--navigation-height` via `ResizeObserver`. The main container applies:
-  `pb-[calc(var(--navigation-height,0px)+2rem)]`
-  This reserves sufficient scroll space so no content is obscured behind the footer, including its safe-area padding and enlarged text. It is `0px` from `48rem` upwards, where the footer is hidden.
+  When the mobile menu bar is fixed at the bottom of the viewport (below `48rem`), the root element tracks its measured height as `--navigation-height` via `ResizeObserver`. The shared page footer (section 6.8), the last element in the layout, is followed by an `aria-hidden` spacer of that height:
+  `h-[var(--navigation-height,0px)]`
+  This reserves sufficient scroll space so no content is obscured behind the bar, including its safe-area padding and enlarged text. It is `0px` from `48rem` upwards, where the bar is hidden. `main` itself uses a plain `pb-8`.
 
 ### 4.3 Responsive Content Grids
 
@@ -489,6 +489,49 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
   below the text on narrow screens.
 - **Focus:** The card never takes focus on its own and has no live region. Closing moves focus to
   `#page-heading`.
+
+### 6.8 Shared Footer (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in `Footer`. It reuses
+> existing tokens only.
+
+- **Placement:** a semantic `<footer>` (the `contentinfo` landmark) after `main` in `AppLayout`,
+  on every route. The layout root is a flex column and `main` is `flex-1`, so the footer sits at
+  the bottom of the viewport on short pages.
+- **Surface:** a slim, full-width, matte neutral band (`bg-slate-50` with a single `border-t
+  border-blue-200`), deliberately not a card and not a saturated block. Its content sits in the
+  `max-w-4xl` shell (`px-4 sm:px-6`) with `py-1.5` below `md` and `md:py-3` from `md`, and no fixed height, so enlarged text reflows.
+  It has no heading, link or other interactive element, no signature bar, no amber line and no
+  divider, so it stays quieter than the header and hero.
+- **Desktop (from `md`):** one row, `justify-between`, vertically centred. Left: a 20px compass
+  icon and the message. Right: the copyright line.
+- **Mobile:** stacked with no gap (`leading-snug` on the message): the icon and message first (icon aligned to the first text
+  line), the copyright line directly below, right-aligned to the content edge (`text-right`
+  at every width). The message is `text-[13px]` below `md` and `text-sm` from `md`; the copyright
+  stays `text-sm`. Text wraps normally.
+- **Compass icon:** an inline 24×24 outline SVG (a circle with a small needle, section 5.3
+  style, 1.8 stroke, `currentColor`) at `size-5 text-blue-900`, `aria-hidden`,
+  `focusable="false"` and titleless. It is drawn separately from `CompassHeroMotif`, which
+  would be unclear at this size.
+- **Message:** **"Din kompass till tydlig information och bättre beredskap – före och under en
+  kris."** in `text-sm text-slate-700`, regular weight.
+- **Copyright:** **"© 2026 KrisKompassen"**, `text-sm text-slate-600`. It makes no further legal
+  statement.
+- **Contrast:** `slate-700` and `slate-600` on `slate-50` are approximately 9.5:1 and 7.2:1,
+  computed from the palette values and still to be confirmed with a contrast checker
+  (section 2.5).
+- **Mobile bottom clearance:** a separate `aria-hidden` spacer after the `<footer>`, as tall as
+  the measured menu bar (`h-[var(--navigation-height,0px)]`, section 4.2), keeps the fixed bar
+  from covering the footer without adding empty space inside it. It is `0px` from 48rem upwards.
+- **Permanent backup on Min info:** `InstallHelpSection` follows the address form, outside it,
+  using a section 5.1 card with `mt-8 p-6 sm:p-8`. Its `h2` **Installera appen** names the section
+  through `aria-labelledby`. The native `details` summary **Visa installationshjälp** retains
+  its disclosure marker and has a minimum 48px target, visible focus and underline. It starts
+  closed on every page visit, uses no storage and opens inline without taking focus elsewhere.
+  Instructions for **Chrome på dator**, **iPhone och iPad** and **Safari på Mac** have `h3`
+  labels. All variants remain available regardless of browser install offers, platform detection
+  or a dismissed automatic card. The automatic card and backup share `InstallInstructionsContent`;
+  no automatic visibility, dismissal or install-button behaviour changes.
 
 ---
 

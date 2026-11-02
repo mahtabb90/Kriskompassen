@@ -92,6 +92,23 @@ describe("installPromptService", () => {
     expect(service.getSnapshot()).toEqual({ canInstall: false })
   })
 
+  it("accepts a fresh install offer after an earlier installation", async () => {
+    const { browserWindow, service } = startedService()
+    const first = installEvent()
+    browserWindow.dispatchEvent(first)
+    await expect(service.promptInstall()).resolves.toBe("accepted")
+    browserWindow.dispatchEvent(new Event("appinstalled"))
+    expect(service.getSnapshot().canInstall).toBe(false)
+
+    const next = installEvent()
+    browserWindow.dispatchEvent(next)
+
+    expect(service.getSnapshot().canInstall).toBe(true)
+    await expect(service.promptInstall()).resolves.toBe("accepted")
+    expect(first.prompt).toHaveBeenCalledOnce()
+    expect(next.prompt).toHaveBeenCalledOnce()
+  })
+
   it("never offers installation while running in standalone display mode", async () => {
     const { browserWindow, service } = startedService({ standalone: true })
     const event = installEvent()

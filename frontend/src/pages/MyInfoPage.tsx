@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import AddressSection from "../components/AddressSection"
+import InstallHelpSection from "../components/InstallHelpSection"
 import RemoveAddressDialog from "../components/RemoveAddressDialog"
 import { useAddresses } from "../context/addressContext"
 import type { Address, AddressLabel, SavedAddress } from "../types/address"
@@ -13,6 +14,7 @@ type LabelKind = AddressLabel["kind"]
  * The active address is the one other features (e.g. future shelter search) use as the
  * starting point. Saving the first address activates it automatically; later additions need
  * an explicit "Ange som aktuell plats".
+ * Also provides permanent, on-demand installation help below the address form.
  */
 function MyInfoPage() {
   const { addresses, addAddress, setActive, remove } = useAddresses()
@@ -158,6 +160,8 @@ function MyInfoPage() {
         onSave={handleSave}
         saveError={saveError}
       />
+
+      <InstallHelpSection />
 
       {pendingRemoval && (
         <RemoveAddressDialog
