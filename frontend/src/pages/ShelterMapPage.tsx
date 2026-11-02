@@ -5,6 +5,7 @@ import { useAddresses } from "../context/addressContext"
 import { useMode } from "../context/modeContext"
 import { useNearestShelters } from "../hooks/useNearestShelters"
 import { useSavedShelters } from "../hooks/useSavedShelters"
+import type { Shelter } from "../types/shelter"
 import type { GeoPoint } from "../utils/distance"
 
 // Lazy-loaded so maplibre-gl is only fetched once a user actually opens this page, never on
@@ -23,11 +24,17 @@ function AllSheltersMapWithNearest({
   savedShelterIds,
   initialView,
   onNavigate,
+  isSaved,
+  save,
+  remove,
 }: {
   origin: GeoPoint
   savedShelterIds: ReadonlySet<string>
   initialView?: StoredMapView
   onNavigate: (path: string, options?: { state?: unknown }) => void
+  isSaved: (id: string) => boolean
+  save: (shelter: Pick<Shelter, "id" | "address" | "lat" | "lon">) => Promise<void>
+  remove: (id: string) => Promise<void>
 }) {
   const { state } = useNearestShelters(origin)
   const nearestShelters = state.status === "ready" ? state.data : []
@@ -39,6 +46,9 @@ function AllSheltersMapWithNearest({
       savedShelterIds={savedShelterIds}
       initialView={initialView}
       onNavigate={onNavigate}
+      isSaved={isSaved}
+      save={save}
+      remove={remove}
     />
   )
 }
@@ -60,7 +70,7 @@ function AllSheltersMapWithNearest({
 function ShelterMapPage() {
   const { mode } = useMode()
   const { activeAddress } = useAddresses()
-  const { shelters: savedShelters } = useSavedShelters()
+  const { shelters: savedShelters, isSaved, save, remove } = useSavedShelters()
   const navigate = useNavigate()
   const location = useLocation()
   // Set by AllSheltersMap.tsx when navigating to a shelter's detail page, and handed straight
@@ -122,6 +132,9 @@ function ShelterMapPage() {
                 savedShelterIds={savedShelterIds}
                 initialView={initialView}
                 onNavigate={navigate}
+                isSaved={isSaved}
+                save={save}
+                remove={remove}
               />
             ) : (
               <AllSheltersMap
@@ -130,6 +143,9 @@ function ShelterMapPage() {
                 savedShelterIds={savedShelterIds}
                 initialView={initialView}
                 onNavigate={navigate}
+                isSaved={isSaved}
+                save={save}
+                remove={remove}
               />
             )}
           </Suspense>
