@@ -60,27 +60,32 @@ function ShelterListItem({
         <span className="h-full w-8 bg-amber-400" />
       </div>
       <div className="p-5 sm:p-6">
-        {isNearest && (
-          <p className="mb-1 inline-flex items-center gap-1 text-sm font-semibold text-blue-900">
-            <span aria-hidden="true">★</span> Närmast
-          </p>
-        )}
+        <p
+          className="mb-1 inline-flex items-center gap-1 text-sm font-semibold text-blue-900"
+          aria-hidden={isNearest ? undefined : true}
+        >
+          <span className={isNearest ? undefined : "invisible"} aria-hidden="true">
+            ★
+          </span>{" "}
+          <span className={isNearest ? undefined : "invisible"}>Närmast</span>
+        </p>
         <p className="font-semibold text-blue-900">
           {describeShelterLocation(shelter, activeAddress?.municipality)}
         </p>
         <p className="mt-1 text-sm text-slate-500 italic" aria-hidden={comment ? undefined : true}>
           {comment || " "}
         </p>
-        {shelter.number && (
-          <p className="mt-1 text-sm text-slate-600">Skyddsrumsnummer {shelter.number}</p>
-        )}
-        {(distanceMeters !== undefined || otherDetails.length > 0) && (
-          <p className="mt-1 text-sm text-slate-600">
-            {distanceMeters !== undefined && <ShelterDistance meters={distanceMeters} />}
-            {distanceMeters !== undefined && otherDetails.length > 0 && " · "}
-            {otherDetails.join(" · ")}
-          </p>
-        )}
+        <p className="mt-1 text-sm text-slate-600" aria-hidden={shelter.number ? undefined : true}>
+          {shelter.number ? `Skyddsrumsnummer ${shelter.number}` : " "}
+        </p>
+        <p
+          className="mt-1 text-sm text-slate-600"
+          aria-hidden={distanceMeters !== undefined || otherDetails.length > 0 ? undefined : true}
+        >
+          {distanceMeters !== undefined && <ShelterDistance meters={distanceMeters} />}
+          {distanceMeters !== undefined && otherDetails.length > 0 && " · "}
+          {otherDetails.length > 0 ? otherDetails.join(" · ") : distanceMeters === undefined && " "}
+        </p>
 
         {onToggleSave ? (
           <div className="mt-4">
