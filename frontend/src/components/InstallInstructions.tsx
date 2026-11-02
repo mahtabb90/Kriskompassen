@@ -4,28 +4,7 @@ import {
   dismissInstallInstructions,
   isInstallInstructionsDismissed,
 } from "../services/installInstructionsDismissal"
-
-function ShareIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-      className="inline-block align-text-bottom text-blue-900"
-    >
-      <path
-        d="M12 15V4m0 0L8 8m4-4 4 4M8 11H6v9h12v-9h-2"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
+import InstallInstructionsContent from "./InstallInstructionsContent"
 
 /**
  * Tells iOS, iPadOS and macOS Safari users how to install the app manually.
@@ -58,17 +37,9 @@ function InstallInstructions() {
       }
     >
       <p className="max-w-prose min-w-0 flex-1 basis-60 leading-relaxed text-slate-700">
-        {installState === "ios-instructions" ? (
-          <>
-            Lägg till KrisKompassen på hemskärmen: tryck på Dela <ShareIcon /> och välj ”Lägg till
-            på hemskärmen”.
-          </>
-        ) : (
-          <>
-            Lägg till KrisKompassen i Dock: välj Arkiv och sedan ”Lägg till i Dock”, eller klicka på
-            Dela <ShareIcon /> och välj ”Lägg till i Dock”.
-          </>
-        )}
+        <InstallInstructionsContent
+          platform={installState === "ios-instructions" ? "ios" : "macos-safari"}
+        />
       </p>
       {/* The pseudo-element extends the 32px box to a 48px hit area, as on the install button. */}
       <button

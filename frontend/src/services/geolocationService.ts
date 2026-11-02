@@ -56,6 +56,22 @@ function mapPositionError(error: GeolocationPositionError): GeolocationRequestEr
   }
 }
 
+/** The exact Swedish copy shown for a failed device-position request, shared by every caller
+ * (address entry, and the shelter map's own live-position button) so the wording never drifts
+ * between them. */
+export function describeGeolocationError(error: GeolocationRequestError): string {
+  switch (error.code) {
+    case "permission_denied":
+      return "Platsbehörighet nekades. Du kan ange din adress manuellt istället."
+    case "timeout":
+      return "Det tog för lång tid att hämta din position. Försök igen eller ange adressen manuellt."
+    case "unsupported":
+      return "Den här webbläsaren stöder inte platshämtning. Ange adressen manuellt istället."
+    case "position_unavailable":
+      return "Din position kunde inte fastställas. Försök igen eller ange adressen manuellt."
+  }
+}
+
 /**
  * Requests the device's current position through the browser's Geolocation API.
  *

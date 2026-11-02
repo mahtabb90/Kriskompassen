@@ -1,8 +1,10 @@
-import { lazy, Suspense, useMemo } from "react"
+import { lazy, Suspense, useId, useMemo } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import type { StoredMapView } from "../components/AllSheltersMap"
+import LowAccuracyNotice from "../components/LowAccuracyNotice"
 import { useAddresses } from "../context/addressContext"
 import { useMode } from "../context/modeContext"
+import { useCurrentPosition } from "../hooks/useCurrentPosition"
 import { useNearestShelters } from "../hooks/useNearestShelters"
 import { useSavedShelters } from "../hooks/useSavedShelters"
 import type { Shelter } from "../types/shelter"
@@ -23,6 +25,7 @@ function AllSheltersMapWithNearest({
   origin,
   savedShelterIds,
   initialView,
+  recenterToken,
   onNavigate,
   isSaved,
   save,
@@ -31,6 +34,7 @@ function AllSheltersMapWithNearest({
   origin: GeoPoint
   savedShelterIds: ReadonlySet<string>
   initialView?: StoredMapView
+  recenterToken: number
   onNavigate: (path: string, options?: { state?: unknown }) => void
   isSaved: (id: string) => boolean
   save: (shelter: Pick<Shelter, "id" | "address" | "lat" | "lon">) => Promise<void>
@@ -45,6 +49,7 @@ function AllSheltersMapWithNearest({
       nearestShelters={nearestShelters}
       savedShelterIds={savedShelterIds}
       initialView={initialView}
+      recenterToken={recenterToken}
       onNavigate={onNavigate}
       isSaved={isSaved}
       save={save}
@@ -83,10 +88,25 @@ function ShelterMapPage() {
     () => new Set(savedShelters.map((shelter) => shelter.id)),
     [savedShelters]
   )
-  const origin: GeoPoint | null =
+  const savedOrigin: GeoPoint | null =
     typeof activeAddress?.lat === "number" && typeof activeAddress?.lon === "number"
       ? { lat: activeAddress.lat, lon: activeAddress.lon }
       : null
+  const {
+    position: livePosition,
+    accuracy: locateAccuracy,
+    loading: locatingDevice,
+    failed: locateFailed,
+    errorMessage: locateErrorMessage,
+    recenterToken,
+    requestPosition,
+  } = useCurrentPosition()
+  // The live-fetched position always wins over the saved address, but never writes back to it -
+  // "aktiv adress" in the header/Min info/skyddsrum-listan stays untouched (see the ticket's
+  // level-1 scope: session-only, local to this page).
+  const origin = livePosition ?? savedOrigin
+  const geolocationSupported = "geolocation" in navigator
+  const locateHelpTextId = useId()
 
   return (
     <section>
@@ -119,36 +139,61 @@ function ShelterMapPage() {
         </p>
       ) : (
         <div className="mt-6">
-          <Suspense
-            fallback={
-              <p role="status" className={panelClassName}>
-                Laddar karta…
-              </p>
-            }
+          <button
+            type="button"
+            onClick={requestPosition}
+            disabled={locatingDevice || !geolocationSupported}
+            aria-describedby={!geolocationSupported ? locateHelpTextId : undefined}
+            className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 font-semibold text-blue-900 hover:bg-blue-50 disabled:opacity-60"
           >
-            {origin ? (
-              <AllSheltersMapWithNearest
-                origin={origin}
-                savedShelterIds={savedShelterIds}
-                initialView={initialView}
-                onNavigate={navigate}
-                isSaved={isSaved}
-                save={save}
-                remove={remove}
-              />
-            ) : (
-              <AllSheltersMap
-                origin={null}
-                nearestShelters={[]}
-                savedShelterIds={savedShelterIds}
-                initialView={initialView}
-                onNavigate={navigate}
-                isSaved={isSaved}
-                save={save}
-                remove={remove}
-              />
-            )}
-          </Suspense>
+            {locatingDevice ? "Hämtar position…" : "Hämta aktuell position"}
+          </button>
+          {!geolocationSupported && (
+            <p id={locateHelpTextId} className="mt-1 text-sm text-slate-600">
+              Den här webbläsaren stöder inte platshämtning. Ange adressen manuellt istället.
+            </p>
+          )}
+          {locateAccuracy !== null && <LowAccuracyNotice accuracyMeters={locateAccuracy} />}
+          {locateFailed && (
+            <div role="alert" className="mt-1 text-sm font-medium text-red-800">
+              {locateErrorMessage}
+            </div>
+          )}
+
+          <div className="mt-4">
+            <Suspense
+              fallback={
+                <p role="status" className={panelClassName}>
+                  Laddar karta…
+                </p>
+              }
+            >
+              {origin ? (
+                <AllSheltersMapWithNearest
+                  origin={origin}
+                  savedShelterIds={savedShelterIds}
+                  initialView={initialView}
+                  recenterToken={recenterToken}
+                  onNavigate={navigate}
+                  isSaved={isSaved}
+                  save={save}
+                  remove={remove}
+                />
+              ) : (
+                <AllSheltersMap
+                  origin={null}
+                  nearestShelters={[]}
+                  savedShelterIds={savedShelterIds}
+                  initialView={initialView}
+                  recenterToken={recenterToken}
+                  onNavigate={navigate}
+                  isSaved={isSaved}
+                  save={save}
+                  remove={remove}
+                />
+              )}
+            </Suspense>
+          </div>
         </div>
       )}
     </section>
