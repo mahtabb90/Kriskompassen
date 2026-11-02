@@ -176,9 +176,12 @@ describe("WarningSignalsPage", () => {
       const note = document.getElementById(link.getAttribute("aria-describedby")!)
       expect(note?.textContent).toBe("Kräver internetanslutning.")
     }
-    expect(screen.getAllByText("Kräver internetanslutning.")).toHaveLength(4)
     const sources = within(screen.getByRole("region", { name: "Källor" }))
-    expect(sources.queryByText("Kräver internetanslutning.")).toBeNull()
+    for (const link of sources.getAllByRole("link")) {
+      const note = document.getElementById(link.getAttribute("aria-describedby")!)
+      expect(note?.textContent).toBe("Kräver internetanslutning.")
+    }
+    expect(screen.getAllByText("Kräver internetanslutning.")).toHaveLength(6)
     const [importantMessage] = signalCards()
     for (const step of signal("important-message").whatToDo) {
       expect(within(importantMessage).getByText(step.text)).toBeTruthy()

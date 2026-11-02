@@ -68,6 +68,7 @@ function WarningSignalsPage() {
             headingId="signal-sources-heading"
             intro="Signalerna och texterna bygger på följande källor:"
             sources={collectSources([...state.data.items, state.data])}
+            isOnline={isOnline}
           />
         </>
       )}

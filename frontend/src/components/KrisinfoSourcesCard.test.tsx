@@ -10,9 +10,14 @@ const sources = [
   { source: { name: "Källa B", url: "https://example.org/b" }, lastVerified: "2026-10-15" },
 ]
 
-function renderCard() {
+function renderCard(isOnline = true) {
   return render(
-    <KrisinfoSourcesCard sources={sources} headingId="test-sources-heading" intro="Inledning." />
+    <KrisinfoSourcesCard
+      sources={sources}
+      headingId="test-sources-heading"
+      intro="Inledning."
+      isOnline={isOnline}
+    />
   )
 }
 
@@ -40,6 +45,24 @@ describe("KrisinfoSourcesCard", () => {
       expect(link.getAttribute("target")).toBe("_blank")
       expect(link.getAttribute("rel")).toBe("noopener noreferrer")
     }
+  })
+
+  it("marks each source link as external with a decorative icon", () => {
+    renderCard()
+    for (const link of screen.getAllByRole("link")) {
+      expect(link.querySelector("svg")!.getAttribute("aria-hidden")).toBe("true")
+      expect(link.hasAttribute("aria-label")).toBe(false)
+    }
+    expect(screen.queryByText("Kräver internetanslutning.")).toBeNull()
+  })
+
+  it("says that each source link needs internet while offline", () => {
+    renderCard(false)
+    for (const link of screen.getAllByRole("link")) {
+      const note = document.getElementById(link.getAttribute("aria-describedby")!)
+      expect(note?.textContent).toBe("Kräver internetanslutning.")
+    }
+    expect(screen.getAllByText("Kräver internetanslutning.")).toHaveLength(2)
   })
 
   it("shows each source's own check date", () => {

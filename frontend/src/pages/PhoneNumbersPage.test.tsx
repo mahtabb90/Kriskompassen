@@ -2,6 +2,7 @@
 import { act, cleanup, render, screen, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { krisinfoSections } from "../content/krisinfo/index"
+import { ModeProvider } from "../context/ModeProvider"
 import { getKrisinfoSection, KrisinfoError } from "../services/krisinfoService"
 import PhoneNumbersPage from "./PhoneNumbersPage"
 
@@ -30,8 +31,17 @@ function phone(number: string) {
   return found
 }
 
+// The page reads browser connectivity through useMode, so it renders inside the real provider.
+function renderPage() {
+  return render(
+    <ModeProvider>
+      <PhoneNumbersPage />
+    </ModeProvider>
+  )
+}
+
 async function renderReady() {
-  const view = render(<PhoneNumbersPage />)
+  const view = renderPage()
   await screen.findByText(section.summary)
   return view
 }
@@ -51,7 +61,7 @@ afterEach(() => {
 
 describe("PhoneNumbersPage", () => {
   it("keeps one focusable page heading while loading and when ready", async () => {
-    render(<PhoneNumbersPage />)
+    renderPage()
     const heading = screen.getByRole("heading", { level: 1, name: "Viktiga telefonnummer" })
     expect(heading.id).toBe("page-heading")
     expect(heading.getAttribute("tabindex")).toBe("-1")
@@ -154,6 +164,25 @@ describe("PhoneNumbersPage", () => {
     expect(sources.getAllByText("Senast kontrollerad: 2 november 2026")).toHaveLength(5)
   })
 
+  it("says that each source link needs internet once the connection is lost", async () => {
+    await renderReady()
+    const sources = within(screen.getByRole("region", { name: "Källor" }))
+    expect(sources.queryByText("Kräver internetanslutning.")).toBeNull()
+    act(() => {
+      window.dispatchEvent(new Event("offline"))
+    })
+    const links = sources.getAllByRole("link")
+    for (const link of links) {
+      const note = document.getElementById(link.getAttribute("aria-describedby")!)
+      expect(note?.textContent).toBe("Kräver internetanslutning.")
+    }
+    expect(sources.getAllByText("Kräver internetanslutning.")).toHaveLength(links.length)
+    expect(screen.getAllByRole("link", { name: /^Ring / }).length).toBeGreaterThan(0)
+    for (const link of screen.getAllByRole("link", { name: /^Ring / })) {
+      expect(link.hasAttribute("aria-describedby")).toBe(false)
+    }
+  })
+
   it("makes no network request", async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
@@ -163,7 +192,7 @@ describe("PhoneNumbersPage", () => {
 
   it("shows a Swedish error with a retry that loads the numbers", async () => {
     readSection.mockRejectedValueOnce(new KrisinfoError("unknown_section", "Unknown section"))
-    render(<PhoneNumbersPage />)
+    renderPage()
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Telefonnumren kunde inte visas. Försök igen."
     )

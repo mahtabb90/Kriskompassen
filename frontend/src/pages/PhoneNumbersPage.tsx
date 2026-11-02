@@ -1,5 +1,6 @@
 import KrisinfoSourcesCard from "../components/KrisinfoSourcesCard"
 import PhoneCard from "../components/PhoneCard"
+import { useMode } from "../context/modeContext"
 import { useKrisinfo } from "../hooks/useKrisinfo"
 import { collectSources } from "../utils/krisinfoSources"
 
@@ -10,11 +11,13 @@ import { collectSources } from "../utils/krisinfoSources"
  * Reads through `useKrisinfo`, so the list is available offline once the app is installed and
  * makes no network request. It is the only reader of the content; each `PhoneCard` receives
  * its number as props, in content order. Sources are listed in order of first use by the
- * numbers and then the section. The page heading stays mounted across loading states so the
- * layout can name and focus it.
+ * numbers and then the section; browser connectivity from `useMode()` lets their links say
+ * when they need internet. The page heading stays mounted across loading states so the layout
+ * can name and focus it.
  */
 function PhoneNumbersPage() {
   const { state, retry } = useKrisinfo("phone-numbers")
+  const { isOnline } = useMode()
 
   return (
     <section>
@@ -64,6 +67,7 @@ function PhoneNumbersPage() {
             headingId="phone-sources-heading"
             intro="Numren och texterna bygger på följande källor:"
             sources={collectSources([...state.data.items, state.data])}
+            isOnline={isOnline}
           />
         </>
       )}
