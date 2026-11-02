@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { GeolocationRequestError, requestCurrentPosition } from "./geolocationService"
+import type { GeolocationErrorCode } from "../types/address"
+import {
+  GeolocationRequestError,
+  describeGeolocationError,
+  requestCurrentPosition,
+} from "./geolocationService"
 
 function makePositionError(code: 1 | 2 | 3, message = "error"): GeolocationPositionError {
   return {
@@ -97,5 +102,32 @@ describe("requestCurrentPosition", () => {
 
     expect(error).toBeInstanceOf(GeolocationRequestError)
     expect(error).toBeInstanceOf(Error)
+  })
+})
+
+describe("describeGeolocationError", () => {
+  const cases: Array<[GeolocationErrorCode, string]> = [
+    [
+      "permission_denied",
+      "Platsbehörighet nekades. Du kan ange din adress manuellt istället.",
+    ],
+    [
+      "timeout",
+      "Det tog för lång tid att hämta din position. Försök igen eller ange adressen manuellt.",
+    ],
+    [
+      "unsupported",
+      "Den här webbläsaren stöder inte platshämtning. Ange adressen manuellt istället.",
+    ],
+    [
+      "position_unavailable",
+      "Din position kunde inte fastställas. Försök igen eller ange adressen manuellt.",
+    ],
+  ]
+
+  it.each(cases)("describes %s in Swedish", (code, message) => {
+    expect(describeGeolocationError(new GeolocationRequestError(code, "irrelevant"))).toBe(
+      message
+    )
   })
 })

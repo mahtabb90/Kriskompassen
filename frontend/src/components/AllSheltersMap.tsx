@@ -40,6 +40,11 @@ interface AllSheltersMapProps {
   /** Resumes exactly where the user left off (see StoredMapView) instead of the usual
    * origin-based framing - set when arriving back from a shelter's detail page. */
   initialView?: StoredMapView
+  /** Bumped by ShelterMapPage once per successful "Hämta aktuell position" fetch; recenters the
+   * camera on `origin` without waiting for nearestShelters (unlike the one-time fit-to-nearest
+   * effect below, which would race the async refetch). Not meant to fire for any other reason
+   * origin might change. */
+  recenterToken?: number
   /** Performs the actual SPA navigation - this component has no router context of its own
    * (its popups are plain DOM, not a React tree), so the caller (which does) does it. */
   onNavigate: (path: string, options?: { state?: unknown }) => void
@@ -206,6 +211,7 @@ function AllSheltersMap({
   nearestShelters,
   savedShelterIds,
   initialView,
+  recenterToken = 0,
   onNavigate,
 }: AllSheltersMapProps) {
   const { activeAddress } = useAddresses()
@@ -255,14 +261,6 @@ function AllSheltersMap({
     map.addControl(new NavigationControl({ showCompass: false }), "top-right")
     map.scrollZoom.disable()
     mapRef.current = map
-
-    let originMarker: Marker | null = null
-    if (origin) {
-      originMarker = new Marker({ element: originMarkerElement() })
-        .setLngLat([origin.lon, origin.lat])
-        .setPopup(new Popup({ closeButton: false }).setText("Din position"))
-        .addTo(map)
-    }
 
     const handleViewportChange = () => {
       if (map.getZoom() < MIN_ZOOM_FOR_SHELTERS) {
@@ -382,7 +380,6 @@ function AllSheltersMap({
     })
 
     return () => {
-      originMarker?.remove()
       map.remove()
       mapRef.current = null
     }
@@ -391,6 +388,40 @@ function AllSheltersMap({
     // savedShelterIds are read via refs/the data-sync effect below instead.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Keeps the origin marker in sync with a later origin change (e.g. a newly fetched live
+  // position from the "Hämta aktuell position" button) - the map itself, created once above,
+  // never reacts to origin on its own. Keyed on the coordinates, not origin's object identity
+  // (see useNearestShelters.ts's own comment on this) - an unrelated re-render that just
+  // rebuilds the origin object literal must not tear the marker down and recreate it.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !origin) return
+    const marker = new Marker({ element: originMarkerElement() })
+      .setLngLat([origin.lon, origin.lat])
+      .setPopup(new Popup({ closeButton: false }).setText("Din position"))
+      .addTo(map)
+    return () => {
+      marker.remove()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [origin?.lat, origin?.lon])
+
+  // Fires exactly once per successful "Hämta aktuell position" fetch (see useCurrentPosition's
+  // own recenterToken), not on every origin change - deliberately not reused for the
+  // fit-to-nearest effect below, which depends on the async nearestShelters refetch that would
+  // race/lag behind a freshly fetched position. A plain flyTo to the raw point satisfies
+  // "centrera kartan på den nya punkten" without that race; the nearest-shelter highlighting
+  // still updates for free via the data-sync effect once the nearestShelters prop changes.
+  const previousRecenterTokenRef = useRef(recenterToken)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !origin) return
+    if (recenterToken === previousRecenterTokenRef.current) return
+    previousRecenterTokenRef.current = recenterToken
+    map.flyTo({ center: [origin.lon, origin.lat], zoom: LOCAL_ZOOM })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recenterToken, origin?.lat, origin?.lon])
 
   // Syncs the GeoJSON source whenever a new viewport fetch resolves, or the nearest/saved sets
   // change (e.g. a shelter gets bookmarked while this page is open).
@@ -433,6 +464,33 @@ function AllSheltersMap({
         >
           Zooma in för att se skyddsrum på kartan.
         </p>
+      )}
+      {/* Bottom-left, not bottom-right - MapLibre's own compact attribution control already
+          lives in that corner (see attributionControl above), and this avoids the pixel math
+          of stacking a plain React-rendered button next to it. Hidden entirely without an
+          origin - there's nothing to recenter on. A plain easeTo keeps the user's current zoom
+          (unlike recenterToken's flyTo, which resets to LOCAL_ZOOM for a freshly fetched
+          position) - this button only snaps back to a marker the user panned away from. */}
+      {origin && (
+        <button
+          type="button"
+          onClick={() => mapRef.current?.easeTo({ center: [origin.lon, origin.lat] })}
+          aria-label="Centrera på min position"
+          className="absolute bottom-4 left-4 z-10 flex min-h-12 min-w-12 items-center justify-center rounded-full border border-blue-200/80 bg-white text-blue-900 shadow-sm hover:bg-blue-50"
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className="size-6"
+          >
+            <circle cx="12" cy="12" r="7" />
+            <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+            <path strokeLinecap="round" d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+          </svg>
+        </button>
       )}
     </div>
   )

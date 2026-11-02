@@ -183,7 +183,7 @@ describe("AddressSection", () => {
 
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Hämta min position" }))
+      fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
     })
 
     expect(screen.getByText("Drottninggatan 1")).toBeTruthy()
@@ -192,7 +192,11 @@ describe("AddressSection", () => {
     expect(screen.getByRole("button", { name: "Hämta ny position" })).toBeTruthy()
   })
 
-  it("flags a particularly imprecise fix instead of the generic approximate message", async () => {
+  it("shows the imprecision toggle for a particularly imprecise fix, wired to the fetched accuracy", async () => {
+    // The toggle's own open/close behavior and content are covered by LowAccuracyNotice.test.tsx
+    // - this only confirms the fetched accuracy actually reaches it, and that the generic
+    // "ungefärlig position" description still shows alongside it (it's about provenance, not
+    // precision, so it applies to every geolocated address regardless of accuracy).
     getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
       onSuccess({
         coords: { latitude: 59.3, longitude: 18.0, accuracy: 18_000 },
@@ -204,12 +208,31 @@ describe("AddressSection", () => {
 
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Hämta min position" }))
+      fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
     })
 
-    expect(screen.getByText(/mycket osäker/)).toBeTruthy()
-    expect(screen.getByText(/±18\.0 km/)).toBeTruthy()
-    expect(screen.queryByText(/ungefärlig position/)).toBeNull()
+    expect(screen.getByText(/ungefärlig position/)).toBeTruthy()
+    const toggle = screen.getByRole("button", { name: /Ungefärlig position/ })
+    fireEvent.click(toggle)
+    expect(screen.getByText(/ca ±18\.0 km/)).toBeTruthy()
+  })
+
+  it("shows no imprecision toggle for an accurate fix", async () => {
+    getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
+      onSuccess({
+        coords: { latitude: 59.3, longitude: 18.0, accuracy: 30 },
+      } as GeolocationPosition)
+    })
+    fetchMock.mockResolvedValue(
+      Response.json({ found: true, address: "Drottninggatan 1", lat: 59.3, lon: 18.0 })
+    )
+
+    render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
+    })
+
+    expect(screen.queryByRole("button", { name: /Ungefärlig position/ })).toBeNull()
   })
 
   it("shows an accessible error for a denied permission while manual entry stays usable", async () => {
@@ -221,7 +244,7 @@ describe("AddressSection", () => {
 
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Hämta min position" }))
+      fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
     })
 
     expect(screen.getByRole("alert").textContent).toContain("nekades")
@@ -237,7 +260,7 @@ describe("AddressSection", () => {
     vi.stubGlobal("navigator", {})
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
 
-    const button = screen.getByRole("button", { name: "Hämta min position" }) as HTMLButtonElement
+    const button = screen.getByRole("button", { name: "Hämta aktuell position" }) as HTMLButtonElement
     expect(button.disabled).toBe(true)
     expect(screen.getByText(/stöder inte platshämtning/)).toBeTruthy()
   })
