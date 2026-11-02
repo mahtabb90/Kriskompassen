@@ -200,7 +200,7 @@ describe("CrisisKitPage ownership changes", () => {
     })
 
     expect(await screen.findByText("Markerad: Behövs inte")).toBeTruthy()
-    expect(screen.getByText("Deaktiverad – räknas inte med i beredskapsöversikten.")).toBeTruthy()
+    expect(screen.queryByText("Deaktiverad – räknas inte med i beredskapsöversikten.")).toBeNull()
 
     expect(
       (
@@ -357,6 +357,15 @@ describe("CrisisKitPage custom-item creation", () => {
 
 describe("CrisisKitPage expiration summary", () => {
   it("keeps the review disclosure keyboard-focusable with an external focus indicator", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      {
+        ...recommendedFoodItem,
+        id: "focus-test",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(6),
+      },
+    ])
+
     mountPage()
     const summary = await screen.findByText("Visa varor att se över")
     expect(summary.tagName).toBe("SPAN")
@@ -413,7 +422,9 @@ describe("CrisisKitPage expiration summary", () => {
     ])
     mountPage()
 
-    const reviewSection = screen.getByRole("region", { name: "Utgångsdatum att se över" })
+    const reviewSection = await screen.findByRole("region", {
+      name: "Utgångsdatum att se över",
+    })
 
     await waitFor(() => {
       expect(within(reviewSection).getByText("4", { selector: "span" })).toBeTruthy()
@@ -499,24 +510,12 @@ describe("CrisisKitPage expiration summary", () => {
     ])
   })
 
-  it("shows an empty message when no owned items need review", async () => {
-    vi.mocked(getCrisisKitItems).mockResolvedValue([
-      { ...recommendedItem, isOwned: false, expirationDate: dateOffsetFromToday(-15) },
-      { ...recommendedItem, id: "no-date", isOwned: true },
-      { ...recommendedItem, id: "ok", isOwned: true, expirationDate: dateOffsetFromToday(45) },
-    ])
+  it("hides the expiration summary when no owned items need review", async () => {
     mountPage()
 
-    const reviewSection = screen.getByRole("region", { name: "Utgångsdatum att se över" })
-    const totalCount = within(reviewSection).getByText(
-      (_, element) =>
-        element?.tagName === "P" &&
-        element.textContent?.replace(/\\s+/g, " ").trim() === "0 saker att se över"
-    )
-    expect(totalCount).toBeTruthy()
-    const summary = screen.getByText("Visa varor att se över")
-    fireEvent.click(summary)
-    expect(screen.getByText("Det finns inga varor att se över just nu.")).toBeTruthy()
+    expect(await screen.findByRole("heading", { name: "Min krislåda" })).toBeTruthy()
+
+    expect(screen.queryByLabelText("Utgångsdatum att se över")).toBeNull()
   })
 })
 
@@ -654,6 +653,66 @@ describe("CrisisKitPage category sections", () => {
       "Ta emot information",
       "Viktig information",
     ])
+  })
+
+  it("automatically expands subcategories with active items when a category opens", async () => {
+    const activeItem = {
+      ...recommendedFoodItem,
+      id: "active-rice",
+      subcategory: "Torrvaror",
+    }
+
+    const deactivatedItem = {
+      ...recommendedFoodItem,
+      id: "deactivated-canned-food",
+      name: "Konserver",
+      subcategory: "Konserver",
+      isNotNeeded: true,
+    }
+
+    vi.mocked(getCrisisKitItems).mockResolvedValue([activeItem, deactivatedItem])
+
+    mountPage()
+
+    const foodHeading = await screen.findByRole("heading", {
+      name: "Mat",
+      level: 2,
+    })
+
+    const foodDetails = foodHeading.closest("details") as HTMLDetailsElement
+
+    const activeHeading = within(foodDetails).getByRole("heading", {
+      name: "Torrvaror",
+      level: 3,
+    })
+
+    const deactivatedHeading = within(foodDetails).getByRole("heading", {
+      name: "Konserver",
+      level: 3,
+    })
+
+    const activeDetails = activeHeading.closest("details") as HTMLDetailsElement
+    const deactivatedDetails = deactivatedHeading.closest("details") as HTMLDetailsElement
+
+    // Both subcategories should initially be collapsed.
+    expect(activeDetails.open).toBe(false)
+    expect(deactivatedDetails.open).toBe(false)
+
+    // Open the parent category.
+    fireEvent.click(foodHeading.closest("summary")!)
+
+    // The active subcategory should expand automatically.
+    await waitFor(() => {
+      expect(activeDetails.open).toBe(true)
+    })
+
+    // The deactivated-only subcategory should remain collapsed.
+    expect(deactivatedDetails.open).toBe(false)
+
+    // The user should still be able to expand it manually.
+    fireEvent.click(deactivatedHeading.closest("summary")!)
+
+    expect(deactivatedDetails.open).toBe(true)
   })
 })
 

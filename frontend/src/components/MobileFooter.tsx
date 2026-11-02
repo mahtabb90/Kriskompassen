@@ -9,10 +9,11 @@ interface MobileFooterProps {
 }
 
 /**
- * Renders the fixed bottom bar holding the "Meny" button below 48rem.
+ * Renders the fixed amber bottom bar as one full-width "Meny" button below 48rem.
  *
  * The bar is hidden from 48rem upwards. Its stacking order stays below the VMA and app-update
- * notices, and native modals sit above it in the top layer.
+ * notices, and native modals sit above it in the top layer. Safe-area padding belongs to the
+ * button so the full bar remains a touch target; the layout measures that padding with the bar.
  *
  * @param footerRef Gives the shared layout access to the bar to reserve scroll space for it.
  * @param triggerRef Gives the menu access to the button for returning focus.
@@ -25,11 +26,7 @@ function MobileFooter({ footerRef, triggerRef, menuId, expanded, onOpen }: Mobil
     <nav
       ref={footerRef}
       aria-label="Huvudmeny"
-      className={
-        "fixed inset-x-0 bottom-0 z-5 flex justify-center border-t border-slate-200 bg-white " +
-        "pt-2 pr-[env(safe-area-inset-right)] pb-[max(0.5rem,env(safe-area-inset-bottom))] " +
-        "pl-[env(safe-area-inset-left)] md:hidden"
-      }
+      className="fixed inset-x-0 bottom-0 z-5 border-t-2 border-blue-900 bg-amber-300 md:hidden"
     >
       <button
         ref={triggerRef}
@@ -39,8 +36,10 @@ function MobileFooter({ footerRef, triggerRef, menuId, expanded, onOpen }: Mobil
         aria-haspopup="dialog"
         onClick={onOpen}
         className={
-          "inline-flex min-h-12 min-w-12 cursor-pointer items-center justify-center gap-2 " +
-          "rounded-xl border-2 border-blue-900 bg-amber-300 px-5 py-3 font-semibold text-blue-900 " +
+          "mobile-menu-trigger flex min-h-12 min-w-12 w-full cursor-pointer items-center " +
+          "justify-center gap-3 bg-amber-300 pt-3 text-base font-normal text-blue-900 " +
+          "pr-[max(1rem,env(safe-area-inset-right))] pb-[max(0.75rem,env(safe-area-inset-bottom))] " +
+          "pl-[max(1rem,env(safe-area-inset-left))] " +
           "hover:bg-amber-200 active:bg-amber-400"
         }
       >
@@ -51,6 +50,7 @@ function MobileFooter({ footerRef, triggerRef, menuId, expanded, onOpen }: Mobil
           fill="none"
           aria-hidden="true"
           focusable="false"
+          className="shrink-0"
         >
           <path
             d="M4 7h16M4 12h16M4 17h16"
