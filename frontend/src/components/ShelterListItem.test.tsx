@@ -142,10 +142,10 @@ describe("ShelterListItem nearest badge", () => {
     expect(screen.getByText("Närmast")).toBeTruthy()
   })
 
-  it("shows no badge when isNearest is omitted", () => {
+  it("hides the badge visually (but keeps its space reserved) when isNearest is omitted", () => {
     renderItem(fullShelter)
 
-    expect(screen.queryByText("Närmast")).toBeNull()
+    expect(screen.getByText("Närmast").className).toContain("invisible")
   })
 })
 
