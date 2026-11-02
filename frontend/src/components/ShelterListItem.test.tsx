@@ -70,6 +70,28 @@ describe("ShelterListItem with full data", () => {
     expect(detailLink.getAttribute("href")).toBe(`/skyddsrum/${fullShelter.id}`)
   })
 
+  it("wraps the card's main content in its own link to the detail page, focusable and keyboard-reachable like CrisisCard", () => {
+    renderItem(fullShelter, { distanceMeters: 350 })
+
+    const links = screen.getAllByRole("link")
+    const cardLink = links.find((link) => link.getAttribute("href") === `/skyddsrum/${fullShelter.id}` && link.textContent !== "Visa detaljer")
+    expect(cardLink).toBeTruthy()
+    expect(cardLink?.className).toContain("focus-visible:-outline-offset-4")
+    expect(cardLink?.textContent).toContain("Kantarellen 11, Solna kommun")
+  })
+
+  it("does not nest the save button or the detail link inside the card's main link (DESIGN_SYSTEM §6.1)", () => {
+    renderItem(fullShelter, { distanceMeters: 350, saved: false, onToggleSave: vi.fn() })
+
+    const links = screen.getAllByRole("link")
+    const cardLink = links.find((link) => link.textContent !== "Visa detaljer")
+    const detailLink = screen.getByRole("link", { name: "Visa detaljer" })
+    const saveButton = screen.getByRole("button", { name: "Spara skyddsrum" })
+
+    expect(cardLink?.contains(detailLink)).toBe(false)
+    expect(cardLink?.contains(saveButton)).toBe(false)
+  })
+
   it("has no link to an external map - the detail page's own embedded map covers that", () => {
     renderItem(fullShelter, { distanceMeters: 350 })
 
