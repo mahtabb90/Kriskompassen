@@ -6,7 +6,8 @@ import { isValidLatLon, parseCoordinates } from "../utils/coordinates"
 
 type LabelKind = AddressLabel["kind"]
 
-const GEOLOCATED_ADDRESS_DESCRIPTION = "Hämtad automatiskt – ungefärlig position, kontrollera att den stämmer"
+const GEOLOCATED_ADDRESS_DESCRIPTION =
+  "Hämtad automatiskt – ungefärlig position, kontrollera att den stämmer"
 
 interface AddressSectionProps {
   /** Called whenever typing or fetching a position resolves a new address to add. */

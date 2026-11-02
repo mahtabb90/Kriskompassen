@@ -268,7 +268,9 @@ describe("ShelterMapPage", () => {
     const button = screen.getByRole("button", { name: "Hämta aktuell position" })
     expect(button.hasAttribute("disabled")).toBe(true)
     expect(
-      screen.getByText("Den här webbläsaren stöder inte platshämtning. Ange adressen manuellt istället.")
+      screen.getByText(
+        "Den här webbläsaren stöder inte platshämtning. Ange adressen manuellt istället."
+      )
     ).toBeTruthy()
     expect(getCurrentPosition).not.toHaveBeenCalled()
   })

@@ -107,10 +107,7 @@ describe("requestCurrentPosition", () => {
 
 describe("describeGeolocationError", () => {
   const cases: Array<[GeolocationErrorCode, string]> = [
-    [
-      "permission_denied",
-      "Platsbehörighet nekades. Du kan ange din adress manuellt istället.",
-    ],
+    ["permission_denied", "Platsbehörighet nekades. Du kan ange din adress manuellt istället."],
     [
       "timeout",
       "Det tog för lång tid att hämta din position. Försök igen eller ange adressen manuellt.",
@@ -126,8 +123,6 @@ describe("describeGeolocationError", () => {
   ]
 
   it.each(cases)("describes %s in Swedish", (code, message) => {
-    expect(describeGeolocationError(new GeolocationRequestError(code, "irrelevant"))).toBe(
-      message
-    )
+    expect(describeGeolocationError(new GeolocationRequestError(code, "irrelevant"))).toBe(message)
   })
 })

@@ -260,7 +260,9 @@ describe("AddressSection", () => {
     vi.stubGlobal("navigator", {})
     render(<AddressSection onResolved={vi.fn()} {...baseProps()} />)
 
-    const button = screen.getByRole("button", { name: "Hämta aktuell position" }) as HTMLButtonElement
+    const button = screen.getByRole("button", {
+      name: "Hämta aktuell position",
+    }) as HTMLButtonElement
     expect(button.disabled).toBe(true)
     expect(screen.getByText(/stöder inte platshämtning/)).toBeTruthy()
   })
