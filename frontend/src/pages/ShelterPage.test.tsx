@@ -248,18 +248,20 @@ describe("ShelterPage nearest list", () => {
 })
 
 describe("ShelterPage Kartan link", () => {
-  it("links to the all-shelters map page, next to the two real tabs", () => {
+  it("links to the all-shelters map page, separate from the two real tabs", () => {
     renderPage()
 
-    const kartanLink = screen.getByRole("link", { name: "Kartan" })
+    const kartanLink = screen.getByRole("link", { name: "Visa på karta" })
     expect(kartanLink.getAttribute("href")).toBe("/skyddsrum/karta")
+    expect(kartanLink.getAttribute("role")).not.toBe("tab")
+    expect(screen.getByRole("tablist").contains(kartanLink)).toBe(false)
   })
 
   it("is available regardless of online/offline mode or which outer tab is active", () => {
     mockMode("offline")
     renderPage()
 
-    expect(screen.getByRole("link", { name: "Kartan" }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "Visa på karta" }).getAttribute("href")).toBe(
       "/skyddsrum/karta"
     )
   })
