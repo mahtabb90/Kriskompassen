@@ -50,8 +50,16 @@ describe("SignalCard", () => {
   it("shows the pattern description as text beside the decorative drawing", () => {
     const { container } = render(<SignalCard signal={full} isOnline />)
     expect(screen.getByText("Beskrivning av mönstret.")).toBeTruthy()
-    expect(container.querySelectorAll("rect")).toHaveLength(3)
-    expect(container.querySelector("rect")!.closest("[aria-hidden='true']")).toBeTruthy()
+    expect(container.querySelectorAll("svg g rect")).toHaveLength(3)
+    expect(container.querySelector("svg g rect")!.closest("[aria-hidden='true']")).toBeTruthy()
+  })
+
+  it("puts a decorative loudspeaker icon before the timeline", () => {
+    const { container } = render(<SignalCard signal={full} isOnline />)
+    const icon = container.querySelector("svg[viewBox='0 0 24 24']")!
+    const timeline = container.querySelector("svg g")!.closest("svg")!
+    expect(icon.closest("[aria-hidden='true']")).toBeTruthy()
+    expect(icon.compareDocumentPosition(timeline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it("shows the meaning with a link to its own source", () => {

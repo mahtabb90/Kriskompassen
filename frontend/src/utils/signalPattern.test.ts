@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { krisinfoSections } from "../content/krisinfo/index"
 import type { SignalPattern } from "../types/krisinfo"
-import { computeSignalStrokes } from "./signalPattern"
+import { computeSignalStrokes, formatSignalSeconds } from "./signalPattern"
 
 const signals = krisinfoSections["warning-signals"].items
 
@@ -32,6 +32,24 @@ describe("computeSignalStrokes", () => {
       ["readiness-alert", 7, [30], 300],
       ["all-clear", 1, [30], 30],
     ])
+  })
+
+  it("ends each content signal's timeline at its stated duration, or its last tone", () => {
+    expect(
+      signals.map((item) => [item.id, computeSignalStrokes(item.pattern).timelineSeconds])
+    ).toEqual([
+      ["important-message", 120],
+      ["air-raid", 60],
+      ["readiness-alert", 300],
+      ["all-clear", 30],
+    ])
+  })
+
+  it("never ends the timeline before the last tone", () => {
+    for (const { pattern } of signals) {
+      const { spanSeconds, timelineSeconds } = computeSignalStrokes(pattern)
+      expect(timelineSeconds).toBeGreaterThanOrEqual(spanSeconds)
+    }
   })
 
   it("separates consecutive tones by the pause", () => {
@@ -90,5 +108,31 @@ describe("computeSignalStrokes", () => {
     ["a zero duration", { toneSeconds: 5, pauseSeconds: 1, totalDurationSeconds: 0 }],
   ])("rejects %s instead of drawing a misleading pattern", (_case, pattern) => {
     expect(() => computeSignalStrokes(pattern)).toThrow(RangeError)
+  })
+})
+
+describe("formatSignalSeconds", () => {
+  it.each([
+    [0, "0 s"],
+    [30, "30 s"],
+    [58, "58 s"],
+    [60, "1 min"],
+    [112, "112 s"],
+    [120, "2 min"],
+    [300, "5 min"],
+    [90, "90 s"],
+    [0.5, "0,5 s"],
+  ])("formats %s seconds as %s", (seconds, label) => {
+    expect(formatSignalSeconds(seconds)).toBe(label)
+  })
+
+  it("labels the content signals' timelines from 0 s to their end", () => {
+    expect(
+      signals.map((item) => formatSignalSeconds(computeSignalStrokes(item.pattern).timelineSeconds))
+    ).toEqual(["2 min", "1 min", "5 min", "30 s"])
+  })
+
+  it.each([-1, NaN, Infinity])("rejects %s seconds", (seconds) => {
+    expect(() => formatSignalSeconds(seconds)).toThrow(RangeError)
   })
 })

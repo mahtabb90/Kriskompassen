@@ -19,6 +19,7 @@ const section = krisinfoSections["warning-signals"]
 // come from the content, so rewording them needs no change in this file.
 const SIGNAL_IDS = ["important-message", "air-raid", "readiness-alert", "all-clear"]
 const STROKE_COUNTS = [6, 15, 7, 1]
+const END_LABELS = ["2 min", "1 min", "5 min", "30 s"]
 const MCF_URL = section.source.url
 const KRISINFORMATION_VMA_URL =
   "https://www.krisinformation.se/varningssystem/vma-flyglarm-och-beredskapslarm/viktigt-meddelande-till-allmanheten-sa-funkar-det/"
@@ -97,10 +98,20 @@ describe("WarningSignalsPage", () => {
     signalCards().forEach((card, index) => {
       const item = signal(SIGNAL_IDS[index])
       expect(within(card).getByText(item.patternDescription)).toBeTruthy()
-      const strokes = card.querySelectorAll("rect")
+      const strokes = card.querySelectorAll("svg g rect")
       expect(strokes).toHaveLength(STROKE_COUNTS[index])
       expect(strokes[0].closest("[aria-hidden='true']")).toBeTruthy()
     })
+  })
+
+  it("labels each timeline from 0 s to the duration the content states", async () => {
+    await renderReady()
+    const timelineLabels = signalCards().map((card) => {
+      const timeline = card.querySelector("svg g")!.closest("svg")!.parentElement!
+      expect(timeline.getAttribute("aria-hidden")).toBe("true")
+      return [...timeline.querySelectorAll("span")].map((span) => span.textContent)
+    })
+    expect(timelineLabels).toEqual(END_LABELS.map((end) => ["0 s", end]))
   })
 
   it("shows a meaning only where the content has one, with Krisinformation.se as its source", async () => {

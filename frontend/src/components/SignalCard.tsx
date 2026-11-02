@@ -1,5 +1,6 @@
 import type { Signal } from "../types/krisinfo"
 import ExternalLink from "./ExternalLink"
+import SignalIcon from "./SignalIcon"
 import SignalPattern from "./SignalPattern"
 
 const CARD_CLASSES = "rounded-2xl border border-blue-200/80 bg-white p-6 shadow-sm sm:p-8"
@@ -17,7 +18,8 @@ interface SignalCardProps {
  * Presentational only: it renders the `signal` it is given and reads no hook, service or
  * context. The name is an `h2`; "Betydelse" and "Gör så här" are `h3` below it.
  *
- * - The drawn pattern is decorative; `patternDescription` is always shown as text.
+ * - The loudspeaker icon and the drawn timeline are decorative; `patternDescription` is always
+ *   shown as text.
  * - The meaning is shown only when the content has one, with its own source link when
  *   `meaningSource` is set. Nothing replaces a missing meaning.
  * - The actions are an ordered list. Each step's text is always shown; its link, if any, is a
@@ -32,7 +34,15 @@ function SignalCard({ signal, isOnline }: SignalCardProps) {
   return (
     <div className={CARD_CLASSES}>
       <h2 className="wrap-anywhere text-xl font-bold text-blue-900">{signal.name}</h2>
-      <SignalPattern pattern={signal.pattern} className="mt-4" />
+      <div className="mt-4 flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-900"
+        >
+          <SignalIcon />
+        </span>
+        <SignalPattern pattern={signal.pattern} className="min-w-0 flex-1" />
+      </div>
       <p className={`mt-3 ${BODY_CLASSES}`}>{signal.patternDescription}</p>
 
       {signal.meaning !== undefined && (

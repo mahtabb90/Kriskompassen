@@ -17,12 +17,15 @@ export interface SignalStroke {
 /**
  * The tones of a signal, ready to draw on a timeline of its own length.
  *
- * @property spanSeconds Time from the start of the first tone to the end of the last, so a
- * drawing can scale each signal to its full width.
+ * @property spanSeconds Time from the start of the first tone to the end of the last.
+ * @property timelineSeconds How long the signal lasts: the content's `totalDurationSeconds` when
+ * it states one, otherwise `spanSeconds`. A drawing scales each signal to this length, so its
+ * end matches the duration the content's text gives. It is never shorter than `spanSeconds`.
  * @property strokes The tones in order, one per drawn stroke.
  */
 export interface SignalStrokes {
   spanSeconds: number
+  timelineSeconds: number
   strokes: readonly SignalStroke[]
 }
 
@@ -83,6 +86,28 @@ export function computeSignalStrokes(pattern: SignalPattern): SignalStrokes {
     lengthSeconds: pattern.toneSeconds,
   }))
   const spanSeconds = count * pattern.toneSeconds + (count - 1) * pattern.pauseSeconds
+  const timelineSeconds = pattern.totalDurationSeconds ?? spanSeconds
 
-  return { spanSeconds, strokes }
+  return { spanSeconds, timelineSeconds, strokes }
+}
+
+const secondsFormat = new Intl.NumberFormat("sv-SE", { maximumFractionDigits: 1 })
+
+/**
+ * Formats a point on a signal's timeline as a short Swedish label.
+ *
+ * Whole minutes are written in minutes, matching how the content's texts state durations, and
+ * everything else in seconds: 0 → "0 s", 30 → "30 s", 60 → "1 min", 112 → "112 s",
+ * 120 → "2 min", 300 → "5 min".
+ *
+ * @param seconds A time of zero or more seconds.
+ * @returns The label, e.g. "2 min".
+ * @throws {RangeError} If `seconds` is negative or not a finite number.
+ */
+export function formatSignalSeconds(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    throw new RangeError(`seconds must be zero or greater, got ${seconds}`)
+  }
+  if (seconds > 0 && seconds % 60 === 0) return `${secondsFormat.format(seconds / 60)} min`
+  return `${secondsFormat.format(seconds)} s`
 }

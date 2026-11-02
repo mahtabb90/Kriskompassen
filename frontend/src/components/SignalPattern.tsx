@@ -1,12 +1,16 @@
 import type { SignalPattern as SignalPatternData } from "../types/krisinfo"
-import { computeSignalStrokes } from "../utils/signalPattern"
-import SignalIcon from "./SignalIcon"
+import { computeSignalStrokes, formatSignalSeconds } from "../utils/signalPattern"
 
-// The drawing's own coordinate width; every signal is scaled to fill it.
-const TIMELINE_WIDTH = 240
-const TIMELINE_HEIGHT = 24
-const STROKE_Y = 6
-const STROKE_HEIGHT = 12
+// Pixel geometry; only horizontal positions are percentages of the timeline.
+const SVG_HEIGHT = 16
+const TRACK_Y = 6
+const TRACK_HEIGHT = 4
+const TONE_Y = 3
+const TONE_HEIGHT = 10
+
+function percentOf(seconds: number, timelineSeconds: number): string {
+  return `${(seconds / timelineSeconds) * 100}%`
+}
 
 interface SignalPatternProps {
   pattern: SignalPatternData
@@ -14,49 +18,60 @@ interface SignalPatternProps {
 }
 
 /**
- * Draws a warning signal's pattern: a loudspeaker icon followed by one stroke per tone.
+ * Draws a warning signal's pattern as a timeline: a thin light track for the whole duration,
+ * one rounded (pill-shaped) stroke per tone on top of it, and the start and end times below.
  *
- * Each stroke is as long as the tone and the gaps are as long as the pauses. Every signal uses
- * its own time scale, scaled from the first tone's start to the last tone's end, so the short
- * tones of one signal stay as visible as the long tones of another. The strokes come from
- * `computeSignalStrokes`. The timeline stretches horizontally to the available width at a fixed
- * height, so the strokes are plain rectangles that stay undistorted vertically.
+ * The strokes come from `computeSignalStrokes`. Each signal uses its own time scale, from 0 to
+ * `timelineSeconds`, so the short tones of one signal stay as visible as the long tones of
+ * another, and the end label matches the duration the content's text gives. The SVG has no
+ * `viewBox`: horizontal positions are percentages of the available width and heights and corner
+ * radii are pixels, so the strokes keep their rounded shape at every width instead of being
+ * stretched.
  *
- * Decorative: the whole drawing is hidden from assistive technology, because the visible
- * pattern description carries the same information. It uses `currentColor` in `text-blue-900`
- * and never red, which is reserved for VMA warnings.
+ * Decorative: the drawing and its labels are hidden from assistive technology, because the
+ * visible pattern description carries the same information. Tones use `currentColor` in
+ * `text-blue-900` on a `blue-200` track, never red, which is reserved for VMA warnings.
  *
  * @param props.pattern The signal's structured timing.
- * @param props.className Extra classes for the wrapper, e.g. spacing.
+ * @param props.className Extra classes for the wrapper, e.g. width or spacing.
  * @throws {RangeError} If the pattern is invalid, as `computeSignalStrokes` does.
  */
 function SignalPattern({ pattern, className = "" }: SignalPatternProps) {
-  const { spanSeconds, strokes } = computeSignalStrokes(pattern)
-  const scale = TIMELINE_WIDTH / spanSeconds
+  const { timelineSeconds, strokes } = computeSignalStrokes(pattern)
 
   return (
-    <div aria-hidden="true" className={`flex items-center gap-3 ${className}`}>
-      <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-900">
-        <SignalIcon />
-      </span>
+    <div aria-hidden="true" className={className}>
       <svg
         aria-hidden="true"
         focusable="false"
-        viewBox={`0 0 ${TIMELINE_WIDTH} ${TIMELINE_HEIGHT}`}
-        preserveAspectRatio="none"
-        className="h-6 min-w-0 flex-1 text-blue-900"
+        height={SVG_HEIGHT}
+        className="block w-full overflow-visible text-blue-900"
       >
-        {strokes.map((stroke) => (
-          <rect
-            key={stroke.startSeconds}
-            x={stroke.startSeconds * scale}
-            y={STROKE_Y}
-            width={stroke.lengthSeconds * scale}
-            height={STROKE_HEIGHT}
-            fill="currentColor"
-          />
-        ))}
+        <rect
+          x="0"
+          y={TRACK_Y}
+          width="100%"
+          height={TRACK_HEIGHT}
+          rx={TRACK_HEIGHT / 2}
+          className="fill-blue-200"
+        />
+        <g fill="currentColor">
+          {strokes.map((stroke) => (
+            <rect
+              key={stroke.startSeconds}
+              x={percentOf(stroke.startSeconds, timelineSeconds)}
+              y={TONE_Y}
+              width={percentOf(stroke.lengthSeconds, timelineSeconds)}
+              height={TONE_HEIGHT}
+              rx={TONE_HEIGHT / 2}
+            />
+          ))}
+        </g>
       </svg>
+      <div className="mt-1 flex justify-between gap-4 text-sm whitespace-nowrap text-slate-600">
+        <span>{formatSignalSeconds(0)}</span>
+        <span>{formatSignalSeconds(timelineSeconds)}</span>
+      </div>
     </div>
   )
 }
