@@ -341,7 +341,8 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   never an urgency cue. The label, panel border and button fill set it apart together, so
   colour is never the only cue. The content's `isEmergency` alone selects this variant.
 - **Other numbers:** section 5.1 cards without the accent bar or hover state, with the
-  secondary button (section 6.2.2). One column at every width, in content order.
+  secondary button (section 6.2.2). One column at every width, in content order, limited
+  together with the sources card to `max-w-2xl` as on the warning signals page (section 5.7).
 - **Heading:** each `h2` holds the number (`text-3xl font-bold tabular-nums`, on its own line)
   and the label below it (`text-lg font-semibold`), so heading navigation names the service, not
   only the digits. A space between the two lines keeps the accessible name readable, for example
@@ -357,10 +358,11 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   `font-semibold text-slate-800 tabular-nums`, and a secondary-button link **"Ring från
   utlandet"** named **"Ring från utlandet eller med utländsk telefon till {nummer},
   {utlandsnummer}"**.
-- **Sources:** a section 5.1 card at the bottom with the `h2` **"Källor"**, listing each
-  distinct source once as a text link (section 6.3) with "(öppnas i ny flik)", followed by
-  **"Senast kontrollerad: {datum}"** in the metadata style (section 3.2). A source used by
-  several posts shows the oldest date among them.
+- **Sources:** a section 5.1 card at the bottom (`KrisinfoSourcesCard`, shared with section
+  5.7) with the `h2` **"Källor"**, listing each distinct source once as an `ExternalLink`
+  (section 5.7: external-link icon, visually hidden "(öppnas i ny flik)" and, offline,
+  "Kräver internetanslutning."), followed by **"Senast kontrollerad: {datum}"** in the metadata
+  style (section 3.2). A source used by several posts shows the oldest date among them.
 - **Contrast:** calculated with the WCAG 2.2 relative-luminance formula from the installed
   Tailwind 4.3.3 values (`index.css` does not override them), converted from OKLCH to the
   8-bit sRGB colour the browser paints. Each pair meets WCAG AA (4.5:1) for normal text.
@@ -370,6 +372,78 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   | `blue-900` `oklch(37.9% 0.146 265.522)` | `blue-50` `oklch(97% 0.014 254.604)` | `#1c398e` on `#eff6ff` | 9.53:1 |
   | `slate-700` `oklch(37.2% 0.044 257.287)` | `blue-50` | `#314158` on `#eff6ff` | 9.52:1 |
   | `white` `#fff` | `blue-900` | `#ffffff` on `#1c398e` | 10.37:1 |
+
+  Recalculate these values when the tokens or the Tailwind version change.
+
+### 5.7 Warning Signals Page (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in
+> `WarningSignalsPage`, `SignalCard`, `SignalPattern`, `SignalIcon` and `ExternalLink`. It reuses
+> existing tokens only; adopting it as a recurring pattern requires the team's agreement.
+
+- **Column:** the signal cards and the sources card share one `max-w-2xl` (672px) column in the
+  source's order, so on wide screens the text and drawing fill each card instead of leaving an
+  empty right-hand area. The `h1` and lead paragraph keep their normal widths. The phone numbers
+  page uses the same column (section 5.6).
+- **Signal cards:** section 5.1 cards without the accent bar or hover state. Each `h2` is the
+  signal's name in `text-2xl font-bold text-blue-900 wrap-anywhere`, one step above the section
+  3.2 card heading so it stands clearly above the `h3`. **"Betydelse"** and **"Gör så här"**
+  are `h3` (`text-lg font-semibold text-blue-900`), each opening a block with a 1px
+  `border-slate-200` top divider (`mt-6 pt-5`). Body text uses the Body Text scale (section
+  3.2).
+- **Pattern panel:** a `rounded-xl bg-blue-50 p-4` panel below the `h2` groups how the signal
+  sounds. Its first row holds `SignalIcon`, a loudspeaker with two sound waves in the section
+  5.3 outline style, in a 48px `rounded-full bg-white` circle, beside the pattern description
+  (`gap-3`). The timeline follows below at the panel's full width (`mt-4`), so it has room even
+  on narrow screens. The panel has no heading of its own.
+- **Timeline (`SignalPattern`):** a 4px `fill-blue-300` track with fully rounded ends spans the
+  signal's whole duration, with one 10px-high, fully rounded (pill-shaped) `currentColor` stroke
+  per tone in `text-blue-900` on top; gaps are the pauses. The SVG has no `viewBox`: positions
+  and widths are percentages of the timeline and heights and radii are pixels, so strokes keep
+  their shape at every width instead of being stretched. Each signal uses its own time scale,
+  from 0 to the duration the content states (or to the end of the last tone when it states
+  none), so short and long tones are equally visible and a single continuous tone is one unbroken
+  bar. Below the track, `text-sm text-slate-600` labels give the start (**"0 s"**) on the left and
+  the end on the right, in whole minutes (**"2 min"**) or else seconds (**"30 s"**), matching
+  the text's stated duration. The drawing is the app's own, uses no image files and copies no
+  authority's graphics. It is decorative, labels included (`aria-hidden="true"`,
+  `focusable="false"`, no `<title>`): the pattern description always states the timing as text.
+- **No warning colours:** no red, warning triangle or amber. Red and the triangle stay reserved
+  for VMA (section 2.4.1), and amber is never an urgency cue.
+- **Meaning:** shown only when the content has one. A separate meaning source follows on a
+  metadata line (section 3.2) as **"Källa:"** and an external link.
+- **Actions:** an ordered list (`list-decimal`, `text-blue-900` semibold markers). Each step's
+  text is always shown; a link, when present, sits below it as a complement. The section is left
+  out when the content lists no actions.
+- **External links (`ExternalLink`):** used for every external link on the krisinfo pages,
+  including their sources. A standalone text link (section 6.3) with `font-medium` and
+  `wrap-anywhere`, rendered as an `inline-block` with `py-3` so it keeps a 48px target on one
+  line and wraps like ordinary text. A 20×20px decorative external-link icon (box with an
+  outgoing arrow, section 5.3 style, `currentColor`, `aria-hidden`) follows the last word and
+  stays on the same line as it. A visually hidden **"(öppnas i ny flik)"** completes the
+  accessible name, so it starts with the visible text and needs no `aria-label`. While the
+  browser reports no connection, a `text-sm text-slate-600` line **"Kräver
+  internetanslutning."** follows the link and describes it with `aria-describedby`; the link
+  stays available.
+- **Loading, error and sources:** as section 5.6: a stable `h1`, a `role="status"` loading
+  line, a `role="alert"` error with the secondary **"Försök igen"** button, and the shared
+  sources card (`KrisinfoSourcesCard`) at the bottom, listing each source once with its oldest
+  check date, including a separate meaning source.
+- **Contrast:** calculated as in section 5.6 from the installed Tailwind 4.3.3 values. Each
+  text pair meets WCAG AA (4.5:1) for normal text. The drawing is decorative; its strokes still
+  exceed the 3:1 non-text target against both the panel and the track. The track is
+  deliberately light, so it reads as background behind the strokes, and carries no information.
+
+  | Foreground | Background | sRGB | Ratio | Used for |
+  | --- | --- | --- | --- | --- |
+  | `blue-900` `oklch(37.9% 0.146 265.522)` | `white` | `#1c398e` on `#ffffff` | 10.37:1 | Headings, links, list markers, icon in its white circle |
+  | `slate-700` `oklch(37.2% 0.044 257.287)` | `white` | `#314158` on `#ffffff` | 10.36:1 | Meaning, action text |
+  | `slate-600` `oklch(44.6% 0.043 257.281)` | `white` | `#45556c` on `#ffffff` | 7.58:1 | "Källa:" line, "Kräver internetanslutning." |
+  | `slate-700` | `blue-50` `oklch(97% 0.014 254.604)` | `#314158` on `#eff6ff` | 9.52:1 | Pattern description in the panel |
+  | `slate-600` | `blue-50` | `#45556c` on `#eff6ff` | 6.97:1 | Timeline labels |
+  | `blue-900` | `blue-50` | `#1c398e` on `#eff6ff` | 9.53:1 | Tone strokes against the panel |
+  | `blue-900` | `blue-300` `oklch(80.9% 0.105 251.813)` | `#1c398e` on `#8ec5ff` | 5.72:1 | Tone strokes against the track |
+  | `blue-300` | `blue-50` | `#8ec5ff` on `#eff6ff` | 1.67:1 | Decorative track against the panel |
 
   Recalculate these values when the tokens or the Tailwind version change.
 

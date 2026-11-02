@@ -63,7 +63,9 @@ export const warningSignalsSection: ListSection<Signal> = {
         },
         { text: "För ytterligare information kan du även ringa informationsnumret 113 13." },
       ],
-      pattern: { toneSeconds: 7, pauseSeconds: 14, repeatCount: 6 },
+      // The source states both 6 repeats and a 2-minute total; the duration is kept because the
+      // drawn timeline ends there, and 6 whole tones fit in it.
+      pattern: { toneSeconds: 7, pauseSeconds: 14, totalDurationSeconds: 120 },
       audioLinkUrl: `${MCF_AUDIO_BASE}/01-viktigt-meddelande.mp3`,
       source: MCF_OUTDOOR_WARNING,
       lastVerified: LAST_VERIFIED,
@@ -74,8 +76,12 @@ export const warningSignalsSection: ListSection<Signal> = {
       patternDescription:
         "Signalen hörs i 2 sekunder, följt av 2 sekunders paus. Mönstret upprepas under 1 minut.",
       whatToDo: [
-        { text: "Sök dig genast till närmaste skyddsrum, källare eller annan skyddad plats." },
-        { text: "Du får bättre skydd inomhus än utomhus. Välj helst ett rum utan fönster." },
+        {
+          text: "Bege dig omedelbart till det närmaste stället där du kan skydda dig: ett skyddsrum, en källare eller något annat utrymme som ger skydd.",
+        },
+        {
+          text: "Inne i en byggnad är du bättre skyddad än ute. Ett rum som saknar fönster skyddar bäst.",
+        },
       ],
       pattern: { toneSeconds: 2, pauseSeconds: 2, totalDurationSeconds: 60 },
       audioLinkUrl: `${MCF_AUDIO_BASE}/03-flyglarm.mp3`,
@@ -87,7 +93,7 @@ export const warningSignalsSection: ListSection<Signal> = {
       name: "Beredskapslarm",
       patternDescription:
         "Signalen hörs i 30 sekunder, följt av 15 sekunders paus. Mönstret upprepas under 5 minuter.",
-      meaning: "Signalen innebär att högsta beredskap gäller i hela landet.",
+      meaning: "Larmet visar att högsta beredskap råder i hela Sverige.",
       whatToDo: [
         { text: "Ta dig inomhus." },
         { text: "Följ informationen i Sveriges Radio P4.", link: P4_LINK },

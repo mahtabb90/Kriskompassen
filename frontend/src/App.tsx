@@ -14,6 +14,7 @@ import PhoneNumbersPage from "./pages/PhoneNumbersPage"
 import ShelterDetailPage from "./pages/ShelterDetailPage"
 import ShelterMapPage from "./pages/ShelterMapPage"
 import ShelterPage from "./pages/ShelterPage"
+import WarningSignalsPage from "./pages/WarningSignalsPage"
 
 /**
  * Registers public pages and the development-only storage test within the shared layout.
@@ -38,6 +39,7 @@ function App() {
               <Route path="/lugn-i-kris" element={<CalmInCrisisPage />} />
               <Route path="/min-info" element={<MyInfoPage />} />
               <Route path="/telefonnummer" element={<PhoneNumbersPage />} />
+              <Route path="/varningssignaler" element={<WarningSignalsPage />} />
               {import.meta.env.DEV && <Route path="/dev/indexeddb" element={<IndexedDbTest />} />}
               <Route path="*" element={<NotFoundPage />} />
             </Route>
