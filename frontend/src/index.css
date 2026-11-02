@@ -26,6 +26,11 @@ html {
   outline-offset: -4px;
 }
 
+/* The full-width trigger meets the viewport edges, so its focus outline stays inside it. */
+.mobile-menu-trigger:focus-visible {
+  outline-offset: -4px;
+}
+
 .pwa-update-slot {
   display: flow-root;
 }
