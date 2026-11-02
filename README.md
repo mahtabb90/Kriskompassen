@@ -107,6 +107,17 @@ detail page; that link also carries the map's exact position along, so its own "
 kartan" link returns to the same spot instead of resetting the view. Like every map here, it is
 online-only and its library is lazy-loaded, only fetched the first time a user actually opens it.
 
+"Kartan" also has its own "Hämta aktuell position" button, letting a user fetch their device's
+position right there and recenter the map and its nearest-shelter highlighting on it immediately
+— for that session only, without creating, changing or saving any address; the active address
+used everywhere else (header, Min info, Skyddsrum) stays untouched. It shares the same
+permission/timeout/unsupported-browser handling as Min info's own position button, which now uses
+the same "Hämta aktuell position" label. When the resulting fix is imprecise, a collapsed
+"Ungefärlig position" disclosure (also shared with Min info) explains the likely distance and
+what can improve it, rather than a standing block of text. A separate recenter control pans the
+view back to the current marker without changing zoom or fetching a new position, for when the
+user has panned away from it.
+
 A shelter's own detail page embeds a simpler map of just that one shelter's exact location (and
 the user's position too, when known), replacing an earlier external link to openstreetmap.org.
 Like "Kartan", it is online-only, lazy-loaded, and falls back to the "Plats" text field already

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useAddresses, type AddressContextValue } from "../context/addressContext"
@@ -8,6 +8,18 @@ import { useNearestShelters } from "../hooks/useNearestShelters"
 import { useSavedShelters } from "../hooks/useSavedShelters"
 import type { GeoPoint } from "../utils/distance"
 import ShelterMapPage from "./ShelterMapPage"
+
+function makePositionError(code: 1 | 2 | 3): GeolocationPositionError {
+  return {
+    code,
+    message: "error",
+    PERMISSION_DENIED: 1,
+    POSITION_UNAVAILABLE: 2,
+    TIMEOUT: 3,
+  } as GeolocationPositionError
+}
+
+const getCurrentPosition = vi.fn()
 
 vi.mock("../context/addressContext", () => ({ useAddresses: vi.fn() }))
 vi.mock("../context/modeContext", () => ({ useMode: vi.fn() }))
@@ -23,11 +35,13 @@ vi.mock("../components/AllSheltersMap", () => ({
     nearestShelters,
     savedShelterIds,
     initialView,
+    recenterToken,
   }: {
     origin: GeoPoint | null
     nearestShelters: { id: string }[]
     savedShelterIds: ReadonlySet<string>
     initialView?: { center: GeoPoint; zoom: number }
+    recenterToken?: number
   }) => (
     <div data-testid="all-shelters-map">
       <p>Ursprung: {origin ? `${origin.lat},${origin.lon}` : "inget"}</p>
@@ -39,6 +53,7 @@ vi.mock("../components/AllSheltersMap", () => ({
           ? `${initialView.center.lat},${initialView.center.lon},${initialView.zoom}`
           : "ingen"}
       </p>
+      <p>Omcentrera: {recenterToken}</p>
     </div>
   ),
 }))
@@ -62,6 +77,8 @@ function mockMode(mode: "online" | "offline") {
 }
 
 beforeEach(() => {
+  getCurrentPosition.mockReset()
+  vi.stubGlobal("navigator", { geolocation: { getCurrentPosition } })
   mockMode("online")
   vi.mocked(useAddresses).mockReturnValue({
     activeAddress: { lat: 59.3, lon: 18.0, municipality: "Solna kommun" },
@@ -84,6 +101,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  vi.unstubAllGlobals()
   vi.clearAllMocks()
 })
 
@@ -142,5 +160,118 @@ describe("ShelterMapPage", () => {
     renderPage({ notice: "Det skyddsrummet är inte sparat lokalt." })
 
     expect(screen.getByRole("alert").textContent).toBe("Det skyddsrummet är inte sparat lokalt.")
+  })
+
+  it("fetches the device position on click and overrides the active address as origin", async () => {
+    getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
+      onSuccess({ coords: { latitude: 61.0, longitude: 21.0 } } as GeolocationPosition)
+    })
+    renderPage()
+    await screen.findByTestId("all-shelters-map")
+    expect(screen.getByText("Ursprung: 59.3,18")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
+
+    expect(await screen.findByText("Ursprung: 61,21")).toBeTruthy()
+    expect(screen.getByText("Omcentrera: 1")).toBeTruthy()
+  })
+
+  it("fetches the device position on click when there is no active address yet", async () => {
+    vi.mocked(useAddresses).mockReturnValue({
+      activeAddress: null,
+      loading: false,
+    } as unknown as AddressContextValue)
+    getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
+      onSuccess({ coords: { latitude: 61.0, longitude: 21.0 } } as GeolocationPosition)
+    })
+    renderPage()
+    await screen.findByTestId("all-shelters-map")
+    expect(screen.getByText("Ursprung: inget")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
+
+    expect(await screen.findByText("Ursprung: 61,21")).toBeTruthy()
+  })
+
+  it("shows the imprecision toggle for an imprecise fix, wired to the fetched accuracy", async () => {
+    // The toggle's own open/close behavior and content are covered by LowAccuracyNotice.test.tsx
+    // - this only confirms the fetched accuracy actually reaches it.
+    getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
+      onSuccess({
+        coords: { latitude: 61.0, longitude: 21.0, accuracy: 6_200 },
+      } as GeolocationPosition)
+    })
+    renderPage()
+    await screen.findByTestId("all-shelters-map")
+
+    fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
+
+    const toggle = await screen.findByRole("button", { name: /Ungefärlig position/ })
+    fireEvent.click(toggle)
+    expect(screen.getByText(/ca ±6\.2 km/)).toBeTruthy()
+  })
+
+  it("shows no imprecision toggle for an accurate fix", async () => {
+    getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
+      onSuccess({
+        coords: { latitude: 61.0, longitude: 21.0, accuracy: 25 },
+      } as GeolocationPosition)
+    })
+    renderPage()
+    await screen.findByTestId("all-shelters-map")
+
+    fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
+    await screen.findByText("Ursprung: 61,21")
+
+    expect(screen.queryByText(/Ungefärlig position/)).toBeNull()
+  })
+
+  it("shows a loading state and disables the button while fetching the position", async () => {
+    let releasePosition: (() => void) | undefined
+    getCurrentPosition.mockImplementation((onSuccess: PositionCallback) => {
+      releasePosition = () =>
+        onSuccess({ coords: { latitude: 61.0, longitude: 21.0 } } as GeolocationPosition)
+    })
+    renderPage()
+    await screen.findByTestId("all-shelters-map")
+
+    fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
+
+    const button = await screen.findByRole("button", { name: "Hämtar position…" })
+    expect(button.hasAttribute("disabled")).toBe(true)
+
+    releasePosition?.()
+  })
+
+  it("shows the shared Swedish message when geolocation permission is denied", async () => {
+    getCurrentPosition.mockImplementation(
+      (_onSuccess: PositionCallback, onError: PositionErrorCallback) => {
+        onError(makePositionError(1))
+      }
+    )
+    renderPage()
+    await screen.findByTestId("all-shelters-map")
+
+    fireEvent.click(screen.getByRole("button", { name: "Hämta aktuell position" }))
+
+    expect(
+      await screen.findByText("Platsbehörighet nekades. Du kan ange din adress manuellt istället.")
+    ).toBeTruthy()
+    expect(screen.getByText("Ursprung: 59.3,18")).toBeTruthy()
+  })
+
+  it("disables the button and shows help text when geolocation is unsupported", async () => {
+    vi.stubGlobal("navigator", {})
+    renderPage()
+    await screen.findByTestId("all-shelters-map")
+
+    const button = screen.getByRole("button", { name: "Hämta aktuell position" })
+    expect(button.hasAttribute("disabled")).toBe(true)
+    expect(
+      screen.getByText(
+        "Den här webbläsaren stöder inte platshämtning. Ange adressen manuellt istället."
+      )
+    ).toBeTruthy()
+    expect(getCurrentPosition).not.toHaveBeenCalled()
   })
 })
