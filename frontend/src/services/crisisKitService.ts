@@ -50,6 +50,28 @@ function validateCategory(category: CrisisKitCategory): void {
 }
 
 /**
+ * Validates that a custom item uses a subcategory from the official list
+ * for its selected category, or the special "Övrigt" grouping.
+ */
+function validateSubcategory(category: CrisisKitCategory, subcategory: string | undefined): void {
+  if (subcategory === undefined) {
+    return
+  }
+
+  if (subcategory === "Övrigt") {
+    return
+  }
+
+  const isValidSubcategory = RECOMMENDED_CRISIS_KIT.some(
+    (item) => item.category === category && item.subcategory === subcategory
+  )
+
+  if (!isValidSubcategory) {
+    throw new Error("Välj en giltig underkategori.")
+  }
+}
+
+/**
  * Loads the emergency-kit checklist from IndexedDB.
  *
  * Recommended items remain visible even when the user has saved changes.
@@ -63,12 +85,13 @@ export async function getCrisisKitItems(): Promise<CrisisKitItem[]> {
     const savedItem = savedItemsById.get(item.id)
 
     if (!savedItem) {
-      return { ...item, isOwned: false }
+      return { ...item, isOwned: false, isNotNeeded: false }
     }
 
     return {
       ...item,
       isOwned: savedItem.isOwned,
+      isNotNeeded: savedItem.isNotNeeded ?? false,
       expirationDate: savedItem.expirationDate,
     }
   })
@@ -80,11 +103,12 @@ export async function getCrisisKitItems(): Promise<CrisisKitItem[]> {
 
 interface CrisisKitItemUpdate {
   isOwned?: boolean
+  isNotNeeded?: boolean
   expirationDate?: string | null
 }
 
 /**
- * Updates ownership and expiration date for a recommended item.
+ * Updates ownership, exclusion status, and expiration date for a recommended item.
  */
 export async function updateCrisisKitItem(id: string, updates: CrisisKitItemUpdate): Promise<void> {
   const recommendedItem = RECOMMENDED_CRISIS_KIT.find((item) => item.id === id)
@@ -93,7 +117,11 @@ export async function updateCrisisKitItem(id: string, updates: CrisisKitItemUpda
     throw new Error("Det gick inte att hitta den rekommenderade saken.")
   }
 
-  if (updates.isOwned === undefined && updates.expirationDate === undefined) {
+  if (
+    updates.isOwned === undefined &&
+    updates.isNotNeeded === undefined &&
+    updates.expirationDate === undefined
+  ) {
     throw new Error("Ingen ändring att spara.")
   }
 
@@ -102,10 +130,20 @@ export async function updateCrisisKitItem(id: string, updates: CrisisKitItemUpda
 
   const savedItem = await db.crisisKitItems.get(id)
 
+  const isNotNeeded =
+    updates.isNotNeeded ?? (updates.isOwned === true ? false : (savedItem?.isNotNeeded ?? false))
+
+  const isOwned = isNotNeeded
+    ? false
+    : updates.isNotNeeded === false
+      ? false
+      : (updates.isOwned ?? savedItem?.isOwned ?? false)
+
   const updatedItem: CrisisKitItem = {
     ...recommendedItem,
-    isOwned: savedItem?.isOwned ?? false,
-    ...(updates.isOwned !== undefined ? { isOwned: updates.isOwned } : {}),
+    isOwned,
+    isNotNeeded,
+    ...(savedItem?.expirationDate ? { expirationDate: savedItem.expirationDate } : {}),
   }
 
   if (updates.expirationDate !== undefined) {
@@ -143,17 +181,20 @@ export async function updateCustomCrisisKitItemOwnership(
  */
 export async function addCustomCrisisKitItem(
   name: string,
-  category: CrisisKitCategory
+  category: CrisisKitCategory,
+  subcategory?: string
 ): Promise<CrisisKitItem> {
+  validateCategory(category)
+  validateSubcategory(category, subcategory)
+
   const item: CrisisKitItem = {
     id: crypto.randomUUID(),
     name: validateName(name),
     category,
+    ...(subcategory ? { subcategory } : {}),
     isOwned: false,
     isCustom: true,
   }
-
-  validateCategory(category)
 
   await db.crisisKitItems.add(item)
   return item
@@ -166,7 +207,8 @@ export async function updateCustomCrisisKitItem(
   id: string,
   name: string,
   category: CrisisKitCategory,
-  expirationDate?: string | null
+  expirationDate?: string | null,
+  subcategory?: string
 ): Promise<void> {
   const validatedName = validateName(name)
   validateCategory(category)
@@ -177,10 +219,20 @@ export async function updateCustomCrisisKitItem(
     throw new Error("Det gick inte att hitta den egna saken.")
   }
 
+  const nextSubcategory =
+    subcategory !== undefined
+      ? subcategory
+      : savedItem.category === category
+        ? savedItem.subcategory
+        : undefined
+
+  validateSubcategory(category, nextSubcategory)
+
   const updatedItem: CrisisKitItem = {
     ...savedItem,
     name: validatedName,
     category,
+    ...(nextSubcategory ? { subcategory: nextSubcategory } : { subcategory: undefined }),
   }
 
   if (expirationDate !== undefined) {

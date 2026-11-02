@@ -13,6 +13,7 @@ const baseItem: CrisisKitItemType = {
 }
 
 const onOwnershipChange = vi.fn().mockResolvedValue(undefined)
+const onNotNeededChange = vi.fn().mockResolvedValue(undefined)
 const onExpirationDateSave = vi.fn().mockResolvedValue(undefined)
 const onCustomItemSave = vi.fn().mockResolvedValue(undefined)
 const onCustomItemDelete = vi.fn().mockResolvedValue(undefined)
@@ -26,6 +27,7 @@ afterEach(() => {
 
 beforeEach(() => {
   onOwnershipChange.mockResolvedValue(undefined)
+  onNotNeededChange.mockResolvedValue(undefined)
   onExpirationDateSave.mockResolvedValue(undefined)
   onCustomItemSave.mockResolvedValue(undefined)
   onCustomItemDelete.mockResolvedValue(undefined)
@@ -37,6 +39,7 @@ function renderItem(item: CrisisKitItemType, headingLevel: 3 | 4 = 3) {
       item={item}
       headingLevel={headingLevel}
       onOwnershipChange={onOwnershipChange}
+      onNotNeededChange={onNotNeededChange}
       onExpirationDateSave={onExpirationDateSave}
       onCustomItemSave={onCustomItemSave}
       onCustomItemDelete={onCustomItemDelete}
@@ -52,6 +55,21 @@ describe("CrisisKitItem heading level", () => {
     cleanup()
     renderItem(baseItem, 4)
     expect(screen.getByRole("heading", { level: 4, name: "Konserver" })).toBeTruthy()
+  })
+})
+
+describe("CrisisKitItem custom item label", () => {
+  it("shows the user-added icon and label for custom items", () => {
+    const { container } = renderItem({ ...baseItem, isCustom: true })
+
+    expect(screen.getByText("Tillagd av användaren")).toBeTruthy()
+    expect(container.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
+  })
+
+  it("does not show the user-added label for recommended items", () => {
+    renderItem(baseItem)
+
+    expect(screen.queryByText("Tillagd av användaren")).toBeNull()
   })
 })
 
@@ -128,10 +146,66 @@ describe("CrisisKitItem expiration dates", () => {
 })
 
 describe("CrisisKitItem interactions", () => {
+  it("asks for confirmation before marking an item as not needed", () => {
+    renderItem(baseItem)
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Behövs inte" }))
+
+    const dialog = screen.getByRole("dialog")
+
+    expect(
+      within(dialog).getByText("Vill du markera saken som något du inte behöver?")
+    ).toBeTruthy()
+    expect(onNotNeededChange).not.toHaveBeenCalled()
+    expect(within(dialog).getByRole("button", { name: "Ja, markera som Behövs inte" })).toBeTruthy()
+  })
+
+  it("does not mark an item as not needed when confirmation is canceled", () => {
+    renderItem(baseItem)
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Behövs inte" }))
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Avbryt" }))
+
+    expect(onNotNeededChange).not.toHaveBeenCalled()
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("marks an item as not needed after confirmation", async () => {
+    renderItem(baseItem)
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Behövs inte" }))
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Ja, markera som Behövs inte",
+      })
+    )
+
+    await waitFor(() => {
+      expect(onNotNeededChange).toHaveBeenCalledWith(baseItem, true)
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull()
+    })
+  })
+
+  it("restores an item marked as not needed", async () => {
+    const notNeededItem = { ...baseItem, isNotNeeded: true }
+    renderItem(notNeededItem)
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Markerad: Behövs inte" }))
+
+    await waitFor(() => {
+      expect(onNotNeededChange).toHaveBeenCalledWith(notNeededItem, false)
+    })
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
   it("calls the ownership callback when an item without a date is marked as missing", async () => {
     renderItem(baseItem)
 
-    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(screen.getByRole("checkbox", { name: "Jag har den här saken" }))
 
     await waitFor(() => {
       expect(onOwnershipChange).toHaveBeenCalledWith(baseItem, false)
@@ -144,7 +218,7 @@ describe("CrisisKitItem interactions", () => {
     const itemWithDate = { ...baseItem, expirationDate: "2030-06-15" }
     renderItem(itemWithDate)
 
-    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(screen.getByRole("checkbox", { name: "Jag har den här saken" }))
 
     const dialog = screen.getByRole("dialog")
     expect(within(dialog).getByText("Vill du markera varan som saknas?")).toBeTruthy()
@@ -158,7 +232,7 @@ describe("CrisisKitItem interactions", () => {
     const itemWithDate = { ...baseItem, expirationDate: "2030-06-15" }
     renderItem(itemWithDate)
 
-    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(screen.getByRole("checkbox", { name: "Jag har den här saken" }))
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Avbryt" }))
 
     expect(onOwnershipChange).not.toHaveBeenCalled()
@@ -170,7 +244,7 @@ describe("CrisisKitItem interactions", () => {
     const itemWithDate = { ...baseItem, expirationDate: "2030-06-15" }
     renderItem(itemWithDate)
 
-    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(screen.getByRole("checkbox", { name: "Jag har den här saken" }))
     fireEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: "Ja, markera som saknas",
@@ -230,13 +304,14 @@ describe("CrisisKitItem interactions", () => {
     ).toBeTruthy()
   })
 
-  it("opens the editor with the current name and category", () => {
+  it("opens the editor with the current name", () => {
     renderItem({ ...baseItem, isCustom: true })
 
     fireEvent.click(screen.getByRole("button", { name: "Redigera" }))
 
     expect((screen.getByLabelText("Namn") as HTMLInputElement).value).toBe("Konserver")
-    expect((screen.getByLabelText("Kategori") as HTMLSelectElement).value).toBe("Mat")
+    expect(screen.queryByLabelText("Kategori")).toBeNull()
+    expect(screen.queryByLabelText("Underkategori")).toBeNull()
   })
 
   it("saves changes to a custom item", async () => {
@@ -247,13 +322,10 @@ describe("CrisisKitItem interactions", () => {
     fireEvent.change(screen.getByLabelText("Namn"), {
       target: { value: "Ris" },
     })
-    fireEvent.change(screen.getByLabelText("Kategori"), {
-      target: { value: "Övrigt" },
-    })
     fireEvent.click(screen.getByRole("button", { name: "Spara ändringar" }))
 
     await waitFor(() => {
-      expect(onCustomItemSave).toHaveBeenCalledWith(customItem, "Ris", "Övrigt")
+      expect(onCustomItemSave).toHaveBeenCalledWith(customItem, "Ris", "Mat")
     })
 
     expect(screen.queryByRole("button", { name: "Spara ändringar" })).toBeNull()
@@ -286,6 +358,35 @@ describe("CrisisKitItem interactions", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("Storage error")
     expect(screen.getByLabelText("Namn")).toBeTruthy()
     expect(screen.getByRole("button", { name: "Spara ändringar" })).toBeTruthy()
+  })
+
+  it("shows an excluded item as deactivated and disables ownership changes", () => {
+    const excludedItem = {
+      ...baseItem,
+      isOwned: false,
+      isNotNeeded: true,
+    }
+
+    renderItem(excludedItem)
+
+    expect(screen.getByText("Deaktiverad")).toBeTruthy()
+    expect(screen.queryByText("Saknas")).toBeNull()
+
+    expect(
+      (
+        screen.getByRole("checkbox", {
+          name: "Jag har den här saken",
+        }) as HTMLInputElement
+      ).disabled
+    ).toBe(true)
+
+    expect(
+      (
+        screen.getByRole("checkbox", {
+          name: "Markerad: Behövs inte",
+        }) as HTMLInputElement
+      ).disabled
+    ).toBe(false)
   })
 })
 
