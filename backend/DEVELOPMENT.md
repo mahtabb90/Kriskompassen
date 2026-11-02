@@ -18,6 +18,7 @@ rendering.
 | Preparedness articles | Manually maintained summaries attributed to Krisinformation.se | File-backed article API; no automatic source fetching |
 | Civil-defense shelters | Myndigheten för civilt försvar (MCF), open OGC API Features | File-backed snapshot API and browser-local offline cache; refreshed by a manual script, no automatic daily sync yet |
 | General crisis news | Krisinformation.se news API v3 | Chosen source for future work; no news fetching service or route is implemented |
+| Phone numbers and outdoor warning signals (krisinfo) | Krisinformation.se and Myndigheten för civilt försvar (MCF) | Static TypeScript content bundled with the frontend and precached by the service worker; no backend API, fetching or IndexedDB copy. See [Frontend krisinfo content](#frontend-krisinfo-content) |
 
 Do not feed news records into the VMA validator or silently fall back to news if VMA fetching fails.
 The former assumption that Krisinformation VMA records have the news format is no longer used.
@@ -36,6 +37,8 @@ storage or the account-free product decision.
 - **Curated content:** `src/data/crisis.json` is shipped with the backend and read on demand.
   Content updates follow the file-review and deployment process below; runtime requests never
   write to this file.
+- **Frontend krisinfo content:** phone numbers and warning signals are bundled with the
+  frontend, not the backend. See [Frontend krisinfo content](#frontend-krisinfo-content).
 - **Shelter lookups:** `GET /api/v1/shelters/nearest?lat=&lon=` ranks the bundled
   `src/data/shelters.json` snapshot by distance and returns the five nearest as
   `{shelters, source, bboxRadiusMetersUsed}`, without contacting MCF. `GET
@@ -162,6 +165,60 @@ summarisation.
 The Python runtime includes project files in its function bundle; see
 [Vercel's Python bundling documentation](https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled).
 Do not add runtime writes to this deployment file as a substitute for durable database storage.
+
+## Frontend krisinfo content
+
+This section covers content that lives in the frontend, not in the backend. Phone numbers and
+the outdoor warning signals ("Hesa Fredrik") are static TypeScript in
+`frontend/src/content/krisinfo/`. They are separate from the preparedness articles above, which
+the backend serves from `src/data/crisis.json`.
+
+- **Model:** the types are in `frontend/src/types/krisinfo.ts`. Every section and every item
+  carries `source` (name and `https` URL) and `lastVerified` (`YYYY-MM-DD`).
+- **Files:** `phones.ts` and `signals.ts` hold the content; `index.ts` maps each section ID to
+  its content.
+- **Reading:** pages call `useKrisinfo(sectionId)`, which reads through `getKrisinfoSection` in
+  `frontend/src/services/krisinfoService.ts`. Do not import the content files directly, so the
+  source can later move to IndexedDB or a backend without changing pages.
+- **Offline:** the content ships in the JavaScript bundle, which the service worker precaches.
+  It needs no network request, IndexedDB copy or `vite.config.ts` change, and it is shown in
+  both online mode and "Sparad information" mode.
+- **Text and links:** texts are written in our own words based on the source, in short and
+  simple Swedish, and are rendered as plain text. Facts and meaning must match the source:
+  numbers, times, counts, actions, terms (for example "krigsplaceringsorder") and what a signal
+  means. No advice beyond the source is added. `source` and `meaningSource` therefore mean
+  "based on", not "quoted from". `meaning` is absent and `whatToDo` empty where no official
+  source states anything. `meaningSource` names the page when a meaning is based on another
+  official source than the post's `source`. Action links only complement the step
+  text, which must stay readable without them, because links need internet while, for example,
+  radio via FM works without it. The P4 link points to
+  [Sveriges Radio's channel list](https://www.sverigesradio.se/kanaler), because P4 is a set of
+  local channels without one national page.
+- **Signal recordings:** `audioLinkUrl` is an external link to MCF's MP3 file, which the browser
+  opens in its own player. The app does not bundle, play or cache audio, and Workbox is not
+  configured for `.mp3`.
+
+### Adding or changing krisinfo content
+
+1. Open the post's source page and write the text in your own words. Keep every fact and the
+   meaning as the source states them, and add no advice of your own.
+2. Set `lastVerified` to the date someone compared the post's facts and meaning with its source.
+   Whoever changes a post makes that comparison and updates the date in the same change.
+   `lastVerified` in the content files is the only record of when a post was verified.
+3. Update `frontend/src/content/krisinfo/krisinfo.test.ts` when a fact changes. These content
+   tests pin facts (phone numbers, signal timings, links, MP3 links, sources and `lastVerified`),
+   not wording, so a rewording alone needs no test change.
+4. To add a section, add its ID and type to `KrisinfoSections` and its content to
+   `krisinfoSections` in `index.ts`. The section's `id` must equal its key.
+5. Run the frontend checks: `npm run lint`, `npm run format:check`, `npm run test` and
+   `npm run build`.
+
+### How content updates reach users
+
+A content change reaches users only through a new frontend publication. An installed app then
+shows the existing app update notice, and the new content appears first when the user selects
+**Uppdatera appen**. Until then the app shows the previous edition, also offline. There is no
+local copy in IndexedDB that could become outdated, and saved user data is not affected.
 
 ## Civil-defense shelters
 
