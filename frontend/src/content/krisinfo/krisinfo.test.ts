@@ -8,6 +8,10 @@ import { krisinfoSections } from "./index"
 const KRISINFORMATION_PHONES_URL =
   "https://www.krisinformation.se/detta-gor-samhallet/viktiga-telefonnummer/"
 const VARDGUIDEN_1177_URL = "https://www.1177.se/om-1177/nar-du-ringer-1177/nar-du-ringer-1177/"
+const SOS_ALARM_112_URL =
+  "https://www.sosalarm.se/om-oss/vanliga-fragor-och-svar/for-privatpersoner/112-bra-att-veta-innan-du-ringer/"
+const BRIS_URL = "https://www.bris.se/for-barn-och-unga/prata-med-oss/"
+const TELETAL_URL = "https://www.teletal.se/"
 const MCF_OUTDOOR_WARNING_URL =
   "https://www.mcf.se/sv/rad-till-privatpersoner/skyddsrum-utrymning-och-varningssystem/viktigt-meddelande-till-allmanheten-vma-och-andra-varningar/utomhusvarning--hesa-fredrik/"
 const KRISINFORMATION_VMA_URL =
@@ -47,10 +51,12 @@ describe("krisinfo content", () => {
     const krisinformation = { name: "Krisinformation.se", url: KRISINFORMATION_PHONES_URL }
     expect(phoneSection.source).toEqual(krisinformation)
     expect(Object.fromEntries(phones.map((item) => [item.number, item.source]))).toEqual({
-      "112": krisinformation,
+      "112": { name: "SOS Alarm", url: SOS_ALARM_112_URL },
       "1177": { name: "1177.se", url: VARDGUIDEN_1177_URL },
       "113 13": krisinformation,
       "114 14": krisinformation,
+      "116 111": { name: "Bris", url: BRIS_URL },
+      "020-22 11 44": { name: "Teletal", url: TELETAL_URL },
     })
     for (const post of [signalSection, ...signals]) {
       expect(post.source).toEqual({
@@ -88,8 +94,15 @@ describe("krisinfo content", () => {
     }
   })
 
-  it("lists the four phone numbers with 112 as the only emergency number", () => {
-    expect(phones.map((item) => item.number)).toEqual(["112", "1177", "113 13", "114 14"])
+  it("lists the six phone numbers in order with 112 as the only emergency number", () => {
+    expect(phones.map((item) => item.number)).toEqual([
+      "112",
+      "1177",
+      "113 13",
+      "114 14",
+      "116 111",
+      "020-22 11 44",
+    ])
     expect(phones.filter((item) => item.isEmergency).map((item) => item.number)).toEqual(["112"])
   })
 
@@ -103,6 +116,8 @@ describe("krisinfo content", () => {
       "1177": "+46 771-11 77 00",
       "113 13": "+46 77 33 113 13",
       "114 14": "+46 77 114 14 00",
+      "116 111": undefined,
+      "020-22 11 44": undefined,
     })
     for (const item of phones) expect(item.description).not.toMatch(/\+46/)
   })

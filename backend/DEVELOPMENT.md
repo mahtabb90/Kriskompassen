@@ -18,7 +18,7 @@ rendering.
 | Preparedness articles | Manually maintained summaries attributed to Krisinformation.se | File-backed article API; no automatic source fetching |
 | Civil-defense shelters | Myndigheten för civilt försvar (MCF), open OGC API Features | File-backed snapshot API and browser-local offline cache; refreshed by a manual script, no automatic daily sync yet |
 | General crisis news | Krisinformation.se news API v3 | Chosen source for future work; no news fetching service or route is implemented |
-| Phone numbers and outdoor warning signals (krisinfo) | Krisinformation.se, 1177.se (the 1177 post) and Myndigheten för civilt försvar (MCF) | Static TypeScript content bundled with the frontend and precached by the service worker; no backend API, fetching or IndexedDB copy. See [Frontend krisinfo content](#frontend-krisinfo-content) |
+| Phone numbers and outdoor warning signals (krisinfo) | Krisinformation.se, with per-post sources SOS Alarm (112), 1177.se (1177), Bris (116 111) and Teletal (020-22 11 44), and Myndigheten för civilt försvar (MCF) | Static TypeScript content bundled with the frontend and precached by the service worker; no backend API, fetching or IndexedDB copy. See [Frontend krisinfo content](#frontend-krisinfo-content) |
 
 Do not feed news records into the VMA validator or silently fall back to news if VMA fetching fails.
 The former assumption that Krisinformation VMA records have the news format is no longer used.
@@ -179,9 +179,13 @@ the backend serves from `src/data/crisis.json`.
   its content.
 - **Phone numbers:** `number` and `abroadNumber` keep the source's spacing for display.
   `abroadNumber` is the source's international number for calls from abroad or from a phone
-  registered outside Sweden; it is absent when the source gives none. Phone numbers follow the
-  order of the section's source page. A post whose facts come from another page names that page
-  as its own `source`; for example, the 1177 post is based on 1177.se.
+  registered outside Sweden; it is absent when the source gives none. 112, 1177, 113 13 and
+  114 14 follow the order of the section's source page (Krisinformation.se); Bris (116 111) and
+  Teletal (020-22 11 44), which that page does not list with a number, follow them. Each post
+  names the page its facts come from as its own `source`: SOS Alarm for 112, 1177.se for 1177,
+  Krisinformation.se for 113 13 and 114 14, Bris for 116 111 and Teletal for 020-22 11 44.
+  Service details that change, such as Teletal's opening hours, are text only and are not
+  pinned by the tests; check them against the source whenever the post is verified.
 - **Reading:** pages call `useKrisinfo(sectionId)`, which reads through `getKrisinfoSection` in
   `frontend/src/services/krisinfoService.ts`. Do not import the content files directly, so the
   source can later move to IndexedDB or a backend without changing pages.

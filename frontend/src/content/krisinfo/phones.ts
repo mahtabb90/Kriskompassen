@@ -10,31 +10,48 @@ const VARDGUIDEN_1177: ContentSource = {
   url: "https://www.1177.se/om-1177/nar-du-ringer-1177/nar-du-ringer-1177/",
 }
 
+const SOS_ALARM_112: ContentSource = {
+  name: "SOS Alarm",
+  url: "https://www.sosalarm.se/om-oss/vanliga-fragor-och-svar/for-privatpersoner/112-bra-att-veta-innan-du-ringer/",
+}
+
+const BRIS: ContentSource = {
+  name: "Bris",
+  url: "https://www.bris.se/for-barn-och-unga/prata-med-oss/",
+}
+
+const TELETAL: ContentSource = {
+  name: "Teletal",
+  url: "https://www.teletal.se/",
+}
+
 const LAST_VERIFIED = "2026-11-02"
 
 /**
- * Phone numbers for help and information, in the order of the section's source page.
+ * Phone numbers for help and information.
  *
- * Each post names the page it is based on; the texts are written in own words based on that
- * source, and numbers, facts and meaning match it.
+ * 112, 1177, 113 13 and 114 14 follow the order of the section's source page; Bris and Teletal,
+ * which that page does not list with a number, follow them. Each post names the page it is
+ * based on; the texts are written in own words based on that source, and numbers, facts and
+ * meaning match it.
  */
 export const phoneNumbersSection: ListSection<Phone> = {
   id: "phone-numbers",
   title: "Viktiga telefonnummer",
-  summary: "Här hittar du viktiga telefonnummer för hjälp och rådgivning.",
+  summary:
+    "Numren nedan går till akut hjälp, vårdråd, polisen, information vid kriser och stöd. Har du en mobil kan du ringa direkt från sidan.",
   points: [],
   source: KRISINFORMATION_PHONES,
   lastVerified: LAST_VERIFIED,
   items: [
     {
       number: "112",
-      label: "Nödsituationer",
+      label: "Larmnummer vid nöd",
       description:
-        "Via 112 kan du även få kontakt med flygräddning, sjöräddning och fjällräddning. Du kan också nå jourhavande präst och Giftinformationscentralen.",
-      whenToUse:
-        "Vid en nödsituation ska du ringa 112. Det kan handla om akut sjukdom, en brand eller ett brott som pågår.",
+        "Samtalet kopplas vidare till polis, ambulans eller räddningstjänst. Ett vanligt sms till 112 kommer inte fram, så ring.",
+      whenToUse: "Är det bråttom och står någons liv, egendom eller miljön på spel, ringer du 112.",
       isEmergency: true,
-      source: KRISINFORMATION_PHONES,
+      source: SOS_ALARM_112,
       lastVerified: LAST_VERIFIED,
     },
     {
@@ -68,6 +85,28 @@ export const phoneNumbersSection: ListSection<Phone> = {
       isEmergency: false,
       abroadNumber: "+46 77 114 14 00",
       source: KRISINFORMATION_PHONES,
+      lastVerified: LAST_VERIFIED,
+    },
+    {
+      number: "116 111",
+      label: "Bris – samtal för dig under 18",
+      description:
+        "Du kan vara anonym, och samtalet kostar inget och syns inte på telefonräkningen. Vill du hellre skriva går det att sms:a samma nummer.",
+      whenToUse:
+        "Är du under 18 och behöver någon att prata med kan du ringa 116 111, vilken tid som helst.",
+      isEmergency: false,
+      source: BRIS,
+      lastVerified: LAST_VERIFIED,
+    },
+    {
+      number: "020-22 11 44",
+      label: "Teletal – hjälp medan du ringer",
+      description:
+        "Tjänsten kostar inget och du behöver varken ansöka eller boka. Den är öppen 07.30–20.00 på vardagar och 12.00–16.00 på helger.",
+      whenToUse:
+        "Har du svårt att klara ett telefonsamtal på egen hand kan du ringa 020-22 11 44 och få hjälp under samtalet.",
+      isEmergency: false,
+      source: TELETAL,
       lastVerified: LAST_VERIFIED,
     },
   ],
