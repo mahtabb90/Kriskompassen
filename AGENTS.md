@@ -329,6 +329,11 @@ Frontend conventions visible in the existing code:
     `"none"`, so the install button and instructions never show together.
   - `InstallInstructions` is a normal-flow card in `main`. Closing it hides it for 30 days through
     `services/installInstructionsDismissal.ts`. Dismissal never affects the install button.
+- `InstallHelpSection` provides permanent, on-demand help after the address form on `/min-info`.
+  Its native `details` starts closed on each mount and shows instructions for desktop Chrome,
+  iPhone/iPad (including Chrome) and macOS Safari. It does not read platform detection, install
+  offers or dismissal storage, and performs no I/O. `InstallInstructionsContent` shares the typed
+  platform-specific text with the automatic card; automatic offer and dismissal rules stay unchanged.
 - PWA generation uses `generateSW`, `registerType: "prompt"`, `injectRegister: false`,
   `skipWaiting: false` and `clientsClaim: true`, retaining `/sw.js`, scope `/` and manifest identity.
   Bootstrap starts registration only in secure production builds. The updater never accesses
@@ -480,6 +485,10 @@ Decided tooling:
 - Install instruction tests cover platform detection as a pure function, dismissal storage failures
   and expiry, `useInstallState` and `InstallInstructions`. Real Safari, iOS and private-mode
   behaviour requires manual device checks.
+- Permanent installation-help tests cover the native disclosure, all instruction variants, a closed
+  state on remount and independence from storage. The My info regression covers a dismissed automatic
+  instruction without a browser install offer; the service also accepts a fresh offer after
+  `appinstalled`. Native keyboard disclosure and actual reinstallation require browser/device checks.
 - The backend pytest suite runs in CI whenever `backend/` changes (see §4) and must not need network access or environment variables.
 - Backend CORS tests provide their own JSON origin environment variable and mock upstream transport. They check that approved frontend origins can read successful feeds and 502/504 errors, and that unlisted origins or unsupported methods do not pass preflight.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.

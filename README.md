@@ -247,6 +247,10 @@ own install feature:
 On iPhone, iPad and in Safari on macOS, where no install button is possible, the app shows a short
 instruction instead. It can be closed and then stays hidden for 30 days.
 
+If the install button or instruction is missing, open **Min info → Installera appen → Visa
+installationshjälp**. This help is always available and includes steps for Chrome on a computer,
+iPhone/iPad (including Chrome) and Safari on macOS, even after the automatic instruction was closed.
+
 The installed app opens as KrisKompassen in its own window, without browser controls. It currently
 uses the KrisKompassen logo as its icon; a maskable icon variant, which lets Android adapt the icon
 to different shapes, is still pending.
