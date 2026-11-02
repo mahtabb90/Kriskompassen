@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AddressProvider } from "../context/AddressProvider"
@@ -115,7 +115,9 @@ describe("routed page structure", () => {
       return crisisResponse(input)
     })
     mountLayout("/")
-    fireEvent.click(screen.getByRole("link", { name: "Krisinformation" }))
+    // The home page also has a Krisinformation card, so use the primary navigation link.
+    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
+    fireEvent.click(within(navigation).getByRole("link", { name: "Krisinformation" }))
     fireEvent.click(await screen.findByRole("link", { name: /^Mat i kris/ }))
     const heading = screen.getByRole("heading", { level: 1 })
     expect(document.activeElement).toBe(heading)

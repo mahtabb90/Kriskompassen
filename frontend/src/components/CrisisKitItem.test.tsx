@@ -66,10 +66,10 @@ describe("CrisisKitItem custom item label", () => {
     expect(container.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
   })
 
-  it("does not show the user-added label for recommended items", () => {
+  it("hides the user-added label visually (but keeps its space reserved) for recommended items", () => {
     renderItem(baseItem)
 
-    expect(screen.queryByText("Tillagd av användaren")).toBeNull()
+    expect(screen.getByText("Tillagd av användaren").className).toContain("invisible")
   })
 })
 
@@ -369,8 +369,8 @@ describe("CrisisKitItem interactions", () => {
 
     renderItem(excludedItem)
 
-    expect(screen.getByText("Deaktiverad")).toBeTruthy()
     expect(screen.queryByText("Saknas")).toBeNull()
+    expect(screen.queryByText("Deaktiverad – räknas inte med i beredskapsöversikten.")).toBeNull()
 
     expect(
       (
