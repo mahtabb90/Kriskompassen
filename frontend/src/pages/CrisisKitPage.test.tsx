@@ -259,7 +259,7 @@ describe("CrisisKitPage ownership changes", () => {
     vi.mocked(getCrisisKitItems).mockResolvedValue([excludedItem])
     mountPage()
 
-    expect(await screen.findByText("Deaktiverad")).toBeTruthy()
+    expect(await screen.findByText("Inaktiverad")).toBeTruthy()
     expect(screen.queryByText("Saknas")).toBeNull()
 
     expect(
