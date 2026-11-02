@@ -26,6 +26,18 @@ function getTodayDateString(): string {
   return `${year}-${month}-${day}`
 }
 
+function CardAccent() {
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute inset-x-0 top-0 flex h-1.5 overflow-hidden rounded-t-2xl"
+    >
+      <span className="h-full flex-1 bg-blue-900" />
+      <span className="h-full w-8 bg-amber-400" />
+    </span>
+  )
+}
+
 function CrisisKitPage() {
   const [items, setItems] = useState<CrisisKitItemType[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -229,8 +241,9 @@ function CrisisKitPage() {
       {totalItemsToReview > 0 && (
         <section
           aria-label="Utgångsdatum att se över"
-          className="mt-6 rounded-2xl border border-blue-200/80 bg-white p-5 shadow-sm sm:p-6"
+          className="relative mt-6 overflow-hidden rounded-2xl border border-blue-200/80 bg-white p-5 pt-7 shadow-sm sm:p-6 sm:pt-8"
         >
+          <CardAccent />
           <div className="flex items-center gap-4">
             <span
               aria-hidden="true"
@@ -501,10 +514,7 @@ function CrisisKitPage() {
         onSubmit={handleAddItem}
         className="relative mt-6 overflow-hidden rounded-2xl border border-blue-200/80 bg-white p-6 pt-7 shadow-sm"
       >
-        <span aria-hidden="true" className="absolute inset-x-0 top-0 flex h-1.5">
-          <span className="h-full flex-1 bg-blue-900" />
-          <span className="h-full w-8 bg-amber-400" />
-        </span>
+        <CardAccent />
         <h2 className="text-xl font-semibold text-blue-900">Lägg till en egen sak</h2>
 
         <div className="mt-4">
@@ -633,8 +643,9 @@ function CrisisKitPage() {
                       subcategoryDetails.open = subcategoryDetails.dataset.hasActiveItems === "true"
                     })
                 }}
-                className="group rounded-2xl border border-blue-200/80 bg-white shadow-sm"
+                className="relative group overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm"
               >
+                <CardAccent />
                 <summary className="relative flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl p-4 pt-5 font-semibold text-blue-900 focus-visible:outline-3 focus-visible:outline-blue-900 focus-visible:outline-offset-4 sm:p-5 sm:pt-6">
                   <span
                     aria-hidden="true"
@@ -707,8 +718,9 @@ function CrisisKitPage() {
 
       <section
         aria-labelledby="crisis-kit-sources-heading"
-        className="mt-10 rounded-2xl border border-blue-200/80 bg-white p-6 shadow-sm sm:p-8"
+        className="relative mt-10 overflow-hidden rounded-2xl border border-blue-200/80 bg-white p-6 pt-8 shadow-sm sm:p-8 sm:pt-10"
       >
+        <CardAccent />
         <h2 id="crisis-kit-sources-heading" className="text-lg font-semibold text-blue-900">
           Källor
         </h2>
