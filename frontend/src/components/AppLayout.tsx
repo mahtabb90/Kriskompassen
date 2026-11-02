@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom"
 import { useVmaBanner } from "../hooks/useVmaBanner"
 import { usePwaUpdate } from "../hooks/usePwaUpdate"
 import BottomNavigation from "./BottomNavigation"
+import Footer from "./Footer"
 import Header from "./Header"
 import InstallInstructions from "./InstallInstructions"
 import MobileMenu from "./MobileMenu"
@@ -18,8 +19,9 @@ import type { VmaMessage } from "../types/vma"
  * the document title. Path changes focus that heading and scroll only as needed to
  * reveal it; initial loads and hash-only changes preserve browser focus. This is the only route
  * focus owner; the mobile menu closes without focusing anything when a route is selected. The
- * measured mobile footer, VMA and app-update heights reserve scroll space around focused
- * content, and the footer reserves none from 48rem upwards. VMA requests and the update
+ * measured mobile menu bar, VMA and app-update heights reserve scroll space around focused
+ * content, and the bar reserves none from 48rem upwards. The shared `Footer` follows `main`
+ * and is followed by a spacer for the menu bar's reserve, so it ends visibly above the bar. VMA requests and the update
  * subscription belong to this persistent layout, not individual routes.
  * Resize notifications defer measurement to avoid resizing observed elements during delivery.
  * A selected CAP snapshot, opened from the banner headline or its message list, stays readable
@@ -209,7 +211,7 @@ function AppLayout() {
   return (
     <div
       className={
-        "min-h-dvh bg-[#D7E2EF] text-slate-800 " +
+        "flex min-h-dvh flex-col bg-[#D7E2EF] text-slate-800 " +
         "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
       }
     >
@@ -237,8 +239,8 @@ function AppLayout() {
         tabIndex={-1}
         aria-labelledby="page-heading"
         className={
-          "mx-auto w-full max-w-4xl scroll-mt-4 px-4 pt-8 wrap-anywhere " +
-          "pb-[calc(var(--navigation-height,0px)+2rem)] sm:px-6 sm:pt-10"
+          "mx-auto w-full max-w-4xl flex-1 scroll-mt-4 px-4 pt-8 pb-8 wrap-anywhere " +
+          "sm:px-6 sm:pt-10"
         }
       >
         <div ref={updateRef} className="pwa-update-slot">
@@ -247,6 +249,7 @@ function AppLayout() {
         <InstallInstructions />
         <Outlet />
       </main>
+      <Footer />
       {openedVma ? (
         <VmaMessageDialog
           key={openedVma.message.id}

@@ -103,6 +103,25 @@ describe("routed page structure", () => {
     expect(screen.getAllByRole("navigation", { name: "Huvudnavigation" })).toHaveLength(1)
   })
 
+  it.each([
+    "/",
+    "/crisis",
+    "/crisis-kit",
+    "/crisis/food-in-crisis",
+    "/lugn-i-kris",
+    "/no-such-page",
+  ])("%s has one footer landmark after main inside the shared layout", async (path) => {
+    mountLayout(path)
+
+    await screen.findAllByRole("heading", { level: 1 })
+    const footers = screen.getAllByRole("contentinfo")
+    expect(footers).toHaveLength(1)
+    const main = screen.getByRole("main")
+    expect(main.compareDocumentPosition(footers[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(main.parentElement).toBe(footers[0].parentElement)
+    expect(within(footers[0]).getByText("© 2026 KrisKompassen")).toBeTruthy()
+  })
+
   it("keeps route focus and updates the title when a delayed detail response arrives", async () => {
     let finish!: (response: Response) => void
     vi.mocked(fetch).mockImplementation(async (input) => {
