@@ -30,7 +30,7 @@ interface SignalPatternProps {
  *
  * Decorative: the drawing and its labels are hidden from assistive technology, because the
  * visible pattern description carries the same information. Tones use `currentColor` in
- * `text-blue-900` on a `blue-200` track, never red, which is reserved for VMA warnings.
+ * `text-blue-900` on a `blue-300` track, never red, which is reserved for VMA warnings.
  *
  * @param props.pattern The signal's structured timing.
  * @param props.className Extra classes for the wrapper, e.g. width or spacing.
@@ -53,7 +53,7 @@ function SignalPattern({ pattern, className = "" }: SignalPatternProps) {
           width="100%"
           height={TRACK_HEIGHT}
           rx={TRACK_HEIGHT / 2}
-          className="fill-blue-200"
+          className="fill-blue-300"
         />
         <g fill="currentColor">
           {strokes.map((stroke) => (

@@ -97,6 +97,7 @@ describe("SignalPattern", () => {
     const { container } = render(<SignalPattern pattern={SHORT} />)
     expect(container.querySelector("svg")!.getAttribute("class")).toContain("text-blue-900")
     expect(container.querySelector("g")!.getAttribute("fill")).toBe("currentColor")
+    expect(container.querySelector("svg > rect")!.getAttribute("class")).toBe("fill-blue-300")
     expect(container.innerHTML).not.toMatch(/red|vma/)
   })
 })
