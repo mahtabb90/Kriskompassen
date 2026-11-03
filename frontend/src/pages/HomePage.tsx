@@ -34,7 +34,7 @@ const FEATURES: readonly Feature[] = [
     prominent: false,
   },
   {
-    to: "/min-info",
+    to: "/installningar",
     description: "Spara viktig lokal information, till exempel adresser som är relevanta för dig.",
     icon: <HomeFeatureIcon name="location" />,
     prominent: false,

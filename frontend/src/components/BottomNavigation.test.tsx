@@ -31,18 +31,20 @@ describe("BottomNavigation", () => {
   })
 
   it("exposes only the current route with aria-current", () => {
-    mountNavigation("/min-info")
+    mountNavigation("/installningar")
     const current = screen.getAllByRole("link").filter((link) => link.hasAttribute("aria-current"))
     expect(current).toHaveLength(1)
     expect(current[0].getAttribute("aria-current")).toBe("page")
-    expect(current[0].textContent).toContain("Min info")
+    expect(current[0].textContent).toContain("Inställningar")
   })
 
   it("has no scroll controls and navigates in place", () => {
     mountNavigation()
     expect(screen.queryAllByRole("button")).toHaveLength(0)
-    fireEvent.click(screen.getByRole("link", { name: "Min info" }))
-    expect(screen.getByRole("link", { name: "Min info" }).getAttribute("aria-current")).toBe("page")
+    fireEvent.click(screen.getByRole("link", { name: "Inställningar" }))
+    expect(screen.getByRole("link", { name: "Inställningar" }).getAttribute("aria-current")).toBe(
+      "page"
+    )
     expect(screen.getByRole("link", { name: "Hem" }).hasAttribute("aria-current")).toBe(false)
   })
 })

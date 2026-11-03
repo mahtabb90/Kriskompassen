@@ -102,7 +102,7 @@ function ShelterMapPage() {
     requestPosition,
   } = useCurrentPosition()
   // The live-fetched position always wins over the saved address, but never writes back to it -
-  // "aktiv adress" in the header/Min info/skyddsrum-listan stays untouched (see the ticket's
+  // "aktiv adress" in the header/Inställningar/skyddsrum-listan stays untouched (see the ticket's
   // level-1 scope: session-only, local to this page).
   const origin = livePosition ?? savedOrigin
   const geolocationSupported = "geolocation" in navigator

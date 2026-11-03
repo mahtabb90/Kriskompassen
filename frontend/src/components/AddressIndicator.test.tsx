@@ -58,7 +58,7 @@ describe("AddressIndicator", () => {
     mount()
 
     const link = await screen.findByRole("link", { name: "Hemgatan 1, Stockholm" })
-    expect(link.getAttribute("href")).toBe("/min-info")
+    expect(link.getAttribute("href")).toBe("/installningar")
     expect(screen.getByText(/Aktuell adress:/).closest("a")).toBeNull()
   })
 
@@ -70,7 +70,7 @@ describe("AddressIndicator", () => {
     mount()
 
     const link = await screen.findByRole("link", { name: "Stockholms kommun" })
-    expect(link.getAttribute("href")).toBe("/min-info")
+    expect(link.getAttribute("href")).toBe("/installningar")
     expect(screen.queryByText(/Hemgatan 1/)).toBeNull()
   })
 
@@ -81,7 +81,7 @@ describe("AddressIndicator", () => {
     mount()
 
     const link = await screen.findByRole("link", { name: `${longText.slice(0, 30)}…` })
-    expect(link.getAttribute("href")).toBe("/min-info")
+    expect(link.getAttribute("href")).toBe("/installningar")
     // Only the rendered text is shortened; this component never writes to storage, so the
     // full-length value configured above is, by construction, what stays saved.
     expect(screen.queryByText(longText)).toBeNull()

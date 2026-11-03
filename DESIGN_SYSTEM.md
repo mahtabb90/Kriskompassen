@@ -316,7 +316,7 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   name is the title (`aria-labelledby`) and its description is `aria-describedby`.
 - **Bento hierarchy:** from `md`, a six-column grid places Krisinformation and Min krislåda
   (`col-span-3`, larger padding, `text-2xl` title, 56px icon circle with a `border-blue-200` edge
-  on `bg-blue-100`) on one row and Skyddsrum, Min info and Lugn i kris (`col-span-2`, `text-xl`
+  on `bg-blue-100`) on one row and Skyddsrum, Inställningar and Lugn i kris (`col-span-2`, `text-xl`
   title, 48px `bg-blue-50` icon circle without border) on the next. Every card ends with the same
   decorative cue, pinned to the card bottom: the text **Öppna** and a 20px inline outline arrow
   (section 5.3 style, `currentColor`, `gap-2`), hidden from assistive technology as a whole
@@ -326,7 +326,7 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   outline is drawn inside the clipped card. No transforms.
 - **Icons:** the section 5.3 outline style in a `bg-blue-50` circle (as in section 5.4). Min
   krislåda reuses `CrisisIcon` (`other`), Lugn i kris reuses `CalmIcon` (`breath`); Krisinformation,
-  Skyddsrum and Min info use `HomeFeatureIcon`. All are `aria-hidden` and `text-blue-900`.
+  Skyddsrum and Inställningar use `HomeFeatureIcon`. All are `aria-hidden` and `text-blue-900`.
 
 ---
 
@@ -523,7 +523,7 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 - **Mobile bottom clearance:** a separate `aria-hidden` spacer after the `<footer>`, as tall as
   the measured menu bar (`h-[var(--navigation-height,0px)]`, section 4.2), keeps the fixed bar
   from covering the footer without adding empty space inside it. It is `0px` from 48rem upwards.
-- **Permanent backup on Min info:** `InstallHelpSection` follows the address form, outside it,
+- **Permanent backup on Inställningar:** `InstallHelpSection` follows the address form, outside it,
   using a section 5.1 card with `mt-8 p-6 sm:p-8`. Its `h2` **Installera appen** names the section
   through `aria-labelledby`. The native `details` summary **Visa installationshjälp** retains
   its disclosure marker and has a minimum 48px target, visible focus and underline. It starts
@@ -549,7 +549,7 @@ KrisKompassen shows the same primary links, from the shared `navigationItems` li
 ### 7.2 Mobile Menu Dialog
 
 - A native modal `<dialog>` named **Meny** covers the whole viewport, including the header and the VMA notice, on a white surface with safe-area padding. The dialog element itself is fullscreen (`.mobile-menu-dialog`: fixed, `inset: 0`, no margin or border, `width: 100%`, `height`/`min-height: 100dvh`, no max-width/max-height), not only its backdrop. A **Stäng menyn** outlined button (48×48px minimum) sits in a fixed top row beside the heading; the link list below scrolls internally (`overscroll-contain`), so short screens and enlarged text remain usable. When the browser offers installation, a fixed footer below the list holds the **Installera app** button (section 6.6).
-- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Min info, Lugn i kris). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
+- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Inställningar, Lugn i kris). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
 - The modal makes the page inert, locks page scrolling and wraps Tab at its boundaries. Escape and **Stäng menyn** return focus to the Meny button, as does selecting the current route. Selecting another route closes the menu and leaves focus to the layout page-heading focus. Crossing `48rem` while open closes it without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating). There is no animation.
 
 ---
