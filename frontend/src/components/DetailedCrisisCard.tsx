@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { useMode } from "../context/modeContext"
 import { useCrisisResource } from "../hooks/useCrisisResource"
 import { isSafeCrisisSourceUrl } from "../services/crisisResponseValidator"
 import { fetchCrisisItem } from "../services/crisisService"
 import { getOfflineItem } from "../services/offlineService"
+import BackLink from "./BackLink"
 import CrisisLoadFeedback from "./CrisisLoadFeedback"
 import OfflineToggle from "./OfflineToggle"
 
@@ -60,12 +61,7 @@ function DetailedCrisisCard() {
       </div>
 
       <div className="p-6 sm:p-8">
-        <Link
-          to="/crisis"
-          className="mb-6 inline-flex min-h-12 items-center gap-1 font-medium text-blue-900 underline underline-offset-4"
-        >
-          <span aria-hidden="true">←</span>Tillbaka till krisinformation
-        </Link>
+        <BackLink to="/crisis" label="Tillbaka till krisinformation" />
 
         <h1
           ref={headingRef}
