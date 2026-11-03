@@ -67,6 +67,7 @@ function mockSavedShelters(shelters: ReturnType<typeof useSavedShelters>["shelte
     save: vi.fn(),
     remove: vi.fn(),
     updateComment: vi.fn(),
+    saveMapImage: vi.fn(),
   })
 }
 
@@ -112,6 +113,7 @@ describe("ShelterPage tabs", () => {
         lon: 18.152,
         savedAt: "2026-01-01T00:00:00Z",
         comment: null,
+        mapImage: null,
       },
     ])
     renderPage()
@@ -170,6 +172,7 @@ describe("ShelterPage comment", () => {
         lon: 18.152,
         savedAt: "2026-01-01T00:00:00Z",
         comment: "Kommunhuset",
+        mapImage: null,
       },
     ])
     renderPage()

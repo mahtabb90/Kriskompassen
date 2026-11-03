@@ -70,6 +70,7 @@ function NearestShelters({
             saved={isSaved(shelter.id)}
             onToggleSave={() => (isSaved(shelter.id) ? onRemove(shelter.id) : onSave(shelter))}
             comment={savedShelters.find((saved) => saved.id === shelter.id)?.comment ?? null}
+            mapImage={savedShelters.find((saved) => saved.id === shelter.id)?.mapImage ?? null}
             isNearest={index === 0}
           />
         ))}

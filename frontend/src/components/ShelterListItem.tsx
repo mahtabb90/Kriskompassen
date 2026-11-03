@@ -4,6 +4,7 @@ import type { Shelter } from "../types/shelter"
 import { formatShelterCapacity } from "../utils/formatCapacity"
 import { describeShelterLocation } from "../utils/shelterLabel"
 import { describeShelterType } from "../utils/shelterType"
+import SavedShelterMapImage from "./SavedShelterMapImage"
 import ShelterDistance from "./ShelterDistance"
 import ShelterSaveToggle from "./ShelterSaveToggle"
 
@@ -16,6 +17,9 @@ interface ShelterListItemProps {
   onToggleSave?: () => void
   /** The user's own relocation note (e.g. "Kommunhuset"), set from the detail view. */
   comment?: string | null
+  /** The user's own saved map snapshot (SavedShelter.mapImage), set from the detail view. Also
+   * drives ShelterSaveToggle's remove-warning text. */
+  mapImage?: Blob | null
   /** Shows a "Närmast" badge - set by the caller for shelters[0]. */
   isNearest?: boolean
 }
@@ -36,6 +40,7 @@ function ShelterListItem({
   saved,
   onToggleSave,
   comment,
+  mapImage,
   isNearest,
 }: ShelterListItemProps) {
   const { activeAddress } = useAddresses()
@@ -79,6 +84,13 @@ function ShelterListItem({
         <p className="mt-1 text-sm text-slate-500 italic" aria-hidden={comment ? undefined : true}>
           {comment || " "}
         </p>
+        {mapImage && (
+          <SavedShelterMapImage
+            image={mapImage}
+            alt="Sparad vy av kartan vid skyddsrummet"
+            className="mt-2 h-24 w-full rounded-xl object-cover"
+          />
+        )}
         <p className="mt-1 text-sm text-slate-600" aria-hidden={shelter.number ? undefined : true}>
           {shelter.number ? `Skyddsrumsnummer ${shelter.number}` : " "}
         </p>
@@ -93,7 +105,12 @@ function ShelterListItem({
       </Link>
       <div className={`px-5 pb-5 sm:px-6 sm:pb-6 ${onToggleSave ? "pt-4" : "pt-3"}`}>
         {onToggleSave ? (
-          <ShelterSaveToggle saved={Boolean(saved)} onToggle={onToggleSave} actions={detailsLink} />
+          <ShelterSaveToggle
+            saved={Boolean(saved)}
+            onToggle={onToggleSave}
+            actions={detailsLink}
+            hasMapImage={Boolean(mapImage)}
+          />
         ) : (
           detailsLink
         )}

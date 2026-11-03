@@ -26,6 +26,7 @@ import {
   removeSavedShelter,
   saveShelter,
   setSavedShelterComment,
+  setSavedShelterMapImage,
 } from "./shelterStorageService"
 
 const table = db.shelterCache
@@ -102,6 +103,7 @@ describe("saveShelter", () => {
       lon: 18.152,
       savedAt: expect.any(String),
       comment: null,
+      mapImage: null,
     })
   })
 })
@@ -148,5 +150,14 @@ describe("setSavedShelterComment", () => {
     await setSavedShelterComment("a", "   ")
 
     expect(savedTable.update).toHaveBeenCalledExactlyOnceWith("a", { comment: null })
+  })
+})
+
+describe("setSavedShelterMapImage", () => {
+  it("stores the image on the bookmark's record", async () => {
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    await setSavedShelterMapImage("a", image)
+
+    expect(savedTable.update).toHaveBeenCalledExactlyOnceWith("a", { mapImage: image })
   })
 })

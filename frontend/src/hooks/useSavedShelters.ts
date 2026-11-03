@@ -4,6 +4,7 @@ import {
   removeSavedShelter,
   saveShelter,
   setSavedShelterComment,
+  setSavedShelterMapImage,
 } from "../services/shelterStorageService"
 import type { SavedShelter, Shelter } from "../types/shelter"
 
@@ -60,6 +61,18 @@ export function useSavedShelters() {
     [refresh]
   )
 
+  const saveMapImage = useCallback(
+    async (shelter: Pick<Shelter, "id" | "address" | "lat" | "lon">, image: Blob) => {
+      // Only saves the bookmark when it doesn't exist yet - saveShelter() always overwrites the
+      // whole record, which would silently wipe an existing comment on a shelter saved earlier.
+      const alreadySaved = state.shelters.some((saved) => saved.id === shelter.id)
+      if (!alreadySaved) await saveShelter(shelter)
+      await setSavedShelterMapImage(shelter.id, image)
+      await refresh()
+    },
+    [refresh, state.shelters]
+  )
+
   return {
     shelters: state.shelters,
     loading: state.loading,
@@ -67,5 +80,6 @@ export function useSavedShelters() {
     save,
     remove,
     updateComment,
+    saveMapImage,
   }
 }

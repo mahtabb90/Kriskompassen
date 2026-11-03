@@ -34,6 +34,7 @@ function renderItem(
     saved?: boolean
     onToggleSave?: () => void
     comment?: string | null
+    mapImage?: Blob | null
     isNearest?: boolean
   } = {}
 ) {
@@ -186,5 +187,33 @@ describe("ShelterListItem comment", () => {
     renderItem(fullShelter, { comment: null })
 
     expect(screen.queryByText("Kommunhuset")).toBeNull()
+  })
+})
+
+describe("ShelterListItem saved map image", () => {
+  it("shows the saved map image when present", () => {
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    renderItem(fullShelter, { mapImage: image })
+
+    expect(screen.getByRole("img", { name: "Sparad vy av kartan vid skyddsrummet" })).toBeTruthy()
+  })
+
+  it("shows nothing extra when there is no saved image", () => {
+    renderItem(fullShelter, { mapImage: null })
+
+    expect(screen.queryByRole("img")).toBeNull()
+  })
+
+  it("warns that removal also deletes the saved image, only when one exists", () => {
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    renderItem(fullShelter, { saved: true, onToggleSave: vi.fn(), mapImage: image })
+
+    expect(screen.getByText("Den sparade kartbilden tas också bort.")).toBeTruthy()
+  })
+
+  it("doesn't warn about image removal when there is no saved image", () => {
+    renderItem(fullShelter, { saved: true, onToggleSave: vi.fn(), mapImage: null })
+
+    expect(screen.queryByText("Den sparade kartbilden tas också bort.")).toBeNull()
   })
 })

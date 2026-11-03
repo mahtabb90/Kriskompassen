@@ -59,6 +59,11 @@ export interface CachedShelter extends Shelter {
  *
  * @property comment A short (50-character max), user-authored note to help relocate the shelter
  * (e.g. "Kommunhuset"), since MCF's address field is often not enough on its own. null when unset.
+ * @property mapImage A user-captured snapshot of the detail page's embedded map, downscaled to
+ * a fixed small size before saving (see utils/mapSnapshot.ts) to bound per-shelter storage. Lives
+ * on this same record rather than a separate table - a non-indexed field needs no Dexie schema
+ * version bump (db.ts's "id" index string is unaffected) - so removing the bookmark removes the
+ * image automatically, with no separate cleanup step. null when no image has been saved.
  */
 export interface SavedShelter {
   id: string
@@ -67,4 +72,5 @@ export interface SavedShelter {
   lon: number
   savedAt: string
   comment: string | null
+  mapImage: Blob | null
 }

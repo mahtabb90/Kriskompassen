@@ -22,6 +22,7 @@ const savedHome: SavedShelter = {
   lon: 18.152,
   savedAt: "2026-01-01T00:00:00Z",
   comment: null,
+  mapImage: null,
 }
 
 const cachedHome: CachedShelter = {
@@ -123,5 +124,15 @@ describe("SavedSheltersSection", () => {
     renderSection({ savedShelters: [{ ...savedHome, comment: "Kommunhuset" }] })
 
     expect(await screen.findByText("Kommunhuset")).toBeTruthy()
+  })
+
+  it("passes a saved shelter's map image through to its card", async () => {
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    vi.mocked(getAllCachedShelters).mockResolvedValue([cachedHome])
+    renderSection({ savedShelters: [{ ...savedHome, mapImage: image }] })
+
+    expect(
+      await screen.findByRole("img", { name: "Sparad vy av kartan vid skyddsrummet" })
+    ).toBeTruthy()
   })
 })

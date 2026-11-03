@@ -123,6 +123,17 @@ the user's position too, when known), replacing an earlier external link to open
 Like "Kartan", it is online-only, lazy-loaded, and falls back to the "Plats" text field already
 on the page while offline.
 
+A "Spara kartbild" button next to that embedded map lets a user save whatever view they have
+panned/zoomed to as a small offline snapshot - bookmarking the shelter first if it is not already
+saved, in the same action. The image is downscaled to a fixed small size (aspect ratio preserved
+via a centered crop, not a distorting stretch) and stored on the same bookmark record as the
+comment field above, so it shows up offline too, both in "Sparade skyddsrum" and on the detail
+page, with no extra Dexie schema version needed. Removing the bookmark removes its image
+automatically; the remove button shows a short warning to that effect, but only when an image is
+actually saved. Capturing a new image still needs the live map, so saving one is online-only like
+the map itself - viewing an already-saved image is not. Exporting or sharing the image outside the
+app, and saving more than one per shelter, are intentionally out of scope for now.
+
 Saving a geolocated address also fetches and caches its nearest shelters in the background right
 away, without the user needing to visit "Skyddsrum" first. This runs silently and never blocks or
 fails the address save itself; it exists so that addresses saved ahead of a crisis already have
