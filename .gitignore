@@ -42,3 +42,8 @@ CLAUDE.md
 
 # Playwright CLI session artifacts (snapshots, console/network logs)
 .playwright-cli/
+
+# Playwright test reports, traces and failure artifacts
+playwright-report/
+test-results/
+blob-report/
