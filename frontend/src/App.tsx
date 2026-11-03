@@ -8,11 +8,14 @@ import CrisisInfoPage from "./pages/CrisisInfoPage"
 import CrisisKitPage from "./pages/CrisisKitPage"
 import HomePage from "./pages/HomePage"
 import IndexedDbTest from "./pages/IndexedDbTest"
-import MyInfoPage from "./pages/MyInfoPage"
+import KrisinfoOverviewPage from "./pages/KrisinfoOverviewPage"
 import NotFoundPage from "./pages/NotFoundPage"
+import PhoneNumbersPage from "./pages/PhoneNumbersPage"
+import SettingsPage from "./pages/SettingsPage"
 import ShelterDetailPage from "./pages/ShelterDetailPage"
 import ShelterMapPage from "./pages/ShelterMapPage"
 import ShelterPage from "./pages/ShelterPage"
+import WarningSignalsPage from "./pages/WarningSignalsPage"
 
 /**
  * Registers public pages and the development-only storage test within the shared layout.
@@ -28,6 +31,7 @@ function App() {
           <Routes>
             <Route element={<AppLayout />}>
               <Route path="/" element={<HomePage />} />
+              <Route path="/krisinformation" element={<KrisinfoOverviewPage />} />
               <Route path="/crisis" element={<CrisisInfoPage />} />
               <Route path="/crisis-kit" element={<CrisisKitPage />} />
               <Route path="/crisis/:id" element={<DetailedCrisisCard />} />
@@ -35,7 +39,9 @@ function App() {
               <Route path="/skyddsrum/karta" element={<ShelterMapPage />} />
               <Route path="/skyddsrum/:id" element={<ShelterDetailPage />} />
               <Route path="/lugn-i-kris" element={<CalmInCrisisPage />} />
-              <Route path="/min-info" element={<MyInfoPage />} />
+              <Route path="/installningar" element={<SettingsPage />} />
+              <Route path="/telefonnummer" element={<PhoneNumbersPage />} />
+              <Route path="/varningssignaler" element={<WarningSignalsPage />} />
               {import.meta.env.DEV && <Route path="/dev/indexeddb" element={<IndexedDbTest />} />}
               <Route path="*" element={<NotFoundPage />} />
             </Route>

@@ -59,7 +59,7 @@ last checked and offers a retry. While the app is open it checks for new warning
 pauses while offline and checks again when the connection returns. Warnings are not stored for
 offline use.
 
-On the "Min info" page, users can save one or more addresses — for example home and work — by
+On the "Inställningar" page, users can save one or more addresses — for example home and work — by
 typing each one, pasting coordinates (for example copied from another map service), or
 requesting their device's position. A fetched position or a pasted coordinate pair is
 reverse-geocoded into a readable address and clearly marked as approximate, and can be corrected
@@ -87,7 +87,7 @@ same coordinates and capacity too - so each shelter also shows its own official 
 the number physically posted at its entrance) to stay distinguishable, plus a link to its own
 detail page for more information. If no address is active yet, or the active address has no
 coordinates (a manually typed address is never geocoded), the page prompts the user to set one
-on "Min info" instead.
+on "Inställningar" instead.
 
 "Kartan", reached via a link next to the "Skyddsrum i närheten"/"Sparade skyddsrum" tabs, lets
 users explore every one of Sweden's roughly 63,000 civil-defense shelters on an interactive,
@@ -110,10 +110,10 @@ online-only and its library is lazy-loaded, only fetched the first time a user a
 "Kartan" also has its own "Hämta aktuell position" button, letting a user fetch their device's
 position right there and recenter the map and its nearest-shelter highlighting on it immediately
 — for that session only, without creating, changing or saving any address; the active address
-used everywhere else (header, Min info, Skyddsrum) stays untouched. It shares the same
-permission/timeout/unsupported-browser handling as Min info's own position button, which now uses
-the same "Hämta aktuell position" label. When the resulting fix is imprecise, a collapsed
-"Ungefärlig position" disclosure (also shared with Min info) explains the likely distance and
+used everywhere else (header, Inställningar, Skyddsrum) stays untouched. It shares the same
+permission/timeout/unsupported-browser handling as the position button on Inställningar, which now
+uses the same "Hämta aktuell position" label. When the resulting fix is imprecise, a collapsed
+"Ungefärlig position" disclosure (also shared with Inställningar) explains the likely distance and
 what can improve it, rather than a standing block of text. A separate recenter control pans the
 view back to the current marker without changing zoom or fetching a new position, for when the
 user has panned away from it.
@@ -122,6 +122,17 @@ A shelter's own detail page embeds a simpler map of just that one shelter's exac
 the user's position too, when known), replacing an earlier external link to openstreetmap.org.
 Like "Kartan", it is online-only, lazy-loaded, and falls back to the "Plats" text field already
 on the page while offline.
+
+A "Spara kartbild" button next to that embedded map lets a user save whatever view they have
+panned/zoomed to as a small offline snapshot - bookmarking the shelter first if it is not already
+saved, in the same action. The image is downscaled to a fixed small size (aspect ratio preserved
+via a centered crop, not a distorting stretch) and stored on the same bookmark record as the
+comment field above, so it shows up offline too, both in "Sparade skyddsrum" and on the detail
+page, with no extra Dexie schema version needed. Removing the bookmark removes its image
+automatically; the remove button shows a short warning to that effect, but only when an image is
+actually saved. Capturing a new image still needs the live map, so saving one is online-only like
+the map itself - viewing an already-saved image is not. Exporting or sharing the image outside the
+app, and saving more than one per shelter, are intentionally out of scope for now.
 
 Saving a geolocated address also fetches and caches its nearest shelters in the background right
 away, without the user needing to visit "Skyddsrum" first. This runs silently and never blocks or
@@ -226,14 +237,25 @@ For configuration, alternative ports and further development instructions, see t
 ## Navigation and accessibility
 
 The main navigation links to **Hem** (Home), **Krisinformation** (Crisis information),
-**Min krislåda** (My emergency kit), **Skyddsrum** (Shelters), **Min info** (My information)
-and **Lugn i kris** (Calm in a crisis), and clearly marks the current page. On phones, a
-**Meny** button opens a full-screen menu with the same links. Larger screens keep the
-navigation above the page content.
+**Min krislåda** (My emergency kit), **Skyddsrum** (Shelters) and **Inställningar** (Settings),
+and clearly marks the current page. On phones, a **Meny** button opens a full-screen menu with
+the same links. Larger screens keep the navigation above the page content.
 
-**Lugn i kris** is a short, static page with simple advice for staying focused during a
-crisis, based on 1177, Krisinformation.se and SOS Alarm. It works offline, stores nothing and
-does not replace healthcare, professional support or official emergency instructions.
+**Krisinformation** is an overview that gathers all crisis information in one place, split into
+four parts:
+
+- **Innan krisen** (Before the crisis): the preparedness articles, which can be saved for offline
+  reading.
+- **Telefonnummer** (Phone numbers): important numbers to call, with click-to-call links.
+- **Utomhusvarning** (Outdoor warning): what the "Hesa Fredrik" warning signals mean and what to
+  do, with links to the recordings at MCF.
+- **Lugn i kris** (Calm in a crisis): a short, static page with simple advice for staying
+  focused during a crisis, based on 1177, Krisinformation.se and SOS Alarm. It stores nothing
+  and does not replace healthcare, professional support or official emergency instructions.
+
+The overview and the phone, warning and calm pages work offline once the app has been opened.
+Each part has a link back to the overview, and **Krisinformation** stays marked in the menu
+while you are in any of them.
 
 Keyboard navigation includes a link to skip directly to the page content and visible focus
 indicators. Pages have descriptive headings and titles.
@@ -247,9 +269,10 @@ KrisKompassen is being developed as a **Progressive Web App (PWA)**, with instal
 
 On supported browsers and devices, users can install the app on their phone or computer. Where the
 browser supports it, KrisKompassen shows an **Installera app** button: in the header beside the
-connection status on wider screens and at the bottom of the **Meny** on phones. It is not shown once
-the app is installed or when it already runs as an installed app. Users can also use the browser's
-own install feature:
+connection status on wider screens and at the bottom of the **Meny** on phones. On wider screens,
+the button shares the status line's layout height, keeping the header steady when the offer appears.
+It is not shown once the app is installed or when it already runs as an installed app. Users can also
+use the browser's own install feature:
 
 - **Chrome and Edge (desktop and Android):** the install option in the address bar or browser menu.
 - **Safari on iPhone and iPad:** Share → **Add to Home Screen**.
@@ -258,7 +281,7 @@ own install feature:
 On iPhone, iPad and in Safari on macOS, where no install button is possible, the app shows a short
 instruction instead. It can be closed and then stays hidden for 30 days.
 
-If the install button or instruction is missing, open **Min info → Installera appen → Visa
+If the install button or instruction is missing, open **Inställningar → Installera appen → Visa
 installationshjälp**. This help is always available and includes steps for Chrome on a computer,
 iPhone/iPad (including Chrome) and Safari on macOS, even after the automatic instruction was closed.
 

@@ -4,6 +4,7 @@ import type { Shelter } from "../types/shelter"
 import { formatShelterCapacity } from "../utils/formatCapacity"
 import { describeShelterLocation } from "../utils/shelterLabel"
 import { describeShelterType } from "../utils/shelterType"
+import SavedShelterMapImage from "./SavedShelterMapImage"
 import ShelterDistance from "./ShelterDistance"
 import ShelterSaveToggle from "./ShelterSaveToggle"
 
@@ -16,6 +17,9 @@ interface ShelterListItemProps {
   onToggleSave?: () => void
   /** The user's own relocation note (e.g. "Kommunhuset"), set from the detail view. */
   comment?: string | null
+  /** The user's own saved map snapshot (SavedShelter.mapImage), set from the detail view. Also
+   * drives ShelterSaveToggle's remove-warning text. */
+  mapImage?: Blob | null
   /** Shows a "Närmast" badge - set by the caller for shelters[0]. */
   isNearest?: boolean
 }
@@ -36,6 +40,7 @@ function ShelterListItem({
   saved,
   onToggleSave,
   comment,
+  mapImage,
   isNearest,
 }: ShelterListItemProps) {
   const { activeAddress } = useAddresses()
@@ -54,12 +59,16 @@ function ShelterListItem({
   )
 
   return (
-    <li className="overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm">
+    <li className="group overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm transition-[border-color,box-shadow] duration-150 ease-out hover:border-blue-400 hover:shadow-md">
       <div className="flex h-1.5 w-full" aria-hidden="true">
-        <span className="h-full flex-1 bg-blue-900" />
+        <span className="h-full flex-1 bg-blue-900 transition-colors group-hover:bg-blue-800" />
         <span className="h-full w-8 bg-amber-400" />
       </div>
-      <div className="p-5 sm:p-6">
+      <Link
+        to={`/skyddsrum/${shelter.id}`}
+        // The card clips overflow, so the focus outline is drawn inside the link instead.
+        className="block p-5 pb-0 focus-visible:-outline-offset-4 sm:p-6 sm:pb-0"
+      >
         <p
           className="mb-1 inline-flex items-center gap-1 text-sm font-semibold text-blue-900"
           aria-hidden={isNearest ? undefined : true}
@@ -75,6 +84,13 @@ function ShelterListItem({
         <p className="mt-1 text-sm text-slate-500 italic" aria-hidden={comment ? undefined : true}>
           {comment || " "}
         </p>
+        {mapImage && (
+          <SavedShelterMapImage
+            image={mapImage}
+            alt="Sparad vy av kartan vid skyddsrummet"
+            className="mt-2 h-24 w-full rounded-xl object-cover"
+          />
+        )}
         <p className="mt-1 text-sm text-slate-600" aria-hidden={shelter.number ? undefined : true}>
           {shelter.number ? `Skyddsrumsnummer ${shelter.number}` : " "}
         </p>
@@ -86,17 +102,17 @@ function ShelterListItem({
           {distanceMeters !== undefined && otherDetails.length > 0 && " · "}
           {otherDetails.length > 0 ? otherDetails.join(" · ") : distanceMeters === undefined && " "}
         </p>
-
+      </Link>
+      <div className={`px-5 pb-5 sm:px-6 sm:pb-6 ${onToggleSave ? "pt-4" : "pt-3"}`}>
         {onToggleSave ? (
-          <div className="mt-4">
-            <ShelterSaveToggle
-              saved={Boolean(saved)}
-              onToggle={onToggleSave}
-              actions={detailsLink}
-            />
-          </div>
+          <ShelterSaveToggle
+            saved={Boolean(saved)}
+            onToggle={onToggleSave}
+            actions={detailsLink}
+            hasMapImage={Boolean(mapImage)}
+          />
         ) : (
-          <div className="mt-3">{detailsLink}</div>
+          detailsLink
         )}
       </div>
     </li>

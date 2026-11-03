@@ -76,6 +76,7 @@ function SavedSheltersSection({
             saved
             onToggleSave={() => onRemove(saved.id)}
             comment={saved.comment}
+            mapImage={saved.mapImage}
           />
         )
       })}

@@ -5,7 +5,7 @@ import HomeFeatureIcon, { type HomeFeatureIconName } from "./HomeFeatureIcon"
 
 afterEach(cleanup)
 
-const NAMES: HomeFeatureIconName[] = ["info", "shelter", "location"]
+const NAMES: HomeFeatureIconName[] = ["info", "shelter", "location", "phone"]
 
 describe("HomeFeatureIcon", () => {
   it.each(NAMES)("renders %s as a decorative currentColor outline icon", (name) => {
@@ -17,6 +17,8 @@ describe("HomeFeatureIcon", () => {
     expect(svg.getAttribute("fill")).toBe("none")
     expect(svg.getAttribute("stroke")).toBe("currentColor")
     expect(svg.getAttribute("stroke-width")).toBe("1.8")
+    expect(svg.getAttribute("stroke-linecap")).toBe("round")
+    expect(svg.getAttribute("stroke-linejoin")).toBe("round")
     expect(svg.querySelector("title")).toBeNull()
     expect(svg.childElementCount).toBeGreaterThan(0)
     expect(svg.getAttribute("class")).toContain("text-blue-900")

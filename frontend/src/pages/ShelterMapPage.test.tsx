@@ -90,12 +90,15 @@ beforeEach(() => {
     updateData: vi.fn(),
   } as unknown as ReturnType<typeof useNearestShelters>)
   vi.mocked(useSavedShelters).mockReturnValue({
-    shelters: [{ id: "saved-1", address: null, lat: 0, lon: 0, savedAt: "", comment: null }],
+    shelters: [
+      { id: "saved-1", address: null, lat: 0, lon: 0, savedAt: "", comment: null, mapImage: null },
+    ],
     loading: false,
     isSaved: () => false,
     save: vi.fn(),
     remove: vi.fn(),
     updateComment: vi.fn(),
+    saveMapImage: vi.fn(),
   })
 })
 

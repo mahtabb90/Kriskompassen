@@ -70,6 +70,7 @@ function NearestShelters({
             saved={isSaved(shelter.id)}
             onToggleSave={() => (isSaved(shelter.id) ? onRemove(shelter.id) : onSave(shelter))}
             comment={savedShelters.find((saved) => saved.id === shelter.id)?.comment ?? null}
+            mapImage={savedShelters.find((saved) => saved.id === shelter.id)?.mapImage ?? null}
             isNearest={index === 0}
           />
         ))}
@@ -108,7 +109,7 @@ const mapLinkClassName =
  *
  * The two are deliberately different sets: a bookmarked shelter is not necessarily nearby right
  * now, and the nearest list changes as the user's saved position changes. Reuses the address
- * chosen on "Min info" (KAN-30) rather than collecting a position here; when none is active yet,
+ * chosen on "Inställningar" rather than collecting a position here; when none is active yet,
  * or the active address has no coordinates (a manually typed address is never geocoded), the
  * nearest-shelters tab prompts the user to set one there instead of duplicating that flow. The
  * saved-shelters tab is unaffected by the online/offline mode toggle - bookmarks are always
@@ -246,7 +247,7 @@ function ShelterPage() {
               <p className="font-semibold text-blue-900">Ingen plats är vald än.</p>
               <p className="mt-2">
                 <Link
-                  to="/min-info"
+                  to="/installningar"
                   className="inline-flex min-h-12 items-center underline underline-offset-4 hover:text-blue-950"
                 >
                   Ange din plats
@@ -261,7 +262,7 @@ function ShelterPage() {
               <p className="font-semibold text-blue-900">Platsen saknar koordinater.</p>
               <p className="mt-2">
                 <Link
-                  to="/min-info"
+                  to="/installningar"
                   className="inline-flex min-h-12 items-center underline underline-offset-4 hover:text-blue-950"
                 >
                   Ange din plats igen

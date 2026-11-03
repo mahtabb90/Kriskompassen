@@ -34,6 +34,7 @@ function renderItem(
     saved?: boolean
     onToggleSave?: () => void
     comment?: string | null
+    mapImage?: Blob | null
     isNearest?: boolean
   } = {}
 ) {
@@ -68,6 +69,32 @@ describe("ShelterListItem with full data", () => {
 
     const detailLink = screen.getByRole("link", { name: "Visa detaljer" })
     expect(detailLink.getAttribute("href")).toBe(`/skyddsrum/${fullShelter.id}`)
+  })
+
+  it("wraps the card's main content in its own link to the detail page, focusable and keyboard-reachable like CrisisCard", () => {
+    renderItem(fullShelter, { distanceMeters: 350 })
+
+    const links = screen.getAllByRole("link")
+    const cardLink = links.find(
+      (link) =>
+        link.getAttribute("href") === `/skyddsrum/${fullShelter.id}` &&
+        link.textContent !== "Visa detaljer"
+    )
+    expect(cardLink).toBeTruthy()
+    expect(cardLink?.className).toContain("focus-visible:-outline-offset-4")
+    expect(cardLink?.textContent).toContain("Kantarellen 11, Solna kommun")
+  })
+
+  it("does not nest the save button or the detail link inside the card's main link (DESIGN_SYSTEM §6.1)", () => {
+    renderItem(fullShelter, { distanceMeters: 350, saved: false, onToggleSave: vi.fn() })
+
+    const links = screen.getAllByRole("link")
+    const cardLink = links.find((link) => link.textContent !== "Visa detaljer")
+    const detailLink = screen.getByRole("link", { name: "Visa detaljer" })
+    const saveButton = screen.getByRole("button", { name: "Spara skyddsrum" })
+
+    expect(cardLink?.contains(detailLink)).toBe(false)
+    expect(cardLink?.contains(saveButton)).toBe(false)
   })
 
   it("has no link to an external map - the detail page's own embedded map covers that", () => {
@@ -160,5 +187,33 @@ describe("ShelterListItem comment", () => {
     renderItem(fullShelter, { comment: null })
 
     expect(screen.queryByText("Kommunhuset")).toBeNull()
+  })
+})
+
+describe("ShelterListItem saved map image", () => {
+  it("shows the saved map image when present", () => {
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    renderItem(fullShelter, { mapImage: image })
+
+    expect(screen.getByRole("img", { name: "Sparad vy av kartan vid skyddsrummet" })).toBeTruthy()
+  })
+
+  it("shows nothing extra when there is no saved image", () => {
+    renderItem(fullShelter, { mapImage: null })
+
+    expect(screen.queryByRole("img")).toBeNull()
+  })
+
+  it("warns that removal also deletes the saved image, only when one exists", () => {
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    renderItem(fullShelter, { saved: true, onToggleSave: vi.fn(), mapImage: image })
+
+    expect(screen.getByText("Den sparade kartbilden tas också bort.")).toBeTruthy()
+  })
+
+  it("doesn't warn about image removal when there is no saved image", () => {
+    renderItem(fullShelter, { saved: true, onToggleSave: vi.fn(), mapImage: null })
+
+    expect(screen.queryByText("Den sparade kartbilden tas också bort.")).toBeNull()
   })
 })

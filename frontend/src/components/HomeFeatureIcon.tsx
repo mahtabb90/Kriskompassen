@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-export type HomeFeatureIconName = "info" | "shelter" | "location"
+export type HomeFeatureIconName = "info" | "shelter" | "location" | "phone"
 
 const ICON_SHAPES: Record<HomeFeatureIconName, ReactNode> = {
   info: (
@@ -22,6 +22,12 @@ const ICON_SHAPES: Record<HomeFeatureIconName, ReactNode> = {
       <circle cx="12" cy="11" r="2.2" />
     </>
   ),
+  phone: (
+    <>
+      <rect x="7" y="3" width="10" height="18" rx="2" />
+      <path d="M11 18h2" />
+    </>
+  ),
 }
 
 interface HomeFeatureIconProps {
@@ -30,8 +36,8 @@ interface HomeFeatureIconProps {
 }
 
 /**
- * Renders a decorative outline icon for a home page feature card that has no equivalent in
- * `CrisisIcon` or `CalmIcon`.
+ * Renders a decorative outline icon for a home page feature card or a krisinfo overview card that
+ * has no equivalent in `CrisisIcon`, `CalmIcon` or `SignalIcon`.
  *
  * It shares their style (24×24 viewBox, 1.8 stroke, `currentColor`). The icon repeats the adjacent
  * card title, so it is hidden from assistive technology and cannot receive focus.

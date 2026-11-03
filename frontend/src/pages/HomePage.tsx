@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
-import CalmIcon from "../components/CalmIcon"
 import CompassHeroMotif from "../components/CompassHeroMotif"
 import CrisisIcon from "../components/CrisisIcon"
 import HomeFeatureIcon from "../components/HomeFeatureIcon"
@@ -10,14 +9,18 @@ interface Feature {
   to: string
   description: string
   icon: ReactNode
-  /** Primary product functions get a larger card; the others are supporting cards. */
+  /**
+   * Primary product functions get larger padding, title and icon; the others are supporting
+   * cards. Every card spans half the row, so two cards fill each row.
+   */
   prominent: boolean
 }
 
 const FEATURES: readonly Feature[] = [
   {
-    to: "/crisis",
-    description: "Läs tydliga råd för olika krissituationer och spara viktig information offline.",
+    to: "/krisinformation",
+    description:
+      "Förbered dig, hitta viktiga telefonnummer, lär dig varningssignalerna och få råd för att behålla lugnet.",
     icon: <HomeFeatureIcon name="info" />,
     prominent: true,
   },
@@ -34,16 +37,9 @@ const FEATURES: readonly Feature[] = [
     prominent: false,
   },
   {
-    to: "/min-info",
+    to: "/installningar",
     description: "Spara viktig lokal information, till exempel adresser som är relevanta för dig.",
     icon: <HomeFeatureIcon name="location" />,
-    prominent: false,
-  },
-  {
-    to: "/lugn-i-kris",
-    description:
-      "Få enkla råd som kan hjälpa dig att behålla fokus och hantera stress i en krissituation.",
-    icon: <CalmIcon name="breath" />,
     prominent: false,
   },
 ]
@@ -71,11 +67,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
   const title = labelFor(to)
 
   return (
-    <div
-      className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm transition-[border-color,box-shadow] duration-150 ease-out hover:border-blue-400 hover:shadow-md ${
-        prominent ? "md:col-span-3" : "md:col-span-2"
-      }`}
-    >
+    <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm transition-[border-color,box-shadow] duration-150 ease-out hover:border-blue-400 hover:shadow-md md:col-span-3">
       {ACCENT_BAR}
       <Link
         to={to}
@@ -160,7 +152,7 @@ function HomePage() {
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Link
-                to="/crisis"
+                to="/krisinformation"
                 className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-950 active:bg-blue-950"
               >
                 Se krisinformation
