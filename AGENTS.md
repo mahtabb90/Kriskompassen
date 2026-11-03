@@ -519,7 +519,7 @@ Running E2E (from `frontend/`):
 - `npm run test:e2e:ui` opens Playwright's UI mode; `npm run test:e2e:report` opens the last HTML report.
 - Traces: locally add `--trace on`, then open the report or `npx playwright show-trace <trace.zip>`. From a failed Actions run, download and unzip the `playwright-report` artifact and run `npx playwright show-report <unzipped>/playwright-report`; traces are under its `test-results/`.
 - Tests use roles and Swedish visible text, not test IDs. Each test gets a fresh browser context, so IndexedDB starts empty. API calls (`**/api/v1/**`) are aborted because no backend runs.
-- Current coverage: crisis kit scroll position on card clicks and saving a custom item across a reload, and the install button with a synthetic `beforeinstallprompt` at 320, 375, 768 and 1024px. The desktop header-height check is marked `test.fail()` for a known layout shift; remove the mark when the header no longer grows.
+- Current coverage: crisis kit scroll position on card clicks and saving a custom item across a reload, and the install button with a synthetic `beforeinstallprompt` at 320, 375, 768 and 1024px. Header-height and navigation-height checks are expected to pass at all four widths.
 
 **Hard rule (team decision): keep existing tests in sync with the code.**
 
