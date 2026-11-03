@@ -11,6 +11,8 @@ import CrisisKitPage from "../pages/CrisisKitPage"
 import HomePage from "../pages/HomePage"
 import KrisinfoOverviewPage from "../pages/KrisinfoOverviewPage"
 import NotFoundPage from "../pages/NotFoundPage"
+import PhoneNumbersPage from "../pages/PhoneNumbersPage"
+import WarningSignalsPage from "../pages/WarningSignalsPage"
 import { feed } from "../services/__fixtures__/vma"
 import { crisisArticles, crisisResponse } from "../services/__fixtures__/crisis"
 import AppLayout from "./AppLayout"
@@ -77,6 +79,8 @@ function mountLayout(path: string) {
               <Route path="/crisis" element={<CrisisInfoPage />} />
               <Route path="/crisis-kit" element={<CrisisKitPage />} />
               <Route path="/crisis/:id" element={<DetailedCrisisCard />} />
+              <Route path="/telefonnummer" element={<PhoneNumbersPage />} />
+              <Route path="/varningssignaler" element={<WarningSignalsPage />} />
               <Route path="/lugn-i-kris" element={<CalmInCrisisPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
@@ -90,9 +94,12 @@ function mountLayout(path: string) {
 describe("routed page structure", () => {
   it.each([
     "/",
+    "/krisinformation",
     "/crisis",
     "/crisis-kit",
     "/crisis/food-in-crisis",
+    "/telefonnummer",
+    "/varningssignaler",
     "/lugn-i-kris",
     "/no-such-page",
   ])("%s has one page heading, one main landmark and one primary navigation", async (path) => {
@@ -107,9 +114,12 @@ describe("routed page structure", () => {
 
   it.each([
     "/",
+    "/krisinformation",
     "/crisis",
     "/crisis-kit",
     "/crisis/food-in-crisis",
+    "/telefonnummer",
+    "/varningssignaler",
     "/lugn-i-kris",
     "/no-such-page",
   ])("%s has one footer landmark after main inside the shared layout", async (path) => {
