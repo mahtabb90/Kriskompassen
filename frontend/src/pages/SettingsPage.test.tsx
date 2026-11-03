@@ -15,7 +15,7 @@ import {
 } from "../services/installInstructionsDismissal"
 import { installPromptService } from "../services/installPromptService"
 import type { SavedAddress } from "../types/address"
-import MyInfoPage from "./MyInfoPage"
+import SettingsPage from "./SettingsPage"
 
 vi.mock("../services/addressStorageService", () => ({
   getSavedAddresses: vi.fn(),
@@ -73,12 +73,12 @@ afterEach(() => {
 function mount() {
   return render(
     <AddressProvider>
-      <MyInfoPage />
+      <SettingsPage />
     </AddressProvider>
   )
 }
 
-describe("MyInfoPage", () => {
+describe("SettingsPage", () => {
   it("keeps installation help outside the address form after automatic instructions are dismissed", async () => {
     const values = new Map<string, string>()
     vi.stubGlobal("localStorage", {
