@@ -31,6 +31,26 @@ describe("ShelterSaveToggle when saved", () => {
   })
 })
 
+describe("ShelterSaveToggle map image removal warning", () => {
+  it("shows a warning that the saved map image is removed too, only when saved and hasMapImage", () => {
+    render(<ShelterSaveToggle saved={true} onToggle={vi.fn()} hasMapImage={true} />)
+
+    expect(screen.getByText("Den sparade kartbilden tas också bort.")).toBeTruthy()
+  })
+
+  it("hides the warning when there is no saved image", () => {
+    render(<ShelterSaveToggle saved={true} onToggle={vi.fn()} hasMapImage={false} />)
+
+    expect(screen.queryByText("Den sparade kartbilden tas också bort.")).toBeNull()
+  })
+
+  it("hides the warning when unsaved, even if hasMapImage is somehow true", () => {
+    render(<ShelterSaveToggle saved={false} onToggle={vi.fn()} hasMapImage={true} />)
+
+    expect(screen.queryByText("Den sparade kartbilden tas också bort.")).toBeNull()
+  })
+})
+
 describe("ShelterSaveToggle actions slot", () => {
   it("renders extra actions in the same row as the button", () => {
     render(

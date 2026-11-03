@@ -49,6 +49,10 @@ class KrisKompassenDatabase extends Dexie {
       shelterCache: "id, fetchedAt",
       savedShelters: "id",
     })
+
+    // SavedShelter later grew a mapImage field (a Blob, see types/shelter.ts) without a new
+    // version here - Dexie's schema string only declares which fields are indexed, so adding a
+    // plain stored field needs no version bump, and mapImage is never queried by.
   }
 }
 

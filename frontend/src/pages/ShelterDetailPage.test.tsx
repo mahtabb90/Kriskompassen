@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { forwardRef, useImperativeHandle } from "react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useAddresses, type AddressContextValue } from "../context/addressContext"
@@ -10,6 +11,7 @@ import {
   removeSavedShelter,
   saveShelter,
   setSavedShelterComment,
+  setSavedShelterMapImage,
 } from "../services/shelterStorageService"
 import type { CachedShelter } from "../types/shelter"
 import ShelterDetailPage from "./ShelterDetailPage"
@@ -28,12 +30,19 @@ vi.mock("../services/shelterStorageService", () => ({
   saveShelter: vi.fn(),
   removeSavedShelter: vi.fn(),
   setSavedShelterComment: vi.fn(),
+  setSavedShelterMapImage: vi.fn(),
 }))
 
+const { mockCaptureImage } = vi.hoisted(() => ({ mockCaptureImage: vi.fn() }))
+
 // The real MapLibre map is verified manually, not here - this just confirms the embedded map
-// mounts (or doesn't, offline) correctly.
+// mounts (or doesn't, offline) correctly, and that the "Spara kartbild" flow reaches the map's
+// exposed captureImage() handle (ShelterLocationMap.tsx) correctly.
 vi.mock("../components/ShelterLocationMap", () => ({
-  default: () => <div data-testid="shelter-location-map" />,
+  default: forwardRef(function MockShelterLocationMap(_props: unknown, ref) {
+    useImperativeHandle(ref, () => ({ captureImage: mockCaptureImage }))
+    return <div data-testid="shelter-location-map" />
+  }),
 }))
 
 const fullShelter: CachedShelter = {
@@ -98,6 +107,8 @@ beforeEach(() => {
   vi.mocked(saveShelter).mockResolvedValue(undefined)
   vi.mocked(removeSavedShelter).mockResolvedValue(undefined)
   vi.mocked(setSavedShelterComment).mockResolvedValue(undefined)
+  vi.mocked(setSavedShelterMapImage).mockResolvedValue(undefined)
+  mockCaptureImage.mockReset()
 })
 
 afterEach(() => {
@@ -193,6 +204,7 @@ describe("ShelterDetailPage save button", () => {
         lon: fullShelter.lon,
         savedAt: "2026-01-01T00:00:00Z",
         comment: null,
+        mapImage: null,
       },
     ])
     fireEvent.click(saveButton)
@@ -212,6 +224,7 @@ describe("ShelterDetailPage save button", () => {
         lon: fullShelter.lon,
         savedAt: "2026-01-01T00:00:00Z",
         comment: null,
+        mapImage: null,
       },
     ])
     renderDetail()
@@ -246,6 +259,7 @@ describe("ShelterDetailPage comment", () => {
         lon: fullShelter.lon,
         savedAt: "2026-01-01T00:00:00Z",
         comment: "Kommunhuset",
+        mapImage: null,
       },
     ])
     renderDetail()
@@ -264,6 +278,7 @@ describe("ShelterDetailPage comment", () => {
         lon: fullShelter.lon,
         savedAt: "2026-01-01T00:00:00Z",
         comment: null,
+        mapImage: null,
       },
     ])
     renderDetail()
@@ -285,6 +300,7 @@ describe("ShelterDetailPage comment", () => {
         lon: fullShelter.lon,
         savedAt: "2026-01-01T00:00:00Z",
         comment: null,
+        mapImage: null,
       },
     ])
     renderDetail()
@@ -298,6 +314,137 @@ describe("ShelterDetailPage comment", () => {
 
     fireEvent.change(input, { target: { value: "Kommunhuset, källaren" } })
     expect(screen.queryByText("Kommentar sparad.")).toBeNull()
+  })
+})
+
+describe("ShelterDetailPage map image", () => {
+  it("saves an unsaved shelter and its captured image together, in one flow", async () => {
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    mockCaptureImage.mockResolvedValue(image)
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    renderDetail()
+    await screen.findByRole("heading", { name: "Kantarellen 11, Solna kommun" })
+
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: null,
+        mapImage: image,
+      },
+    ])
+    const saveImageButton = screen.getByRole("button", { name: "Spara kartbild" })
+    fireEvent.click(saveImageButton)
+
+    expect(await screen.findByText("Kartbild sparad.")).toBeTruthy()
+    expect(saveShelter).toHaveBeenCalledExactlyOnceWith(fullShelter)
+    expect(setSavedShelterMapImage).toHaveBeenCalledExactlyOnceWith(fullShelter.id, image)
+  })
+
+  it("saves only the image, without re-saving the bookmark, when already saved", async () => {
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    mockCaptureImage.mockResolvedValue(image)
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: "Kommunhuset",
+        mapImage: null,
+      },
+    ])
+    renderDetail()
+    await screen.findByText("Sparat skyddsrum")
+
+    const saveImageButton = screen.getByRole("button", { name: "Spara kartbild" })
+    fireEvent.click(saveImageButton)
+
+    expect(await screen.findByText("Kartbild sparad.")).toBeTruthy()
+    expect(saveShelter).not.toHaveBeenCalled()
+    expect(setSavedShelterMapImage).toHaveBeenCalledExactlyOnceWith(fullShelter.id, image)
+  })
+
+  it("does nothing when the map has no view to capture yet", async () => {
+    mockCaptureImage.mockResolvedValue(null)
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    renderDetail()
+    await screen.findByRole("heading", { name: "Kantarellen 11, Solna kommun" })
+
+    const saveImageButton = screen.getByRole("button", { name: "Spara kartbild" })
+    fireEvent.click(saveImageButton)
+    await Promise.resolve()
+
+    expect(saveShelter).not.toHaveBeenCalled()
+    expect(setSavedShelterMapImage).not.toHaveBeenCalled()
+    expect(screen.queryByText("Kartbild sparad.")).toBeNull()
+  })
+
+  it("shows the saved map image, offline and online alike, once one exists", async () => {
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    mockMode("offline")
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: null,
+        mapImage: image,
+      },
+    ])
+    renderDetail()
+
+    expect(
+      await screen.findByRole("img", { name: "Sparad vy av kartan vid skyddsrummet" })
+    ).toBeTruthy()
+    // Offline still shows the live-map notice - only the saved snapshot needs no network.
+    expect(screen.getByText(/Kartan kräver internetanslutning/)).toBeTruthy()
+  })
+
+  it("shows the image removal warning only once a saved image exists", async () => {
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: null,
+        mapImage: image,
+      },
+    ])
+    renderDetail()
+
+    expect(await screen.findByText("Den sparade kartbilden tas också bort.")).toBeTruthy()
+  })
+
+  it("hides the image removal warning when the shelter has no saved image", async () => {
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: null,
+        mapImage: null,
+      },
+    ])
+    renderDetail()
+
+    await screen.findByText("Sparat skyddsrum")
+    expect(screen.queryByText("Den sparade kartbilden tas också bort.")).toBeNull()
   })
 })
 
