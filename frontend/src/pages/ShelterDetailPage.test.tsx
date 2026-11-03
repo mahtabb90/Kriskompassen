@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { forwardRef, useImperativeHandle } from "react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -344,6 +344,33 @@ describe("ShelterDetailPage map image", () => {
     expect(setSavedShelterMapImage).toHaveBeenCalledExactlyOnceWith(fullShelter.id, image)
   })
 
+  it("clears the 'Kartbild sparad.' confirmation once the shelter (and its image) is removed", async () => {
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    mockCaptureImage.mockResolvedValue(image)
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    renderDetail()
+    await screen.findByRole("heading", { name: "Kantarellen 11, Solna kommun" })
+
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: null,
+        mapImage: image,
+      },
+    ])
+    fireEvent.click(screen.getByRole("button", { name: "Spara kartbild" }))
+    expect(await screen.findByText("Kartbild sparad.")).toBeTruthy()
+
+    vi.mocked(getSavedShelters).mockResolvedValue([])
+    fireEvent.click(screen.getByRole("button", { name: "Ta bort sparat skyddsrum" }))
+
+    await waitFor(() => expect(screen.queryByText("Kartbild sparad.")).toBeNull())
+  })
+
   it("saves only the image, without re-saving the bookmark, when already saved", async () => {
     const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
     mockCaptureImage.mockResolvedValue(image)
@@ -362,6 +389,17 @@ describe("ShelterDetailPage map image", () => {
     renderDetail()
     await screen.findByText("Sparat skyddsrum")
 
+    vi.mocked(getSavedShelters).mockResolvedValue([
+      {
+        id: fullShelter.id,
+        address: fullShelter.address,
+        lat: fullShelter.lat,
+        lon: fullShelter.lon,
+        savedAt: "2026-01-01T00:00:00Z",
+        comment: "Kommunhuset",
+        mapImage: image,
+      },
+    ])
     const saveImageButton = screen.getByRole("button", { name: "Spara kartbild" })
     fireEvent.click(saveImageButton)
 

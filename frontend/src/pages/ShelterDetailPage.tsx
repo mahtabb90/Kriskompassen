@@ -249,9 +249,11 @@ function ShelterDetailPage() {
                     >
                       Spara kartbild
                     </button>
-                    <div role="status" className="text-sm font-medium text-green-800">
-                      {mapImageConfirmation}
-                    </div>
+                    {savedRecord?.mapImage && (
+                      <div role="status" className="text-sm font-medium text-green-800">
+                        {mapImageConfirmation}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
