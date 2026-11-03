@@ -173,6 +173,44 @@ describe("WarningSignalsPage", () => {
     }
   })
 
+  it("links each signal once to its MCF recording, first in the card, in a new tab", async () => {
+    await renderReady()
+    const audioLinks = signalCards().map((card) => within(card).getAllByRole("link")[0])
+    expect(audioLinks.map((link) => link.getAttribute("href"))).toEqual(
+      SIGNAL_IDS.map((id) => signal(id).audioLinkUrl)
+    )
+    audioLinks.forEach((link, index) => {
+      expect(link.closest("li")).toBe(signalCards()[index])
+      expect(link.getAttribute("target")).toBe("_blank")
+      expect(link.getAttribute("rel")).toBe("noopener noreferrer")
+      expect(link.hasAttribute("aria-label")).toBe(false)
+      expect(link.textContent).toContain(signal(SIGNAL_IDS[index]).name)
+      expect(link.textContent).toContain("MCF")
+      expect(link.textContent!.endsWith("(öppnas i ny flik)")).toBe(true)
+    })
+  })
+
+  it("links once, between the lead paragraph and the cards, to MCF's page on the signals", async () => {
+    await renderReady()
+    const sourcesRegion = screen.getByRole("region", { name: "Källor" })
+    const lineLinks = screen
+      .getAllByRole("link")
+      .filter((link) => !link.closest("li") && !sourcesRegion.contains(link))
+    expect(lineLinks).toHaveLength(1)
+    const [link] = lineLinks
+    expect(link.getAttribute("href")).toBe(MCF_URL)
+    expect(link.getAttribute("target")).toBe("_blank")
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer")
+    expect(link.hasAttribute("aria-label")).toBe(false)
+    expect(link.textContent).toContain("mcf.se")
+    expect(link.textContent!.endsWith("(öppnas i ny flik)")).toBe(true)
+    expect(link.closest("p")!.textContent).toContain("Myndigheten för civilt försvar (MCF)")
+    const summary = screen.getByText(section.summary)
+    const [firstCard] = signalCards()
+    expect(summary.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(link.compareDocumentPosition(firstCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it("shows no internet note while the browser reports a connection", async () => {
     await renderReady()
     expect(screen.queryByText("Kräver internetanslutning.")).toBeNull()
@@ -182,21 +220,24 @@ describe("WarningSignalsPage", () => {
     await renderReady()
     goOffline()
     const contentLinks = signalCards().flatMap((card) => within(card).queryAllByRole("link"))
-    expect(contentLinks).toHaveLength(4)
-    for (const link of contentLinks) {
+    // Four recordings, three action links and one meaning source.
+    expect(contentLinks).toHaveLength(8)
+    // Every link on the page, including the MCF line and the sources, carries the note.
+    const allLinks = screen.getAllByRole("link")
+    expect(allLinks).toHaveLength(11)
+    for (const link of allLinks) {
       const note = document.getElementById(link.getAttribute("aria-describedby")!)
       expect(note?.textContent).toBe("Kräver internetanslutning.")
     }
-    const sources = within(screen.getByRole("region", { name: "Källor" }))
-    for (const link of sources.getAllByRole("link")) {
-      const note = document.getElementById(link.getAttribute("aria-describedby")!)
-      expect(note?.textContent).toBe("Kräver internetanslutning.")
-    }
-    expect(screen.getAllByText("Kräver internetanslutning.")).toHaveLength(6)
-    const [importantMessage] = signalCards()
-    for (const step of signal("important-message").whatToDo) {
-      expect(within(importantMessage).getByText(step.text)).toBeTruthy()
-    }
+    expect(screen.getAllByText("Kräver internetanslutning.")).toHaveLength(11)
+    signalCards().forEach((card, index) => {
+      const item = signal(SIGNAL_IDS[index])
+      expect(within(card).getByText(item.patternDescription)).toBeTruthy()
+      expect(card.querySelectorAll("svg g rect")).toHaveLength(STROKE_COUNTS[index])
+      for (const step of item.whatToDo) {
+        expect(within(card).getByText(step.text)).toBeTruthy()
+      }
+    })
   })
 
   it("lists MCF and Krisinformation.se as sources, with their verification dates", async () => {
