@@ -95,12 +95,6 @@ for (const width of widths) {
     })
 
     test("does not change the header height", async ({ page }) => {
-      // Known layout shift from 48rem: the text button's min-h-8 (32px) makes the status row
-      // taller than "Ansluten" alone (20px), so the header grows by 12px (188 to 200px) without
-      // an active address and by 4px (204 to 208px) with one. Remove this annotation once the
-      // header no longer grows. The other test covers every step before this assertion.
-      test.fail(isDesktop, "Known header layout shift when the install button appears")
-
       const { header, headerBefore } = await showInstallOffer(page, isDesktop)
 
       expect(await heightOf(header)).toBeCloseTo(headerBefore, 1)

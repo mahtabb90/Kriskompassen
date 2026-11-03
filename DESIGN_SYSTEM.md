@@ -638,6 +638,13 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
   header still grows naturally when text or controls need to wrap, without overlap or clipping.
   The menu footer uses `empty:hidden`, so neither the footer nor its divider is shown while the
   button is not rendered.
+- **Stable desktop row:** The header's install wrapper uses `-my-1.5 flex`: its 6px negative top
+  and bottom margins offset the text button's `py-1.5`, giving it the same 20px outer height and
+  text baseline as the status line. Flex layout avoids an extra inline line box around the
+  button. The visible button remains 32px high with its existing 48px hit area and outward focus
+  outline. Nothing is reserved while it is absent, and the header's initial height is unchanged.
+  Keep the wrapper offsets in sync with the button's vertical padding, and verify spacing,
+  clipping and hit-target overlap when changing either. The mobile menu has no such offsets.
 - **Focus:** Selecting it opens the browser's prompt and removes the button. In the header focus
   moves to `#page-heading`; in the menu the dialog closes and focus returns to the **Meny** button.
 
