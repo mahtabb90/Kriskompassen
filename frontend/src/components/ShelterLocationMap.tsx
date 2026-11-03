@@ -6,8 +6,15 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react"
 import { mapConfig } from "../config/mapConfig"
 import type { Shelter } from "../types/shelter"
 import type { GeoPoint } from "../utils/distance"
-import { captureMapSnapshot } from "../utils/mapSnapshot"
-import { originMarkerElement, shelterMarkerElement } from "../utils/shelterMapIcons"
+import { captureMapSnapshot, loadSvgImage, type MarkerSnapshot } from "../utils/mapSnapshot"
+import {
+  ORIGIN_MARKER_SIZE,
+  ORIGIN_MARKER_SVG,
+  originMarkerElement,
+  SHELTER_MARKER_SIZE,
+  SHELTER_MARKER_SVG,
+  shelterMarkerElement,
+} from "../utils/shelterMapIcons"
 
 interface ShelterLocationMapProps {
   shelter: Pick<Shelter, "lat" | "lon">
@@ -39,9 +46,43 @@ const ShelterLocationMap = forwardRef<ShelterLocationMapHandle, ShelterLocationM
     const mapRef = useRef<MapLibreMap | null>(null)
 
     useImperativeHandle(ref, () => ({
-      captureImage: () => {
+      captureImage: async () => {
         const map = mapRef.current
-        return map ? captureMapSnapshot(map.getCanvas()) : Promise.resolve(null)
+        if (!map) return null
+
+        // map.getCanvas() alone never contains the shelter/origin markers - they're separate DOM
+        // elements maplibre-gl positions on top of the canvas with CSS, not pixels drawn into it.
+        // So each one is rasterized and composited back on manually, at its on-screen position.
+        const canvas = map.getCanvas()
+        // Canvas pixels are CSS pixels * pixel ratio (clamped by maxCanvasSize internally), while
+        // map.project() returns CSS pixels - measuring both live, rather than trusting
+        // map.getPixelRatio(), keeps this correct even when that clamp kicks in.
+        const pixelRatio = canvas.width / canvas.clientWidth
+
+        const toMarkerSnapshot = async (
+          lngLat: [number, number],
+          svg: string,
+          size: number
+        ): Promise<MarkerSnapshot> => {
+          const point = map.project(lngLat)
+          const image = await loadSvgImage(svg)
+          return {
+            x: point.x * pixelRatio,
+            y: point.y * pixelRatio,
+            image,
+            width: size * pixelRatio,
+            height: size * pixelRatio,
+          }
+        }
+
+        const markers = await Promise.all([
+          toMarkerSnapshot([shelter.lon, shelter.lat], SHELTER_MARKER_SVG, SHELTER_MARKER_SIZE),
+          ...(origin
+            ? [toMarkerSnapshot([origin.lon, origin.lat], ORIGIN_MARKER_SVG, ORIGIN_MARKER_SIZE)]
+            : []),
+        ])
+
+        return captureMapSnapshot(canvas, markers)
       },
     }))
 
