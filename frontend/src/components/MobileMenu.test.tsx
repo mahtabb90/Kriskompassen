@@ -102,6 +102,29 @@ describe("MobileMenu", () => {
     expect(current[0].textContent).toBe("Krisinformation")
   })
 
+  it.each(["/varningssignaler", "/crisis/food-in-crisis"])(
+    "keeps Krisinformation current on the krisinfo subpage %s",
+    (path) => {
+      const { dialog } = openMenu(path)
+      const current = within(dialog)
+        .getAllByRole("link")
+        .filter((link) => link.hasAttribute("aria-current"))
+      expect(current).toHaveLength(1)
+      expect(current[0].getAttribute("aria-current")).toBe("page")
+      expect(current[0].textContent).toBe("Krisinformation")
+      expect(current[0].className).toContain("underline")
+    }
+  )
+
+  it("navigates from a krisinfo subpage through its current Krisinformation link", () => {
+    const { trigger, dialog } = openMenu("/telefonnummer")
+    fireEvent.click(within(dialog).getByRole("link", { name: "Krisinformation" }))
+    expect(screen.getByTestId("pathname").textContent).toBe("/crisis")
+    expect(screen.queryByRole("dialog")).toBe(null)
+    // A different route leaves focus to the layout's route heading focus.
+    expect(document.activeElement).not.toBe(trigger)
+  })
+
   it("closes with Stäng menyn and returns focus to the trigger", () => {
     const { trigger, dialog } = openMenu()
     fireEvent.click(within(dialog).getByRole("button", { name: "Stäng menyn" }))
