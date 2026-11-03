@@ -24,6 +24,9 @@ interface SignalCardProps {
  * - A tinted panel groups how the signal sounds: the loudspeaker icon beside
  *   `patternDescription`, and the drawn timeline below them at the panel's full width. The icon
  *   and timeline are decorative; `patternDescription` is always shown as text.
+ * - The panel ends with an external link to the signal's recording at `audioLinkUrl`, which the
+ *   content takes from MCF, so the label names both the signal and MCF. Without `audioLinkUrl`
+ *   no link is shown. The app itself never plays, stores or caches the recording.
  * - The meaning is shown only when the content has one, with its own source link when
  *   `meaningSource` is set. Nothing replaces a missing meaning.
  * - The actions are an ordered list. Each step's text is always shown; its link, if any, is a
@@ -49,6 +52,15 @@ function SignalCard({ signal, isOnline }: SignalCardProps) {
           <p className={`min-w-0 self-center ${BODY_CLASSES}`}>{signal.patternDescription}</p>
         </div>
         <SignalPattern pattern={signal.pattern} className="mt-4" />
+        {signal.audioLinkUrl && (
+          <p className="mt-2">
+            <ExternalLink
+              href={signal.audioLinkUrl}
+              label={`Lyssna på signalen ${signal.name} hos MCF`}
+              isOnline={isOnline}
+            />
+          </p>
+        )}
       </div>
 
       {signal.meaning !== undefined && (

@@ -1,3 +1,4 @@
+import ExternalLink from "../components/ExternalLink"
 import KrisinfoSourcesCard from "../components/KrisinfoSourcesCard"
 import SignalCard from "../components/SignalCard"
 import { useMode } from "../context/modeContext"
@@ -12,7 +13,9 @@ import { collectSources } from "../utils/krisinfoSources"
  * makes no network request. It is the only reader of the content and of `useMode()`; each
  * `SignalCard` receives its signal and `isOnline` as props, in the source's order.
  * Browser-reported connectivity, not the "Sparad information" mode, decides whether external
- * links say that they need internet. Sources are listed in order of first use, including the
+ * links say that they need internet. Between the lead paragraph and the cards, one line says that
+ * the recordings the cards link to come from MCF and links to the section's source page. Sources
+ * are listed in order of first use, including the
  * separate source of a meaning. The page heading stays mounted across loading states so the
  * layout can name and focus it.
  */
@@ -55,6 +58,16 @@ function WarningSignalsPage() {
         <>
           <p className="mt-4 max-w-prose text-lg leading-relaxed text-slate-700">
             {state.data.summary}
+          </p>
+          {/* The sentence stays complete without its link, which follows it, so it also reads
+              well offline and in a screen reader's list of links. */}
+          <p className="mt-3 max-w-prose text-sm text-slate-600">
+            Ljuden kommer från Myndigheten för civilt försvar (MCF).{" "}
+            <ExternalLink
+              href={state.data.source.url}
+              label="MCF:s sida om Hesa Fredrik på mcf.se"
+              isOnline={isOnline}
+            />
           </p>
           {/* One narrower column, so each card's text and drawing share its width. */}
           <div className="max-w-2xl">

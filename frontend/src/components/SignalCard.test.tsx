@@ -20,6 +20,7 @@ const full: Signal = {
     { text: "Andra steget.", link: { label: "Testlänk", url: "https://example.org/steg" } },
   ],
   pattern: { toneSeconds: 2, pauseSeconds: 2, repeatCount: 3 },
+  audioLinkUrl: "https://example.org/testsignal.mp3",
   source,
   lastVerified: "2026-11-02",
 }
@@ -61,8 +62,32 @@ describe("SignalCard", () => {
     let panel: HTMLElement = screen.getByText("Beskrivning av mönstret.")
     while (!panel.contains(timeline)) panel = panel.parentElement!
     expect(panel.contains(icon)).toBe(true)
-    expect(panel.querySelector("h2, h3, ol, a")).toBeNull()
+    expect(panel.querySelector("h2, h3, ol")).toBeNull()
+    expect([...panel.querySelectorAll("a")].map((link) => link.getAttribute("href"))).toEqual([
+      full.audioLinkUrl,
+    ])
     expect(panel.textContent).not.toContain("Signalens betydelse.")
+  })
+
+  it("ends the panel with a link to the recording that names the signal and MCF", () => {
+    const { container } = render(<SignalCard signal={full} isOnline />)
+    const link = screen.getByRole("link", { name: /Testsignal/ })
+    expect(link.getAttribute("href")).toBe(full.audioLinkUrl)
+    expect(link.getAttribute("target")).toBe("_blank")
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer")
+    expect(link.hasAttribute("aria-label")).toBe(false)
+    expect(link.textContent).toContain("MCF")
+    expect(link.textContent!.endsWith("(öppnas i ny flik)")).toBe(true)
+    const timeline = container.querySelector("svg g")!.closest("svg")!
+    expect(timeline.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // The recording link comes first in the card, before the meaning's and actions' links.
+    expect(screen.getAllByRole("link")[0]).toBe(link)
+  })
+
+  it("shows no recording link when the content has no audioLinkUrl", () => {
+    render(<SignalCard signal={{ ...full, audioLinkUrl: undefined }} isOnline />)
+    expect(screen.queryByRole("link", { name: /Testsignal/ })).toBeNull()
+    expect(screen.getAllByRole("link")).toHaveLength(2)
   })
 
   it("keeps each h3 section in its own block with its content", () => {
@@ -124,7 +149,8 @@ describe("SignalCard", () => {
       const noteId = link.getAttribute("aria-describedby")!
       expect(document.getElementById(noteId)!.textContent).toBe("Kräver internetanslutning.")
     }
-    expect(screen.getAllByText("Kräver internetanslutning.")).toHaveLength(2)
+    expect(screen.getAllByText("Kräver internetanslutning.")).toHaveLength(3)
+    expect(screen.getByText("Beskrivning av mönstret.")).toBeTruthy()
     expect(screen.getByText("Andra steget.")).toBeTruthy()
   })
 })
