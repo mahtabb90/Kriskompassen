@@ -1,8 +1,10 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import type { StoredMapView } from "../components/AllSheltersMap"
+import SavedShelterMapImage from "../components/SavedShelterMapImage"
 import ShelterDistance from "../components/ShelterDistance"
 import ShelterGeneralInfo from "../components/ShelterGeneralInfo"
+import type { ShelterLocationMapHandle } from "../components/ShelterLocationMap"
 import ShelterSaveToggle from "../components/ShelterSaveToggle"
 import { useAddresses } from "../context/addressContext"
 import { useMode } from "../context/modeContext"
@@ -54,8 +56,16 @@ function ShelterDetailPage() {
   const location = useLocation()
   const { activeAddress } = useAddresses()
   const { mode } = useMode()
-  const { shelters: savedShelters, isSaved, save, remove, updateComment } = useSavedShelters()
+  const {
+    shelters: savedShelters,
+    isSaved,
+    save,
+    remove,
+    updateComment,
+    saveMapImage,
+  } = useSavedShelters()
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const mapHandleRef = useRef<ShelterLocationMapHandle>(null)
 
   const mapView = (location.state as { mapView?: StoredMapView } | null)?.mapView
   const backTo = mapView ? "/skyddsrum/karta" : "/skyddsrum"
@@ -93,9 +103,11 @@ function ShelterDetailPage() {
   // information from previous renders" pattern (see ShelterPage's mode-driven tab for the same
   // approach) - avoids a lingering "Kommentar sparad." from the previous shelter's page.
   const [confirmationForId, setConfirmationForId] = useState(id)
+  const [mapImageConfirmation, setMapImageConfirmation] = useState("")
   if (id !== confirmationForId) {
     setConfirmationForId(id)
     setCommentConfirmation("")
+    setMapImageConfirmation("")
   }
   const handleToggleSave = useCallback(() => {
     if (!shelter) return
@@ -105,6 +117,14 @@ function ShelterDetailPage() {
       void save(shelter)
     }
   }, [shelter, isSaved, save, remove])
+
+  const handleSaveMapImage = useCallback(() => {
+    if (!shelter) return
+    void mapHandleRef.current?.captureImage().then((image) => {
+      if (!image) return
+      void saveMapImage(shelter, image).then(() => setMapImageConfirmation("Kartbild sparad."))
+    })
+  }, [shelter, saveMapImage])
 
   return (
     <article className="overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm">
@@ -170,7 +190,11 @@ function ShelterDetailPage() {
             </dl>
 
             <div className="mt-6">
-              <ShelterSaveToggle saved={shelterSaved} onToggle={handleToggleSave} />
+              <ShelterSaveToggle
+                saved={shelterSaved}
+                onToggle={handleToggleSave}
+                hasMapImage={Boolean(savedRecord?.mapImage)}
+              />
             </div>
 
             {shelterSaved && (
@@ -215,13 +239,37 @@ function ShelterDetailPage() {
                       </p>
                     }
                   >
-                    <ShelterLocationMap shelter={shelter} origin={origin} />
+                    <ShelterLocationMap ref={mapHandleRef} shelter={shelter} origin={origin} />
                   </Suspense>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSaveMapImage}
+                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-center font-semibold text-blue-900 hover:bg-blue-50"
+                    >
+                      Spara kartbild
+                    </button>
+                    {savedRecord?.mapImage && (
+                      <div role="status" className="text-sm font-medium text-green-800">
+                        {mapImageConfirmation}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <p className="mt-3 text-slate-600">
                   Kartan kräver internetanslutning. Platsen beskrivs ovan under "Plats".
                 </p>
+              )}
+              {savedRecord?.mapImage && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-slate-600">Sparad kartbild</p>
+                  <SavedShelterMapImage
+                    image={savedRecord.mapImage}
+                    alt="Sparad vy av kartan vid skyddsrummet"
+                    className="mt-2 h-48 w-full max-w-sm rounded-xl border border-blue-200/80 object-cover"
+                  />
+                </div>
               )}
             </div>
 

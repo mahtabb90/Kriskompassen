@@ -206,9 +206,9 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
   - Root container: `pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]`
   - Fixed mobile footer: its full-width button owns the padding, using `pb-[max(0.75rem,env(safe-area-inset-bottom))]`, `pl-[max(1rem,env(safe-area-inset-left))]` and `pr-[max(1rem,env(safe-area-inset-right))]`. This keeps the yellow field clickable through its padding. The full-screen menu pads all four edges with the matching insets.
 - **Dynamic Content Offset:**
-  When the mobile footer is fixed at the bottom of the viewport (below `48rem`), the root element tracks its measured height as `--navigation-height` via `ResizeObserver`. The main container applies:
-  `pb-[calc(var(--navigation-height,0px)+2rem)]`
-  This reserves sufficient scroll space so no content is obscured behind the footer, including its safe-area padding and enlarged text. It is `0px` from `48rem` upwards, where the footer is hidden.
+  When the mobile menu bar is fixed at the bottom of the viewport (below `48rem`), the root element tracks its measured height as `--navigation-height` via `ResizeObserver`. The shared page footer (section 6.8), the last element in the layout, is followed by an `aria-hidden` spacer of that height:
+  `h-[var(--navigation-height,0px)]`
+  This reserves sufficient scroll space so no content is obscured behind the bar, including its safe-area padding and enlarged text. It is `0px` from `48rem` upwards, where the bar is hidden. `main` itself uses a plain `pb-8`.
 
 ### 4.3 Responsive Content Grids
 
@@ -316,7 +316,7 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   name is the title (`aria-labelledby`) and its description is `aria-describedby`.
 - **Bento hierarchy:** from `md`, a six-column grid places Krisinformation and Min krislåda
   (`col-span-3`, larger padding, `text-2xl` title, 56px icon circle with a `border-blue-200` edge
-  on `bg-blue-100`) on one row and Skyddsrum, Min info and Lugn i kris (`col-span-2`, `text-xl`
+  on `bg-blue-100`) on one row and Skyddsrum, Inställningar and Lugn i kris (`col-span-2`, `text-xl`
   title, 48px `bg-blue-50` icon circle without border) on the next. Every card ends with the same
   decorative cue, pinned to the card bottom: the text **Öppna** and a 20px inline outline arrow
   (section 5.3 style, `currentColor`, `gap-2`), hidden from assistive technology as a whole
@@ -326,7 +326,7 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   outline is drawn inside the clipped card. No transforms.
 - **Icons:** the section 5.3 outline style in a `bg-blue-50` circle (as in section 5.4). Min
   krislåda reuses `CrisisIcon` (`other`), Lugn i kris reuses `CalmIcon` (`breath`); Krisinformation,
-  Skyddsrum and Min info use `HomeFeatureIcon`. All are `aria-hidden` and `text-blue-900`.
+  Skyddsrum and Inställningar use `HomeFeatureIcon`. All are `aria-hidden` and `text-blue-900`.
 
 ### 5.6 Phone Numbers Page (proposal)
 
@@ -609,6 +609,49 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 - **Focus:** The card never takes focus on its own and has no live region. Closing moves focus to
   `#page-heading`.
 
+### 6.8 Shared Footer (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in `Footer`. It reuses
+> existing tokens only.
+
+- **Placement:** a semantic `<footer>` (the `contentinfo` landmark) after `main` in `AppLayout`,
+  on every route. The layout root is a flex column and `main` is `flex-1`, so the footer sits at
+  the bottom of the viewport on short pages.
+- **Surface:** a slim, full-width, matte neutral band (`bg-slate-50` with a single `border-t
+  border-blue-200`), deliberately not a card and not a saturated block. Its content sits in the
+  `max-w-4xl` shell (`px-4 sm:px-6`) with `py-1.5` below `md` and `md:py-3` from `md`, and no fixed height, so enlarged text reflows.
+  It has no heading, link or other interactive element, no signature bar, no amber line and no
+  divider, so it stays quieter than the header and hero.
+- **Desktop (from `md`):** one row, `justify-between`, vertically centred. Left: a 20px compass
+  icon and the message. Right: the copyright line.
+- **Mobile:** stacked with no gap (`leading-snug` on the message): the icon and message first (icon aligned to the first text
+  line), the copyright line directly below, right-aligned to the content edge (`text-right`
+  at every width). The message is `text-[13px]` below `md` and `text-sm` from `md`; the copyright
+  stays `text-sm`. Text wraps normally.
+- **Compass icon:** an inline 24×24 outline SVG (a circle with a small needle, section 5.3
+  style, 1.8 stroke, `currentColor`) at `size-5 text-blue-900`, `aria-hidden`,
+  `focusable="false"` and titleless. It is drawn separately from `CompassHeroMotif`, which
+  would be unclear at this size.
+- **Message:** **"Din kompass till tydlig information och bättre beredskap – före och under en
+  kris."** in `text-sm text-slate-700`, regular weight.
+- **Copyright:** **"© 2026 KrisKompassen"**, `text-sm text-slate-600`. It makes no further legal
+  statement.
+- **Contrast:** `slate-700` and `slate-600` on `slate-50` are approximately 9.5:1 and 7.2:1,
+  computed from the palette values and still to be confirmed with a contrast checker
+  (section 2.5).
+- **Mobile bottom clearance:** a separate `aria-hidden` spacer after the `<footer>`, as tall as
+  the measured menu bar (`h-[var(--navigation-height,0px)]`, section 4.2), keeps the fixed bar
+  from covering the footer without adding empty space inside it. It is `0px` from 48rem upwards.
+- **Permanent backup on Inställningar:** `InstallHelpSection` follows the address form, outside it,
+  using a section 5.1 card with `mt-8 p-6 sm:p-8`. Its `h2` **Installera appen** names the section
+  through `aria-labelledby`. The native `details` summary **Visa installationshjälp** retains
+  its disclosure marker and has a minimum 48px target, visible focus and underline. It starts
+  closed on every page visit, uses no storage and opens inline without taking focus elsewhere.
+  Instructions for **Chrome på dator**, **iPhone och iPad** and **Safari på Mac** have `h3`
+  labels. All variants remain available regardless of browser install offers, platform detection
+  or a dismissed automatic card. The automatic card and backup share `InstallInstructionsContent`;
+  no automatic visibility, dismissal or install-button behaviour changes.
+
 ---
 
 ## 7. Navigation Patterns
@@ -625,7 +668,7 @@ KrisKompassen shows the same primary links, from the shared `navigationItems` li
 ### 7.2 Mobile Menu Dialog
 
 - A native modal `<dialog>` named **Meny** covers the whole viewport, including the header and the VMA notice, on a white surface with safe-area padding. The dialog element itself is fullscreen (`.mobile-menu-dialog`: fixed, `inset: 0`, no margin or border, `width: 100%`, `height`/`min-height: 100dvh`, no max-width/max-height), not only its backdrop. A **Stäng menyn** outlined button (48×48px minimum) sits in a fixed top row beside the heading; the link list below scrolls internally (`overscroll-contain`), so short screens and enlarged text remain usable. When the browser offers installation, a fixed footer below the list holds the **Installera app** button (section 6.6).
-- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Min info, Lugn i kris). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
+- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Inställningar, Lugn i kris). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
 - The modal makes the page inert, locks page scrolling and wraps Tab at its boundaries. Escape and **Stäng menyn** return focus to the Meny button, as does selecting the current route. Selecting another route closes the menu and leaves focus to the layout page-heading focus. Crossing `48rem` while open closes it without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating). There is no animation.
 
 ---

@@ -52,6 +52,7 @@ export async function saveShelter(
     lon: shelter.lon,
     savedAt: new Date().toISOString(),
     comment: null,
+    mapImage: null,
   }
   await db.savedShelters.put(saved)
 }
@@ -76,4 +77,14 @@ export async function getSavedShelters(): Promise<SavedShelter[]> {
 export async function setSavedShelterComment(id: string, comment: string): Promise<void> {
   const trimmed = comment.trim().slice(0, 50)
   await db.savedShelters.update(id, { comment: trimmed.length > 0 ? trimmed : null })
+}
+
+/**
+ * Sets a bookmarked shelter's saved map snapshot (AGENTS.md §9).
+ *
+ * Updating a shelter that was never saved is a no-op, same as setSavedShelterComment - there is
+ * no record to attach the image to, so callers must save the shelter first.
+ */
+export async function setSavedShelterMapImage(id: string, image: Blob): Promise<void> {
+  await db.savedShelters.update(id, { mapImage: image })
 }

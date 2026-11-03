@@ -6,6 +6,7 @@ import {
   removeSavedShelter,
   saveShelter,
   setSavedShelterComment,
+  setSavedShelterMapImage,
 } from "../services/shelterStorageService"
 import type { SavedShelter } from "../types/shelter"
 import { useSavedShelters } from "./useSavedShelters"
@@ -15,6 +16,7 @@ vi.mock("../services/shelterStorageService", () => ({
   saveShelter: vi.fn(),
   removeSavedShelter: vi.fn(),
   setSavedShelterComment: vi.fn(),
+  setSavedShelterMapImage: vi.fn(),
 }))
 
 const home: SavedShelter = {
@@ -24,6 +26,7 @@ const home: SavedShelter = {
   lon: 18.152,
   savedAt: "2026-01-01T00:00:00Z",
   comment: null,
+  mapImage: null,
 }
 
 beforeEach(() => {
@@ -31,6 +34,7 @@ beforeEach(() => {
   vi.mocked(saveShelter).mockResolvedValue(undefined)
   vi.mocked(removeSavedShelter).mockResolvedValue(undefined)
   vi.mocked(setSavedShelterComment).mockResolvedValue(undefined)
+  vi.mocked(setSavedShelterMapImage).mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -102,5 +106,49 @@ describe("useSavedShelters", () => {
 
     expect(setSavedShelterComment).toHaveBeenCalledExactlyOnceWith("a", "Kommunhuset")
     expect(result.current.shelters).toEqual([commented])
+  })
+
+  it("saves an unsaved shelter and its image together, then refreshes the list", async () => {
+    const { result } = renderHook(() => useSavedShelters())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    const withImage = { ...home, mapImage: image }
+    vi.mocked(getSavedShelters).mockResolvedValue([withImage])
+    await act(async () => {
+      await result.current.saveMapImage(
+        { id: "a", address: "Kantarellen 11", lat: 59.352, lon: 18.152 },
+        image
+      )
+    })
+
+    expect(saveShelter).toHaveBeenCalledExactlyOnceWith({
+      id: "a",
+      address: "Kantarellen 11",
+      lat: 59.352,
+      lon: 18.152,
+    })
+    expect(setSavedShelterMapImage).toHaveBeenCalledExactlyOnceWith("a", image)
+    expect(result.current.shelters).toEqual([withImage])
+  })
+
+  it("saves only the image, without re-saving the bookmark, when already saved", async () => {
+    vi.mocked(getSavedShelters).mockResolvedValueOnce([home])
+    const { result } = renderHook(() => useSavedShelters())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const image = new Blob(["fake-image-bytes"], { type: "image/jpeg" })
+    const withImage = { ...home, mapImage: image }
+    vi.mocked(getSavedShelters).mockResolvedValue([withImage])
+    await act(async () => {
+      await result.current.saveMapImage(
+        { id: "a", address: "Kantarellen 11", lat: 59.352, lon: 18.152 },
+        image
+      )
+    })
+
+    expect(saveShelter).not.toHaveBeenCalled()
+    expect(setSavedShelterMapImage).toHaveBeenCalledExactlyOnceWith("a", image)
+    expect(result.current.shelters).toEqual([withImage])
   })
 })

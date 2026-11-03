@@ -4,7 +4,11 @@ import {
   fetchAddressCandidates,
   fetchGeocode,
 } from "../services/geocodingService"
-import { GeolocationRequestError, requestCurrentPosition } from "../services/geolocationService"
+import {
+  GeolocationRequestError,
+  describeGeolocationError,
+  requestCurrentPosition,
+} from "../services/geolocationService"
 import type { Address, GeocodeCandidate } from "../types/address"
 
 type ResolvingSource = "manual" | "geolocated" | "coordinates"
@@ -19,19 +23,6 @@ interface AddressState {
 
 const NO_ADDRESS_MATCH_MESSAGE =
   "Ingen adress hittades. Kontrollera stavningen eller ange en mer specifik adress."
-
-function describeGeolocationError(error: GeolocationRequestError): string {
-  switch (error.code) {
-    case "permission_denied":
-      return "Platsbehörighet nekades. Du kan ange din adress manuellt istället."
-    case "timeout":
-      return "Det tog för lång tid att hämta din position. Försök igen eller ange adressen manuellt."
-    case "unsupported":
-      return "Den här webbläsaren stöder inte platshämtning. Ange adressen manuellt istället."
-    case "position_unavailable":
-      return "Din position kunde inte fastställas. Försök igen eller ange adressen manuellt."
-  }
-}
 
 function describeGeocodeError(error: GeocodeRequestError, context: string): string {
   switch (error.code) {

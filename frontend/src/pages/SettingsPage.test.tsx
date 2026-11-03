@@ -9,8 +9,13 @@ import {
   saveAddress,
   setActiveAddress,
 } from "../services/addressStorageService"
+import {
+  dismissInstallInstructions,
+  isInstallInstructionsDismissed,
+} from "../services/installInstructionsDismissal"
+import { installPromptService } from "../services/installPromptService"
 import type { SavedAddress } from "../types/address"
-import MyInfoPage from "./MyInfoPage"
+import SettingsPage from "./SettingsPage"
 
 vi.mock("../services/addressStorageService", () => ({
   getSavedAddresses: vi.fn(),
@@ -68,12 +73,39 @@ afterEach(() => {
 function mount() {
   return render(
     <AddressProvider>
-      <MyInfoPage />
+      <SettingsPage />
     </AddressProvider>
   )
 }
 
-describe("MyInfoPage", () => {
+describe("SettingsPage", () => {
+  it("keeps installation help outside the address form after automatic instructions are dismissed", async () => {
+    const values = new Map<string, string>()
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    })
+    dismissInstallInstructions()
+    expect(isInstallInstructionsDismissed()).toBe(true)
+    expect(installPromptService.getSnapshot().canInstall).toBe(false)
+
+    mount()
+    await waitFor(() => expect(getSavedAddresses).toHaveBeenCalled())
+
+    const help = screen.getByRole("region", { name: "Installera appen" })
+    expect(help.closest("form")).toBe(null)
+    const summary = within(help).getByText("Visa installationshjälp")
+    fireEvent.click(summary)
+
+    expect(help.querySelector("details")?.open).toBe(true)
+    expect(within(help).getByRole("heading", { name: "Chrome på dator" })).toBeTruthy()
+    expect(within(help).getByRole("heading", { name: "iPhone och iPad" })).toBeTruthy()
+    expect(isInstallInstructionsDismissed()).toBe(true)
+    expect(saveAddress).not.toHaveBeenCalled()
+    expect(removeAddress).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it("lists saved addresses with their label and marks the active one", async () => {
     vi.mocked(getSavedAddresses).mockResolvedValue([home, work])
     mount()

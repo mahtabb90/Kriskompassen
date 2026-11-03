@@ -5,6 +5,10 @@ interface ShelterSaveToggleProps {
   onToggle: () => void
   /** Extra controls rendered in the same row as the save/remove button, e.g. "Visa detaljer". */
   actions?: ReactNode
+  /** Shows a short warning under the remove button that removing the bookmark also deletes its
+   * saved map image - true only when this shelter actually has one, so removal stays an
+   * unconfirmed, unchanged one-click action otherwise. */
+  hasMapImage?: boolean
 }
 
 /**
@@ -21,7 +25,7 @@ interface ShelterSaveToggleProps {
  * buttons between cards. A grid row keeps both cells (and therefore both buttons' height) the
  * same regardless of which text wraps.
  */
-function ShelterSaveToggle({ saved, onToggle, actions }: ShelterSaveToggleProps) {
+function ShelterSaveToggle({ saved, onToggle, actions, hasMapImage }: ShelterSaveToggleProps) {
   return (
     <div className="flex flex-col gap-3">
       <p className="flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -44,6 +48,9 @@ function ShelterSaveToggle({ saved, onToggle, actions }: ShelterSaveToggleProps)
         </button>
         {actions}
       </div>
+      {saved && hasMapImage && (
+        <p className="text-sm text-slate-600">Den sparade kartbilden tas också bort.</p>
+      )}
     </div>
   )
 }

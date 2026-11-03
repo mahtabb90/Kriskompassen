@@ -83,7 +83,7 @@ describe("MobileMenu", () => {
       "Krisinformation",
       "Min krislåda",
       "Skyddsrum",
-      "Min info",
+      "Inställningar",
       "Lugn i kris",
     ])
     expect(links.map((link) => link.getAttribute("href"))).toEqual(
@@ -164,8 +164,8 @@ describe("MobileMenu", () => {
   it("navigates while the browser reports no connection", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
     const { dialog } = openMenu()
-    fireEvent.click(within(dialog).getByRole("link", { name: "Min info" }))
-    expect(screen.getByTestId("pathname").textContent).toBe("/min-info")
+    fireEvent.click(within(dialog).getByRole("link", { name: "Inställningar" }))
+    expect(screen.getByTestId("pathname").textContent).toBe("/installningar")
   })
 
   it("locks page scrolling while open and restores previous values on close", () => {

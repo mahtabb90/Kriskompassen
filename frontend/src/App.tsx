@@ -8,9 +8,9 @@ import CrisisInfoPage from "./pages/CrisisInfoPage"
 import CrisisKitPage from "./pages/CrisisKitPage"
 import HomePage from "./pages/HomePage"
 import IndexedDbTest from "./pages/IndexedDbTest"
-import MyInfoPage from "./pages/MyInfoPage"
 import NotFoundPage from "./pages/NotFoundPage"
 import PhoneNumbersPage from "./pages/PhoneNumbersPage"
+import SettingsPage from "./pages/SettingsPage"
 import ShelterDetailPage from "./pages/ShelterDetailPage"
 import ShelterMapPage from "./pages/ShelterMapPage"
 import ShelterPage from "./pages/ShelterPage"
@@ -37,7 +37,7 @@ function App() {
               <Route path="/skyddsrum/karta" element={<ShelterMapPage />} />
               <Route path="/skyddsrum/:id" element={<ShelterDetailPage />} />
               <Route path="/lugn-i-kris" element={<CalmInCrisisPage />} />
-              <Route path="/min-info" element={<MyInfoPage />} />
+              <Route path="/installningar" element={<SettingsPage />} />
               <Route path="/telefonnummer" element={<PhoneNumbersPage />} />
               <Route path="/varningssignaler" element={<WarningSignalsPage />} />
               {import.meta.env.DEV && <Route path="/dev/indexeddb" element={<IndexedDbTest />} />}

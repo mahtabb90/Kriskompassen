@@ -1,26 +1,13 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react"
 import { useAddress } from "../hooks/useAddress"
-import {
-  LOW_ACCURACY_THRESHOLD_METERS,
-  type Address,
-  type AddressLabel,
-  type GeocodeCandidate,
-} from "../types/address"
+import LowAccuracyNotice from "./LowAccuracyNotice"
+import type { Address, AddressLabel, GeocodeCandidate } from "../types/address"
 import { isValidLatLon, parseCoordinates } from "../utils/coordinates"
 
 type LabelKind = AddressLabel["kind"]
 
-/** Flags an address as particularly imprecise when its device fix was unusually uncertain. */
-function describeGeolocatedAddress(address: Address): string {
-  if (address.accuracy !== undefined && address.accuracy > LOW_ACCURACY_THRESHOLD_METERS) {
-    const radiusKm = (address.accuracy / 1000).toFixed(1)
-    return (
-      `Hämtad automatiskt – positionen är mycket osäker (ca ±${radiusKm} km), ` +
-      "kontrollera adressen extra noga"
-    )
-  }
-  return "Hämtad automatiskt – ungefärlig position, kontrollera att den stämmer"
-}
+const GEOLOCATED_ADDRESS_DESCRIPTION =
+  "Hämtad automatiskt – ungefärlig position, kontrollera att den stämmer"
 
 interface AddressSectionProps {
   /** Called whenever typing or fetching a position resolves a new address to add. */
@@ -204,7 +191,7 @@ function AddressSection({
           "hover:bg-blue-50 disabled:opacity-60"
         }
       >
-        {resolvingSource === "geolocated" ? "Hämtar position…" : "Hämta min position"}
+        {resolvingSource === "geolocated" ? "Hämtar position…" : "Hämta aktuell position"}
       </button>
       {!geolocationSupported && (
         <p id={helpTextId} className="mt-1 text-sm text-slate-600">
@@ -245,10 +232,11 @@ function AddressSection({
           <div className="mt-4 flex flex-col gap-4 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
             <p className="text-base font-semibold text-slate-900">{address.text}</p>
             <p className="text-sm text-slate-600">
-              {address.source === "manual"
-                ? "Angiven manuellt"
-                : describeGeolocatedAddress(address)}
+              {address.source === "manual" ? "Angiven manuellt" : GEOLOCATED_ADDRESS_DESCRIPTION}
             </p>
+            {address.source === "geolocated" && address.accuracy !== undefined && (
+              <LowAccuracyNotice accuracyMeters={address.accuracy} />
+            )}
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex flex-wrap gap-2">

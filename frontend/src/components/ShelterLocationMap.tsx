@@ -1,11 +1,12 @@
 import "maplibre-gl/dist/maplibre-gl.css"
 import { Map as MapLibreMap, Marker, NavigationControl, LngLatBounds } from "maplibre-gl"
-import { useEffect, useRef } from "react"
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react"
 // Importing mapConfig also runs its setWorkerUrl() side effect exactly once, fixing a
 // documented Vite+MapLibre v6 worker-loading incompatibility - see mapConfig.ts.
 import { mapConfig } from "../config/mapConfig"
 import type { Shelter } from "../types/shelter"
 import type { GeoPoint } from "../utils/distance"
+import { captureMapSnapshot } from "../utils/mapSnapshot"
 import { originMarkerElement, shelterMarkerElement } from "../utils/shelterMapIcons"
 
 interface ShelterLocationMapProps {
@@ -13,6 +14,14 @@ interface ShelterLocationMapProps {
   /** The user's own position, when known. Omitted entirely (no marker, no implied claim about
    * "your position") when there is no active address - this page is reachable without one. */
   origin: GeoPoint | null
+}
+
+/** Lets ShelterDetailPage save exactly the view the user panned/zoomed to, without reaching into
+ * maplibre-gl internals itself. */
+export interface ShelterLocationMapHandle {
+  /** Captures the map's current on-screen view, downscaled per utils/mapSnapshot.ts. Resolves
+   * null if the map isn't mounted yet. */
+  captureImage: () => Promise<Blob | null>
 }
 
 /**
@@ -24,70 +33,84 @@ interface ShelterLocationMapProps {
  * key-less, no quota) and the pattern of syncing markers in their own effect rather than
  * recreating them with the map.
  */
-function ShelterLocationMap({ shelter, origin }: ShelterLocationMapProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<MapLibreMap | null>(null)
+const ShelterLocationMap = forwardRef<ShelterLocationMapHandle, ShelterLocationMapProps>(
+  function ShelterLocationMap({ shelter, origin }, ref) {
+    const containerRef = useRef<HTMLDivElement>(null)
+    const mapRef = useRef<MapLibreMap | null>(null)
 
-  useEffect(() => {
-    if (!containerRef.current) return
-    const map = new MapLibreMap({
-      container: containerRef.current,
-      style: mapConfig.styleUrl,
-      center: [shelter.lon, shelter.lat],
-      zoom: 15,
-      attributionControl: { compact: true },
-    })
-    map.addControl(new NavigationControl({ showCompass: false }), "top-right")
-    map.scrollZoom.disable()
-    mapRef.current = map
-    return () => {
-      map.remove()
-      mapRef.current = null
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    useImperativeHandle(ref, () => ({
+      captureImage: () => {
+        const map = mapRef.current
+        return map ? captureMapSnapshot(map.getCanvas()) : Promise.resolve(null)
+      },
+    }))
 
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
+    useEffect(() => {
+      if (!containerRef.current) return
+      const map = new MapLibreMap({
+        container: containerRef.current,
+        style: mapConfig.styleUrl,
+        center: [shelter.lon, shelter.lat],
+        zoom: 15,
+        attributionControl: { compact: true },
+        // Without this, the WebGL canvas's drawing buffer is cleared right after each frame is
+        // presented - captureImage()'s drawImage()/toBlob() would then read a blank (black)
+        // buffer instead of the rendered map, since that copy always happens later than the
+        // frame that produced it.
+        canvasContextAttributes: { preserveDrawingBuffer: true },
+      })
+      map.addControl(new NavigationControl({ showCompass: false }), "top-right")
+      map.scrollZoom.disable()
+      mapRef.current = map
+      return () => {
+        map.remove()
+        mapRef.current = null
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
-    const shelterMarker = new Marker({ element: shelterMarkerElement() })
-      .setLngLat([shelter.lon, shelter.lat])
-      .addTo(map)
+    useEffect(() => {
+      const map = mapRef.current
+      if (!map) return
 
-    const originMarker = origin
-      ? new Marker({ element: originMarkerElement() })
-          .setLngLat([origin.lon, origin.lat])
-          .addTo(map)
-      : null
+      const shelterMarker = new Marker({ element: shelterMarkerElement() })
+        .setLngLat([shelter.lon, shelter.lat])
+        .addTo(map)
 
-    if (origin) {
-      const bounds = new LngLatBounds([shelter.lon, shelter.lat], [shelter.lon, shelter.lat])
-      bounds.extend([origin.lon, origin.lat])
-      map.fitBounds(bounds, { padding: 48, maxZoom: 16 })
-    } else {
-      map.setCenter([shelter.lon, shelter.lat])
-    }
+      const originMarker = origin
+        ? new Marker({ element: originMarkerElement() })
+            .setLngLat([origin.lon, origin.lat])
+            .addTo(map)
+        : null
 
-    return () => {
-      shelterMarker.remove()
-      originMarker?.remove()
-    }
-    // Depends on origin's scalar fields, not the object itself, since ShelterDetailPage builds
-    // a new origin object every render - depending on the object would rebuild these markers on
-    // every keystroke in the comment field above, not just when the position actually changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shelter.lat, shelter.lon, origin?.lat, origin?.lon])
+      if (origin) {
+        const bounds = new LngLatBounds([shelter.lon, shelter.lat], [shelter.lon, shelter.lat])
+        bounds.extend([origin.lon, origin.lat])
+        map.fitBounds(bounds, { padding: 48, maxZoom: 16 })
+      } else {
+        map.setCenter([shelter.lon, shelter.lat])
+      }
 
-  return (
-    <div
-      role="group"
-      aria-label="Karta över skyddsrummets plats"
-      className="relative overflow-hidden rounded-2xl border border-blue-200/80"
-    >
-      <div ref={containerRef} className="h-64 w-full" />
-    </div>
-  )
-}
+      return () => {
+        shelterMarker.remove()
+        originMarker?.remove()
+      }
+      // Depends on origin's scalar fields, not the object itself, since ShelterDetailPage builds
+      // a new origin object every render - depending on the object would rebuild these markers on
+      // every keystroke in the comment field above, not just when the position actually changes.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [shelter.lat, shelter.lon, origin?.lat, origin?.lon])
+
+    return (
+      <div
+        role="group"
+        aria-label="Karta över skyddsrummets plats"
+        className="relative overflow-hidden rounded-2xl border border-blue-200/80"
+      >
+        <div ref={containerRef} className="h-64 w-full" />
+      </div>
+    )
+  }
+)
 
 export default ShelterLocationMap
