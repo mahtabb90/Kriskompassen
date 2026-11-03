@@ -68,7 +68,7 @@ Frontend versions are taken from `frontend/package-lock.json`.
 | Unit tests | Vitest | 4.1.12 |
 | Component tests | React Testing Library / DOM Testing Library | 16.3.3 / 10.4.2 |
 | DOM test environment | jsdom | 27.4.0 |
-| E2E tests | Playwright (Node/TypeScript) | planned, not installed |
+| E2E tests | Playwright (`@playwright/test`, Chromium only) | 1.64.1 |
 | Runtime | Node.js (required by Vite) | ^20.19.0 or >=22.12.0 |
 
 Backend versions are pinned in `backend/requirements.txt` and `backend/requirements-dev.txt`:
@@ -98,7 +98,8 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
 ├── .github/
 │   └── workflows/
 │       ├── backend-ci.yml   # backend Ruff and pytest when backend/ changes; PRs into dev/main and pushes to dev
-│       └── frontend-ci.yml  # frontend lint, format check, tests and build when frontend/ changes; same triggers
+│       ├── frontend-ci.yml  # frontend lint, format check, tests and build when frontend/ changes; same triggers
+│       └── e2e.yml          # informational Playwright E2E on Ubuntu for PRs into dev/main that change frontend/
 ├── backend/             # FastAPI articles, VMA, geocoding and file-backed shelter API; no database
 │   ├── DEVELOPMENT.md  # backend sources, storage, API contracts and development guide
 │   ├── .python-version # Python 3.13
@@ -118,7 +119,9 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     ├── .env.example    # frontend variable names only
     ├── .nvmrc          # single source of truth for the Node.js version (24 = latest 24.x LTS), read by CI and nvm
     ├── public/          # static assets and PWA icons
-    ├── e2e/             # Playwright tests (planned, not created)
+    ├── e2e/             # Playwright tests (*.spec.ts), run against vite build + vite preview
+    ├── playwright.config.ts # Chromium, webServer (build + preview on port 4173), CI retries and traces
+    ├── tsconfig.e2e.json # typechecks e2e/ and playwright.config.ts; not part of `tsc -b` or the build
     ├── index.html       # HTML entry (lang="sv")
     ├── vite.config.ts   # React, Tailwind and PWA manifest config
     ├── vercel.json      # frontend-only SPA fallback for direct React Router URLs and Cache-Control headers
@@ -158,13 +161,15 @@ Run frontend commands from `frontend/`, backend commands from `backend/` with th
 | Dev server | `npm run dev` | `uvicorn src.app:app --reload --port 8000` |
 | Lint | `npm run lint` | `ruff check .` |
 | Format | `npm run format` (check only: `npm run format:check`) | `ruff format .` (check only: `ruff format --check .`) |
-| Typecheck | `npx tsc -b` (also runs as part of `build`) | n/a |
+| Typecheck | `npx tsc -b` (also runs as part of `build`); E2E: `npm run typecheck:e2e` | n/a |
 | Test | `npm run test` (Vitest, single run) | `pytest` |
-| E2E | `npm run test:e2e` *(planned, Playwright)* | n/a |
+| E2E | `npm run test:e2e` (UI mode: `npm run test:e2e:ui`; report: `npm run test:e2e:report`) | n/a |
 | Build | `npm run build` | n/a |
 | Preview build | `npm run preview` | n/a |
 
-CI: both workflows trigger on pull requests into `dev` or `main` and on pushes to `dev`. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npm run format:check`, `npm run test` and `npm run build` on Node from `frontend/.nvmrc`. `.github/workflows/backend-ci.yml` runs the backend install, `ruff check .`, `ruff format --check .` and `pytest` on Python from `backend/.python-version`. Each workflow always starts (no `on: paths:`) and has three jobs: a change-detection job that diffs against the PR base branch or the previous push with `git diff` and logs the changed files, the check job that runs only when its folder or its own workflow file changed, and a gate job. The check job runs as a matrix on `ubuntu-latest`, `windows-latest` and `macos-latest` (`fail-fast: false`, `defaults.run.shell: bash`, 15-minute timeout, OS in the job name, e.g. `Frontend lint, tests and build (windows-latest)`). Change detection and the gate jobs stay on Ubuntu only. The gate aggregates all matrix variants, so one failing OS fails it, and a skipped matrix still counts as skipped. Do not mark the per-OS jobs as required checks. If the diff cannot be computed, the checks run anyway. The gate jobs `Frontend CI result` and `Backend CI result` are the status checks to mark as required in branch protection; they fail when change detection fails or when needed checks did not succeed. PR runs share one concurrency group per pull request and are cancelled when superseded; each push to `dev` gets its own group (`github.run_id`), so push runs are never queued behind, or cancelled by, a later push and always run to completion. CI uses no third-party actions.
+CI: `frontend-ci.yml` and `backend-ci.yml` trigger on pull requests into `dev` or `main` and on pushes to `dev`. `.github/workflows/frontend-ci.yml` runs `npm ci`, `npm run lint`, `npm run format:check`, `npm run test` and `npm run build` on Node from `frontend/.nvmrc`. `.github/workflows/backend-ci.yml` runs the backend install, `ruff check .`, `ruff format --check .` and `pytest` on Python from `backend/.python-version`. Each workflow always starts (no `on: paths:`) and has three jobs: a change-detection job that diffs against the PR base branch or the previous push with `git diff` and logs the changed files, the check job that runs only when its folder or its own workflow file changed, and a gate job. The check job runs as a matrix on `ubuntu-latest`, `windows-latest` and `macos-latest` (`fail-fast: false`, `defaults.run.shell: bash`, 15-minute timeout, OS in the job name, e.g. `Frontend lint, tests and build (windows-latest)`). Change detection and the gate jobs stay on Ubuntu only. The gate aggregates all matrix variants, so one failing OS fails it, and a skipped matrix still counts as skipped. Do not mark the per-OS jobs as required checks. If the diff cannot be computed, the checks run anyway. The gate jobs `Frontend CI result` and `Backend CI result` are the status checks to mark as required in branch protection; they fail when change detection fails or when needed checks did not succeed. PR runs share one concurrency group per pull request and are cancelled when superseded; each push to `dev` gets its own group (`github.run_id`), so push runs are never queued behind, or cancelled by, a later push and always run to completion. CI uses no third-party actions.
+
+E2E: `.github/workflows/e2e.yml` is separate from the fast CI and informational, not a required check. It runs on pull requests into `dev` or `main` that change `frontend/` or the workflow itself (`on: paths:` is acceptable because it is not required; a required E2E check would need the change-detection and gate pattern above). One `ubuntu-latest` job runs `npm ci`, `npm run typecheck:e2e`, `npx playwright install --with-deps chromium` and `npm run test:e2e`. CI retries a failed test twice and records a trace on the first retry. On failure it uploads the `playwright-report` artifact (`playwright-report/` and `test-results/`, 14 days).
 
 Vercel uses separate projects rooted at `frontend/` (Vite) and `backend/` (FastAPI). `frontend/vercel.json` supplies the SPA fallback, not an API proxy. The backend exports the supported `src/app.py` entrypoint. The user configured Vercel to install backend dependencies from `requirements.txt`; that dashboard setting is not stored in the repo. Connection settings, local testing against the deployed backend and the scope of reported live verification are documented in `backend/DEVELOPMENT.md`. `frontend/vercel.json` sets `Cache-Control: no-cache` for `/sw.js`, `/manifest.webmanifest` and `/index.html`, and `public, max-age=31536000, immutable` for `/assets/*`. `vite preview` ignores these headers; verify them on a Vercel deployment.
 
@@ -469,7 +474,7 @@ Decided tooling:
 | Frontend E2E | Playwright (Node/TypeScript) | `frontend/e2e/` |
 | Backend | pytest | `backend/tests/` |
 
-- Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. `fake-indexeddb` and Playwright remain planned and are not installed.
+- Vitest defaults to Node in `frontend/vitest.config.ts`; `npm run test` runs once. The config disables `.env` loading and is included in `tsconfig.node.json`. React Testing Library and DOM Testing Library are installed. Component/hook tests opt into jsdom with `// @vitest-environment jsdom` and explicitly clean up their renders. jsdom 27.4.0 preserves the existing Node requirements. Vitest excludes `e2e/`. `fake-indexeddb` remains planned and is not installed.
 - Frontend VMA tests cover validation, mapping, transport, banner selection, request state, polling (interval, overlap, offline/visibility pause and reconnection), status text, local time transitions and shared layout integration with synthetic SR v3 fixtures and deterministic lifecycle times. Shared fixtures live in `frontend/src/services/__fixtures__/vma.ts`. Component/hook integration tests replace `fetch` while retaining real validation/mapping, so no backend is required. No test page or mock mode is bundled with the app. Backend pytest tests cover feed-envelope validation, record preservation, provenance and upstream failures. Manual browser layout checks complement these tests; jsdom does not verify real rendering or spoken screen-reader output.
 - Layout integration tests mount the real `ModeProvider`, "Sparad information" switch and connectivity status alongside the VMA banner. They cover mode changes from the focused switch, title updates, connection loss and recovery while preserving the warning and its single request.
 - `ModeToggle` tests cover switch semantics, clicks on the switch and its label, `aria-checked`, the help text, the automatic switch on connection loss, the `aria-disabled` restriction with its explanation and the retained saved mode after reconnection. jsdom does not turn Space/Enter into a native button click, so the tests assert a native `<button>` and keyboard activation is verified manually in a browser.
@@ -506,6 +511,15 @@ Decided tooling:
 - Backend CORS tests provide their own JSON origin environment variable and mock upstream transport. They check that approved frontend origins can read successful feeds and 502/504 errors, and that unlisted origins or unsupported methods do not pass preflight.
 - Once a test runner exists, new logic (services, db, utilities, API routes) must include tests.
 - Keep E2E small: a few critical user flows, including at least one offline scenario.
+
+Running E2E (from `frontend/`):
+
+- Once per machine, install the browser: `npx playwright install chromium` (Linux: add `--with-deps`).
+- `npm run test:e2e` builds the app and starts `vite preview` on port 4173, then runs `e2e/*.spec.ts` in Chromium. Locally an already running preview on 4173 is reused, so stop it after app changes.
+- `npm run test:e2e:ui` opens Playwright's UI mode; `npm run test:e2e:report` opens the last HTML report.
+- Traces: locally add `--trace on`, then open the report or `npx playwright show-trace <trace.zip>`. From a failed Actions run, download and unzip the `playwright-report` artifact and run `npx playwright show-report <unzipped>/playwright-report`; traces are under its `test-results/`.
+- Tests use roles and Swedish visible text, not test IDs. Each test gets a fresh browser context, so IndexedDB starts empty. API calls (`**/api/v1/**`) are aborted because no backend runs.
+- Current coverage: crisis kit scroll position on card clicks and saving a custom item across a reload, and the install button with a synthetic `beforeinstallprompt` at 320, 375, 768 and 1024px. The desktop header-height check is marked `test.fail()` for a known layout shift; remove the mark when the header no longer grows.
 
 **Hard rule (team decision): keep existing tests in sync with the code.**
 
