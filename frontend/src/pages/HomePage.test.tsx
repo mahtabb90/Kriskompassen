@@ -19,7 +19,7 @@ const FEATURES = [
   { name: "Krisinformation", href: "/crisis" },
   { name: "Min krislåda", href: "/crisis-kit" },
   { name: "Skyddsrum", href: "/skyddsrum" },
-  { name: "Min info", href: "/min-info" },
+  { name: "Inställningar", href: "/installningar" },
   { name: "Lugn i kris", href: "/lugn-i-kris" },
 ]
 
