@@ -235,7 +235,7 @@ Content cards represent units of crisis information. They are clean, distinct su
 
 ### 5.2 The Signature Crisis Indicator Bar
 
-The signature top accent bar applies specifically to **crisis-information cards (`CrisisCard`) and crisis-detail surfaces (`DetailedCrisisCard`)**, not to every generic card, panel, empty state, or settings container in the application. Other uses are the white content cards of the static "Lugn i kris" page (section 5.4) and the home page hero and feature cards (section 5.5):
+The signature top accent bar applies specifically to **crisis-information cards (`CrisisCard`) and crisis-detail surfaces (`DetailedCrisisCard`)**, not to every generic card, panel, empty state, or settings container in the application. Other uses are the white content cards of the static "Lugn i kris" page (section 5.4), the home page hero and feature cards (section 5.5) and the krisinfo overview cards (section 5.8):
 
 ```html
 <div className="flex h-1.5 w-full" aria-hidden="true">
@@ -274,7 +274,7 @@ Crisis-information overview cards (`CrisisCard`) and the emergency-kit category 
 
 ### 5.4 Calm Page Motif and Panels ("Lugn i kris")
 
-The static `/lugn-i-kris` page uses a few decorative elements. They add no new colours, gradients or animation.
+The static `/lugn-i-kris` page uses a few decorative elements. They add no new colours, gradients or animation. It is a part of the krisinfo overview (section 5.8), and its back link (section 7.3) sits above the hero card, 24px from the card's top edge.
 
 - **Signature bar:** the hero, advice and sources cards carry the same blue/amber top bar as section 5.2 (without the hover colour), on an `overflow-hidden` card with padding on an inner element. The emergency panel does not.
 - **Hero:** a white content card (section 5.1) with the `h1`, a one-line `p` (`text-xl font-semibold text-blue-900`) and the lead paragraph. `CalmHeroMotif` sits beside the text from `sm`. On mobile it sits directly below the text with a tight `gap-3` and is smaller (`size-20`, `sm:size-40`) to keep the hero compact.
@@ -311,13 +311,15 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   outline, and one `text-amber-400` dot near the long needle point. It has no lettering or
   gradient, is `aria-hidden`, `focusable="false"`, titleless and not animated, and is hidden below
   `md` (`hidden md:block`).
-- **Feature overview:** an `h2` (**"Det här kan du göra i KrisKompassen"**) above five cards whose
+- **Feature overview:** an `h2` (**"Det här kan du göra i KrisKompassen"**) above four cards whose
   `h3` titles are the shared `navigationItems` labels. Each whole card is one link; its accessible
   name is the title (`aria-labelledby`) and its description is `aria-describedby`.
-- **Bento hierarchy:** from `md`, a six-column grid places Krisinformation and Min krislåda
-  (`col-span-3`, larger padding, `text-2xl` title, 56px icon circle with a `border-blue-200` edge
-  on `bg-blue-100`) on one row and Skyddsrum, Inställningar and Lugn i kris (`col-span-2`, `text-xl`
-  title, 48px `bg-blue-50` icon circle without border) on the next. Every card ends with the same
+- **Bento hierarchy:** from `md`, a six-column grid gives every card half a row (`col-span-3`),
+  so the four cards form two full rows. Krisinformation and Min krislåda come first, as primary
+  cards (larger padding, `text-2xl` title, 56px icon circle with a `border-blue-200` edge on
+  `bg-blue-100`); Skyddsrum and Inställningar follow as supporting cards (`text-xl` title, 48px
+  `bg-blue-50` icon circle without border). Lugn i kris is reached through the krisinfo
+  overview (section 5.8) and has no card here. Every card ends with the same
   decorative cue, pinned to the card bottom: the text **Öppna** and a 20px inline outline arrow
   (section 5.3 style, `currentColor`, `gap-2`), hidden from assistive technology as a whole
   because the link name comes from the title. Below `md` the cards stack in one column. Cards stretch to equal height within a
@@ -325,8 +327,176 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
 - **Card surface:** section 5.1 with the section 5.2 bar including its hover colour; the focus
   outline is drawn inside the clipped card. No transforms.
 - **Icons:** the section 5.3 outline style in a `bg-blue-50` circle (as in section 5.4). Min
-  krislåda reuses `CrisisIcon` (`other`), Lugn i kris reuses `CalmIcon` (`breath`); Krisinformation,
-  Skyddsrum and Inställningar use `HomeFeatureIcon`. All are `aria-hidden` and `text-blue-900`.
+  krislåda reuses `CrisisIcon` (`other`); Krisinformation, Skyddsrum and Inställningar use
+  `HomeFeatureIcon`. All are `aria-hidden` and `text-blue-900`.
+
+### 5.6 Phone Numbers Page (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in `PhoneNumbersPage`
+> and `PhoneCard`. It reuses existing tokens only; adopting it as a recurring pattern requires
+> the team's agreement.
+
+- **Emergency number:** the emergency panel from section 5.4 (`rounded-2xl border-2
+  border-blue-900 bg-blue-50`), a visible `text-sm font-semibold text-blue-900` label **"Akut
+  nödnummer"** above the heading, and the primary button (section 6.2.1). No red, warning
+  triangle or amber: red and the triangle stay reserved for VMA (section 2.4.1), and amber is
+  never an urgency cue. The label, panel border and button fill set it apart together, so
+  colour is never the only cue. The content's `isEmergency` alone selects this variant.
+- **Other numbers:** section 5.1 cards without the accent bar or hover state, with the
+  secondary button (section 6.2.2). One column at every width, in content order, limited
+  together with the sources card to `max-w-2xl` as on the warning signals page (section 5.7).
+- **Heading:** each `h2` holds the number (`text-3xl font-bold tabular-nums`, on its own line)
+  and the label below it (`text-lg font-semibold`), so heading navigation names the service, not
+  only the digits. A space between the two lines keeps the accessible name readable, for example
+  "112 Larmnummer vid nöd".
+- **Call links:** visible text **"Ring {nummer}"** and a `tel:` link with digits only (a leading
+  `+` only for numbers for calls from abroad). The accessible name starts with the visible text:
+  **"Ring 112, akut nödnummer"** or **"Ring {nummer}, {etikett}"**. At least 48×48px
+  (`min-h-12 min-w-12`) with `wrap-anywhere`.
+- **Copyable numbers:** every number is plain text outside its links, so it can be selected and
+  copied on devices that cannot place calls. There is no copy button.
+- **Numbers for calls from abroad:** below a 1px `border-slate-200` divider, a `text-sm
+  text-slate-600` line **"Från utlandet eller utländsk telefon:"** with the number in
+  `font-semibold text-slate-800 tabular-nums`, and a secondary-button link **"Ring från
+  utlandet"** named **"Ring från utlandet eller med utländsk telefon till {nummer},
+  {utlandsnummer}"**.
+- **Sources:** a section 5.1 card at the bottom (`KrisinfoSourcesCard`, shared with section
+  5.7) with the `h2` **"Källor"**, listing each distinct source once as an `ExternalLink`
+  (section 5.7: external-link icon, visually hidden "(öppnas i ny flik)" and, offline,
+  "Kräver internetanslutning."), followed by **"Senast kontrollerad: {datum}"** in the metadata
+  style (section 3.2). A source used by several posts shows the oldest date among them.
+- **Contrast:** calculated with the WCAG 2.2 relative-luminance formula from the installed
+  Tailwind 4.3.3 values (`index.css` does not override them), converted from OKLCH to the
+  8-bit sRGB colour the browser paints. Each pair meets WCAG AA (4.5:1) for normal text.
+
+  | Foreground | Background | sRGB | Ratio |
+  | --- | --- | --- | --- |
+  | `blue-900` `oklch(37.9% 0.146 265.522)` | `blue-50` `oklch(97% 0.014 254.604)` | `#1c398e` on `#eff6ff` | 9.53:1 |
+  | `slate-700` `oklch(37.2% 0.044 257.287)` | `blue-50` | `#314158` on `#eff6ff` | 9.52:1 |
+  | `white` `#fff` | `blue-900` | `#ffffff` on `#1c398e` | 10.37:1 |
+
+  Recalculate these values when the tokens or the Tailwind version change.
+
+### 5.7 Warning Signals Page (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in
+> `WarningSignalsPage`, `SignalCard`, `SignalPattern`, `SignalIcon` and `ExternalLink`. It reuses
+> existing tokens only; adopting it as a recurring pattern requires the team's agreement.
+
+- **Heading:** the `h1` and document title are **"Utomhusvarning"**, the name of the page's
+  overview card (section 5.8). Directly below it, a one-line `p` (`mt-2 text-lg font-semibold
+  text-blue-900 sm:mt-3 sm:text-xl`, as on the calm page in section 5.4) reads **"Hesa Fredrik –
+  de fyra varningssignalerna"**, so the familiar name stays visible in every loading state. It is
+  not a heading, so the page keeps one `h1`. `#1c398e` on the page background `#d7e2ef`: 7.91:1.
+- **Column:** the signal cards and the sources card share one `max-w-2xl` (672px) column in the
+  source's order, so on wide screens the text and drawing fill each card instead of leaving an
+  empty right-hand area. The `h1` and lead paragraph keep their normal widths. The phone numbers
+  page uses the same column (section 5.6).
+- **Signal cards:** section 5.1 cards without the accent bar or hover state. Each `h2` is the
+  signal's name in `text-2xl font-bold text-blue-900 wrap-anywhere`, one step above the section
+  3.2 card heading so it stands clearly above the `h3`. **"Betydelse"** and **"Gör så här"**
+  are `h3` (`text-lg font-semibold text-blue-900`), each opening a block with a 1px
+  `border-slate-200` top divider (`mt-6 pt-5`). Body text uses the Body Text scale (section
+  3.2).
+- **Pattern panel:** a `rounded-xl bg-blue-50 p-4` panel below the `h2` groups how the signal
+  sounds. Its first row holds `SignalIcon`, a loudspeaker with two sound waves in the section
+  5.3 outline style, in a 48px `rounded-full bg-white` circle, beside the pattern description
+  (`gap-3`). The timeline follows below at the panel's full width (`mt-4`), so it has room even
+  on narrow screens. The panel has no heading of its own. When the content has a recording, the
+  panel ends with an `ExternalLink` to it (`mt-2`), labelled **"Lyssna på signalen {namn} hos
+  MCF"**, so the accessible name states the signal, MCF and, through the link's hidden text, the
+  new tab. It is the card's first link, before the meaning source and the action links.
+- **Recording attribution:** one metadata line (section 3.2, `mt-3 max-w-prose text-sm
+  text-slate-600`) between the lead paragraph and the cards: **"Ljuden kommer från Myndigheten
+  för civilt försvar (MCF)."** followed, outside the sentence, by an `ExternalLink` **"MCF:s sida
+  om Hesa Fredrik på mcf.se"** to the section's source page. The sentence stays complete without
+  the link. It appears once on the page, not in each card, and the recordings are not listed in
+  the sources card.
+- **Timeline (`SignalPattern`):** a 4px `fill-blue-300` track with fully rounded ends spans the
+  signal's whole duration, with one 10px-high, fully rounded (pill-shaped) `currentColor` stroke
+  per tone in `text-blue-900` on top; gaps are the pauses. The SVG has no `viewBox`: positions
+  and widths are percentages of the timeline and heights and radii are pixels, so strokes keep
+  their shape at every width instead of being stretched. Each signal uses its own time scale,
+  from 0 to the duration the content states (or to the end of the last tone when it states
+  none), so short and long tones are equally visible and a single continuous tone is one unbroken
+  bar. Below the track, `text-sm text-slate-600` labels give the start (**"0 s"**) on the left and
+  the end on the right, in whole minutes (**"2 min"**) or else seconds (**"30 s"**), matching
+  the text's stated duration. The drawing is the app's own, uses no image files and copies no
+  authority's graphics. It is decorative, labels included (`aria-hidden="true"`,
+  `focusable="false"`, no `<title>`): the pattern description always states the timing as text.
+- **No warning colours:** no red, warning triangle or amber. Red and the triangle stay reserved
+  for VMA (section 2.4.1), and amber is never an urgency cue.
+- **Meaning:** shown only when the content has one. A separate meaning source follows on a
+  metadata line (section 3.2) as **"Källa:"** and an external link.
+- **Actions:** an ordered list (`list-decimal`, `text-blue-900` semibold markers). Each step's
+  text is always shown; a link, when present, sits below it as a complement. The section is left
+  out when the content lists no actions.
+- **External links (`ExternalLink`):** used for every external link on the krisinfo pages,
+  including their sources. A standalone text link (section 6.3) with `font-medium` and
+  `wrap-anywhere`, rendered as an `inline-block` with `py-3` so it keeps a 48px target on one
+  line and wraps like ordinary text. A 20×20px decorative external-link icon (box with an
+  outgoing arrow, section 5.3 style, `currentColor`, `aria-hidden`) follows the last word and
+  stays on the same line as it. A visually hidden **"(öppnas i ny flik)"** completes the
+  accessible name, so it starts with the visible text and needs no `aria-label`. While the
+  browser reports no connection, a `text-sm text-slate-600` line **"Kräver
+  internetanslutning."** follows the link and describes it with `aria-describedby`; the link
+  stays available.
+- **Loading, error and sources:** as section 5.6: a stable `h1`, a `role="status"` loading
+  line, a `role="alert"` error with the secondary **"Försök igen"** button, and the shared
+  sources card (`KrisinfoSourcesCard`) at the bottom, listing each source once with its oldest
+  check date, including a separate meaning source.
+- **Contrast:** calculated as in section 5.6 from the installed Tailwind 4.3.3 values. Each
+  text pair meets WCAG AA (4.5:1) for normal text. The drawing is decorative; its strokes still
+  exceed the 3:1 non-text target against both the panel and the track. The track is
+  deliberately light, so it reads as background behind the strokes, and carries no information.
+
+  | Foreground | Background | sRGB | Ratio | Used for |
+  | --- | --- | --- | --- | --- |
+  | `blue-900` `oklch(37.9% 0.146 265.522)` | `white` | `#1c398e` on `#ffffff` | 10.37:1 | Headings, links, list markers, icon in its white circle |
+  | `slate-700` `oklch(37.2% 0.044 257.287)` | `white` | `#314158` on `#ffffff` | 10.36:1 | Meaning, action text |
+  | `slate-600` `oklch(44.6% 0.043 257.281)` | `white` | `#45556c` on `#ffffff` | 7.58:1 | "Källa:" line, "Kräver internetanslutning." |
+  | `slate-700` | `blue-50` `oklch(97% 0.014 254.604)` | `#314158` on `#eff6ff` | 9.52:1 | Pattern description in the panel |
+  | `slate-600` | `blue-50` | `#45556c` on `#eff6ff` | 6.97:1 | Timeline labels |
+  | `blue-900` | `blue-50` | `#1c398e` on `#eff6ff` | 9.53:1 | Tone strokes against the panel |
+  | `blue-900` | `blue-300` `oklch(80.9% 0.105 251.813)` | `#1c398e` on `#8ec5ff` | 5.72:1 | Tone strokes against the track |
+  | `blue-300` | `blue-50` | `#8ec5ff` on `#eff6ff` | 1.67:1 | Decorative track against the panel |
+  | `blue-900` | `blue-50` | `#1c398e` on `#eff6ff` | 9.53:1 | Recording link and its focus outline in the panel |
+  | `slate-600` | `blue-50` | `#45556c` on `#eff6ff` | 6.97:1 | "Kräver internetanslutning." below the recording link |
+  | `slate-600` | page `#d7e2ef` | `#45556c` on `#d7e2ef` | 5.78:1 | Recording attribution line and its offline note |
+  | `blue-900` | page `#d7e2ef` | `#1c398e` on `#d7e2ef` | 7.91:1 | Attribution link, its icon and focus outline |
+
+  Recalculate these values when the tokens or the Tailwind version change.
+
+### 5.8 Krisinfo Overview (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in
+> `KrisinfoOverviewPage` and `KrisinfoSectionCard`, with the parts listed in
+> `krisinfoOverviewSections.ts`. It reuses the home page feature card (section 5.5) and adds no
+> colours, gradients or animation.
+
+- **Page:** `/krisinformation` with the `h1` **"Krisinformation"** and a lead paragraph
+  (`mt-4 max-w-prose text-lg leading-relaxed text-slate-700`), followed by a list named
+  **"Delar av krisinformationen"** (`aria-label`), so screen readers announce the number of
+  parts. The parts appear in list order: Innan krisen, Telefonnummer, Utomhusvarning, Lugn i kris.
+- **Cards:** the section 5.5 supporting card: section 5.1 surface with the section 5.2 bar and its
+  hover colour, `p-6`, a 48px `bg-blue-50` icon circle, an `h2` title in `text-xl font-bold
+  text-blue-900 wrap-anywhere`, a `text-slate-600` description and the decorative **Öppna** cue
+  pinned to the bottom. The whole card is one link named by its title (`aria-labelledby`) and
+  described by its text (`aria-describedby`), never by a generic "Läs mer". The focus outline is
+  drawn inside the clipped card.
+- **Grid:** one column below `md`, two from `md` (`md:grid-cols-2`, `gap-6`); cards stretch to
+  equal height within a row.
+- **Icons:** section 5.3 style, `aria-hidden`, `text-blue-900`: Innan krisen `HomeFeatureIcon`
+  (`info`), Telefonnummer `HomeFeatureIcon` (`phone`, an outline mobile phone), Utomhusvarning
+  `SignalIcon`, Lugn i kris `CalmIcon` (`breath`).
+- **Contrast** (WCAG 2.2 relative luminance, Tailwind 4.3.3 values as in section 5.6):
+
+  | Foreground | Background | sRGB | Ratio | Used for |
+  | --- | --- | --- | --- | --- |
+  | `blue-900` | `white` | `#1c398e` on `#ffffff` | 10.37:1 | Card titles, Öppna cue, icons |
+  | `slate-600` | `white` | `#45556c` on `#ffffff` | 7.58:1 | Card descriptions |
+  | `slate-700` | page background | `#314158` on `#d7e2ef` | 7.90:1 | Lead paragraph |
+  | `blue-900` | page background | `#1c398e` on `#d7e2ef` | 7.91:1 | `h1`, back links (section 7.3) and their focus outline |
 
 ---
 
@@ -539,6 +709,8 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 
 KrisKompassen shows the same primary links, from the shared `navigationItems` list, through two components: `BottomNavigation` (desktop) and `MobileMenu` (mobile). Never duplicate the labels or paths.
 
+Both decide the current page with `isNavigationItemActive()`. An item matches its own path exactly unless it lists `activePaths`: **Krisinformation** stays current on the overview and on every part (`/crisis`, `/crisis/:id`, `/telefonnummer`, `/varningssignaler`, `/lugn-i-kris`), and at most one item is current on any page.
+
 ### 7.1 Responsive Placement
 
 - **Mobile Viewports (`width < 48rem`, any height):**
@@ -549,8 +721,15 @@ KrisKompassen shows the same primary links, from the shared `navigationItems` li
 ### 7.2 Mobile Menu Dialog
 
 - A native modal `<dialog>` named **Meny** covers the whole viewport, including the header and the VMA notice, on a white surface with safe-area padding. The dialog element itself is fullscreen (`.mobile-menu-dialog`: fixed, `inset: 0`, no margin or border, `width: 100%`, `height`/`min-height: 100dvh`, no max-width/max-height), not only its backdrop. A **Stäng menyn** outlined button (48×48px minimum) sits in a fixed top row beside the heading; the link list below scrolls internally (`overscroll-contain`), so short screens and enlarged text remain usable. When the browser offers installation, a fixed footer below the list holds the **Installera app** button (section 6.6).
-- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Inställningar, Lugn i kris). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
-- The modal makes the page inert, locks page scrolling and wraps Tab at its boundaries. Escape and **Stäng menyn** return focus to the Meny button, as does selecting the current route. Selecting another route closes the menu and leaves focus to the layout page-heading focus. Crossing `48rem` while open closes it without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating). There is no animation.
+- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Inställningar). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
+- The modal makes the page inert, locks page scrolling and wraps Tab at its boundaries. Escape and **Stäng menyn** return focus to the Meny button, as does selecting the current route. Selecting another route closes the menu and leaves focus to the layout page-heading focus; this includes selecting Krisinformation while it is current on one of its parts, because that leads to the overview. Crossing `48rem` while open closes it without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating). There is no animation.
+
+### 7.3 Back Links
+
+- Each krisinfo part and each article starts with a `BackLink` to its fixed parent: **"Tillbaka till krisinformation"** to `/krisinformation` on Innan krisen, Telefonnummer, Utomhusvarning and Lugn i kris, and **"Tillbaka till Innan krisen"** to `/crisis` on an article.
+- It is an ordinary router link, never `history.back()`, so it leads to the same page when the current page was opened directly or offline.
+- Style: `inline-flex min-h-12 items-center gap-1 font-medium text-blue-900 underline underline-offset-4` with a decorative `←` (`aria-hidden`), so the accessible name is the label alone. It includes its 24px (`mb-6`) spacing to the heading or card below it.
+- It sits before the `h1` in DOM order. Route focus moves to the `h1`, so keyboard users reach the link with Shift+Tab, as on article pages.
 
 ---
 

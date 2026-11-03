@@ -1,0 +1,22 @@
+// @vitest-environment jsdom
+import { cleanup, render } from "@testing-library/react"
+import { afterEach, describe, expect, it } from "vitest"
+import SignalIcon from "./SignalIcon"
+
+afterEach(cleanup)
+
+describe("SignalIcon", () => {
+  it("renders a decorative currentColor outline icon", () => {
+    const { container } = render(<SignalIcon className="text-blue-900" />)
+    const svg = container.querySelector("svg")!
+    expect(svg.getAttribute("aria-hidden")).toBe("true")
+    expect(svg.getAttribute("focusable")).toBe("false")
+    expect(svg.getAttribute("viewBox")).toBe("0 0 24 24")
+    expect(svg.getAttribute("fill")).toBe("none")
+    expect(svg.getAttribute("stroke")).toBe("currentColor")
+    expect(svg.getAttribute("stroke-width")).toBe("1.8")
+    expect(svg.querySelector("title")).toBeNull()
+    expect(svg.childElementCount).toBeGreaterThan(0)
+    expect(svg.getAttribute("class")).toContain("text-blue-900")
+  })
+})

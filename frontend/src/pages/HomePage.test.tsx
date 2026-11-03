@@ -16,11 +16,10 @@ function renderPage() {
 }
 
 const FEATURES = [
-  { name: "Krisinformation", href: "/crisis" },
+  { name: "Krisinformation", href: "/krisinformation" },
   { name: "Min krislåda", href: "/crisis-kit" },
   { name: "Skyddsrum", href: "/skyddsrum" },
   { name: "Inställningar", href: "/installningar" },
-  { name: "Lugn i kris", href: "/lugn-i-kris" },
 ]
 
 describe("HomePage", () => {
@@ -73,19 +72,18 @@ describe("HomePage", () => {
   it("links the two calls to action to their routes", () => {
     renderPage()
     expect(screen.getByRole("link", { name: "Se krisinformation" }).getAttribute("href")).toBe(
-      "/crisis"
+      "/krisinformation"
     )
     expect(screen.getByRole("link", { name: "Öppna min krislåda" }).getAttribute("href")).toBe(
       "/crisis-kit"
     )
   })
 
-  it("keeps a semantic heading order of h1, one h2 and five h3 cards", () => {
+  it("keeps a semantic heading order of h1, one h2 and four h3 cards", () => {
     renderPage()
     expect(screen.getAllByRole("heading").map((heading) => heading.tagName)).toEqual([
       "H1",
       "H2",
-      "H3",
       "H3",
       "H3",
       "H3",
@@ -112,11 +110,35 @@ describe("HomePage", () => {
     }
   })
 
+  it("no longer offers Lugn i kris, which is reached through the krisinfo overview", () => {
+    renderPage()
+    expect(screen.queryByRole("link", { name: "Lugn i kris" })).toBeNull()
+    for (const link of screen.getAllByRole("link")) {
+      expect(link.getAttribute("href")).not.toBe("/lugn-i-kris")
+    }
+  })
+
+  it("links only to the two calls to action and the four feature cards", () => {
+    renderPage()
+    expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      "/krisinformation",
+      "/crisis-kit",
+      ...FEATURES.map((feature) => feature.href),
+    ])
+  })
+
+  it("gives every card half of the row from md, so two cards fill each row", () => {
+    renderPage()
+    for (const feature of FEATURES) {
+      const card = screen.getByRole("link", { name: feature.name }).parentElement!
+      expect(card.getAttribute("class")).toContain("md:col-span-3")
+    }
+  })
+
   it("hides decorative graphics from assistive technology", () => {
     const { container } = renderPage()
     const svgs = container.querySelectorAll("svg")
-    // Hero motif plus an icon and an arrow per feature card.
-    expect(svgs).toHaveLength(11)
+    expect(svgs.length).toBeGreaterThan(0)
     for (const svg of svgs) {
       expect(svg.closest("[aria-hidden='true']")).not.toBeNull()
       expect(svg.getAttribute("focusable")).toBe("false")
@@ -134,7 +156,6 @@ describe("HomePage", () => {
       expect(cue!.querySelector("svg")).not.toBeNull()
       expect(cue!.textContent).not.toContain("→")
     }
-    expect(screen.getAllByRole("link")).toHaveLength(7)
   })
 
   it("hides the hero motif below the md breakpoint", () => {

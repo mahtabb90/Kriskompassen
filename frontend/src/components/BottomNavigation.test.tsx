@@ -38,6 +38,20 @@ describe("BottomNavigation", () => {
     expect(current[0].textContent).toContain("Inställningar")
   })
 
+  it.each(["/telefonnummer", "/crisis/food-in-crisis", "/lugn-i-kris"])(
+    "keeps Krisinformation current on the krisinfo subpage %s",
+    (path) => {
+      mountNavigation(path)
+      const current = screen
+        .getAllByRole("link")
+        .filter((link) => link.hasAttribute("aria-current"))
+      expect(current).toHaveLength(1)
+      expect(current[0].getAttribute("aria-current")).toBe("page")
+      expect(current[0].textContent).toContain("Krisinformation")
+      expect(current[0].className).toContain("underline")
+    }
+  )
+
   it("has no scroll controls and navigates in place", () => {
     mountNavigation()
     expect(screen.queryAllByRole("button")).toHaveLength(0)

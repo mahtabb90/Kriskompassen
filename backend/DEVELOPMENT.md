@@ -18,6 +18,7 @@ rendering.
 | Preparedness articles | Manually maintained summaries attributed to Krisinformation.se | File-backed article API; no automatic source fetching |
 | Civil-defense shelters | Myndigheten för civilt försvar (MCF), open OGC API Features | File-backed snapshot API and browser-local offline cache; refreshed by a manual script, no automatic daily sync yet |
 | General crisis news | Krisinformation.se news API v3 | Chosen source for future work; no news fetching service or route is implemented |
+| Phone numbers and outdoor warning signals (krisinfo) | Krisinformation.se, with per-post sources SOS Alarm (112), 1177.se (1177), Bris (116 111) and Teletal (020-22 11 44), and Myndigheten för civilt försvar (MCF) | Static TypeScript content bundled with the frontend and precached by the service worker; no backend API, fetching or IndexedDB copy. See [Frontend krisinfo content](#frontend-krisinfo-content) |
 
 Do not feed news records into the VMA validator or silently fall back to news if VMA fetching fails.
 The former assumption that Krisinformation VMA records have the news format is no longer used.
@@ -36,6 +37,8 @@ storage or the account-free product decision.
 - **Curated content:** `src/data/crisis.json` is shipped with the backend and read on demand.
   Content updates follow the file-review and deployment process below; runtime requests never
   write to this file.
+- **Frontend krisinfo content:** phone numbers and warning signals are bundled with the
+  frontend, not the backend. See [Frontend krisinfo content](#frontend-krisinfo-content).
 - **Shelter lookups:** `GET /api/v1/shelters/nearest?lat=&lon=` ranks the bundled
   `src/data/shelters.json` snapshot by distance and returns the five nearest as
   `{shelters, source, bboxRadiusMetersUsed}`, without contacting MCF. `GET
@@ -162,6 +165,130 @@ summarisation.
 The Python runtime includes project files in its function bundle; see
 [Vercel's Python bundling documentation](https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled).
 Do not add runtime writes to this deployment file as a substitute for durable database storage.
+
+## Frontend krisinfo content
+
+This section covers content that lives in the frontend, not in the backend. Phone numbers and
+the outdoor warning signals ("Hesa Fredrik") are static TypeScript in
+`frontend/src/content/krisinfo/`. They are separate from the preparedness articles above, which
+the backend serves from `src/data/crisis.json`.
+
+- **Model:** the types are in `frontend/src/types/krisinfo.ts`. Every section and every item
+  carries `source` (name and `https` URL) and `lastVerified` (`YYYY-MM-DD`).
+- **Files:** `phones.ts` and `signals.ts` hold the content; `index.ts` maps each section ID to
+  its content.
+- **Phone numbers:** `number` and `abroadNumber` keep the source's spacing for display.
+  `abroadNumber` is the source's international number for calls from abroad or from a phone
+  registered outside Sweden; it is absent when the source gives none. 112, 1177, 113 13 and
+  114 14 follow the order of the section's source page (Krisinformation.se); Bris (116 111) and
+  Teletal (020-22 11 44), which that page does not list with a number, follow them. Each post
+  names the page its facts come from as its own `source`: SOS Alarm for 112, 1177.se for 1177,
+  Krisinformation.se for 113 13 and 114 14, Bris for 116 111 and Teletal for 020-22 11 44.
+  Service details that change, such as Teletal's opening hours, are text only and are not
+  pinned by the tests; check them against the source whenever the post is verified.
+  `number` and `abroadNumber` must be groups of digits separated by single spaces or hyphens;
+  only `abroadNumber` starts with `+`, and domestic numbers are never written in +46 format.
+  `toTelHref` in `frontend/src/utils/phoneLink.ts` builds the `tel:` links and throws for any
+  other format. The tests run every bundled number through it, so a malformed number fails CI
+  instead of becoming a broken link.
+- **Reading:** pages call `useKrisinfo(sectionId)`, which reads through `getKrisinfoSection` in
+  `frontend/src/services/krisinfoService.ts`. Do not import the content files directly, so the
+  source can later move to IndexedDB or a backend without changing pages.
+- **Phone numbers page:** `/telefonnummer` (`PhoneNumbersPage`) reads the section through
+  `useKrisinfo` and renders each number with `PhoneCard`, which receives it as props and reads
+  nothing itself. The page lists each distinct `source` once with the oldest `lastVerified`
+  among the posts that use it. It is reached from the krisinfo overview (see below).
+- **Warning signals page:** `/varningssignaler` (`WarningSignalsPage`) reads the section through
+  `useKrisinfo` and browser connectivity through `useMode()`, and renders each signal with
+  `SignalCard`, which receives the signal and `isOnline` as props. It shows the signals in
+  content order with a decorative timeline (`SignalPattern`), `patternDescription` as text,
+  `meaning` only when present (with `meaningSource` as its own link), and `whatToDo` as an
+  ordered list that is left out when empty. Each card's pattern panel ends with an external
+  link to the signal's recording at `audioLinkUrl`, labelled with the signal's name and MCF; a
+  signal without `audioLinkUrl` shows no link. One line between the lead paragraph and the cards
+  says that the recordings come from MCF and links to the section's `source` page on mcf.se. The
+  recordings are not added to the sources card, because they are not a basis for the texts and
+  have no check date of their own. Its `h1` and document title are **Utomhusvarning**, the name
+  of its overview card, with a line under the heading that keeps the name "Hesa Fredrik"
+  visible; the address stays `/varningssignaler`. It is reached from the krisinfo overview.
+- **Overview and navigation:** `/krisinformation` (`KrisinfoOverviewPage`) is the entry point
+  for all crisis information, from the primary navigation, the home page card and its
+  "Se krisinformation" call to action. It lists the parts in the order of
+  `frontend/src/components/krisinfoOverviewSections.ts`: Innan krisen (`/crisis`, the
+  preparedness articles above), Telefonnummer (`/telefonnummer`), Utomhusvarning
+  (`/varningssignaler`) and Lugn i kris (`/lugn-i-kris`). The overview is static and reads no
+  content. Each part links back to it with `BackLink`; an article links back to Innan krisen.
+  No address changed, so there are no redirects. The **Krisinformation** menu item stays marked
+  as the current page on the overview, all four parts and `/crisis/:id` through its
+  `activePaths` in `navigationItems.ts`. Lugn i kris has no menu entry or home card of its own.
+  A new part is added as an entry in `krisinfoOverviewSections.ts`, a route in `App.tsx` and a
+  pattern in Krisinformation's `activePaths`.
+- **External links:** every external link on the krisinfo pages, including the sources, uses
+  `ExternalLink` (`frontend/src/components/ExternalLink.tsx`). It opens a new tab with
+  `rel="noopener noreferrer"`, says so in its accessible name and adds "Kräver
+  internetanslutning." while the browser reports no connection. Pages pass `isOnline` from
+  `useMode()`: browser connectivity, not the "Sparad information" mode, decides the note.
+- **Signal patterns:** `computeSignalStrokes` in `frontend/src/utils/signalPattern.ts` turns a
+  `SignalPattern` into one stroke per tone and a `timelineSeconds` to draw them on.
+  - With `totalDurationSeconds` it counts the whole tones that fit, with no pause after the
+    last one, and the timeline lasts that duration. Viktigt meddelande (7 s tone, 14 s pause,
+    2 minutes) is drawn as 6 tones on a 2-minute timeline, Flyglarm (2 s, 2 s, 1 minute) as 15
+    and Beredskapslarm (30 s, 15 s, 5 minutes) as 7.
+  - With `repeatCount` it draws that many tones, and the timeline ends with the last one, as for
+    Faran över (one 30-second tone).
+  - Prefer `totalDurationSeconds` when the source states a duration, so the timeline's end label
+    matches the text. Viktigt meddelande's source states both 6 repeats and 2 minutes; the
+    duration is used, and the content test pins the resulting 6 tones.
+  - `formatSignalSeconds` writes the labels: whole minutes as "N min", other times as "N s".
+  - Both throw `RangeError` for invalid values, and the tests run every bundled signal through
+    them.
+- **Sources on pages:** `collectSources` and `formatVerifiedDate` in
+  `frontend/src/utils/krisinfoSources.ts` and the `KrisinfoSourcesCard` component are shared by
+  the krisinfo pages. A signal's `meaningSource` is listed after its `source`, with the signal's
+  `lastVerified`.
+- **Offline:** the content ships in the JavaScript bundle, which the service worker precaches.
+  It needs no network request, IndexedDB copy or `vite.config.ts` change, and it is shown in
+  both online mode and "Sparad information" mode.
+- **Text and links:** texts are written in our own words based on the source, in short and
+  simple Swedish, and are rendered as plain text. Facts and meaning must match the source:
+  numbers, times, counts, actions, terms (for example "krigsplaceringsorder") and what a signal
+  means. No advice beyond the source is added. `source` and `meaningSource` therefore mean
+  "based on", not "quoted from". `meaning` is absent and `whatToDo` empty where no official
+  source states anything. `meaningSource` names the page when a meaning is based on another
+  official source than the post's `source`. Action links only complement the step
+  text, which must stay readable without them, because links need internet while, for example,
+  radio via FM works without it. The P4 link points to
+  [Sveriges Radio's channel list](https://www.sverigesradio.se/kanaler), because P4 is a set of
+  local channels without one national page.
+- **Signal recordings:** `audioLinkUrl` is an external link to MCF's MP3 file, which the browser
+  opens in a new tab in its own player. The URLs are the ones linked from the section's source
+  page, MCF's page on Hesa Fredrik, and the content tests pin them. The app does not bundle, play
+  or cache audio, and Workbox is not configured for `.mp3` or for MCF's pages. Like every other
+  external link, the recording links say that they need internet while the browser reports no
+  connection; the rest of the page works offline.
+
+### Adding or changing krisinfo content
+
+1. Open the post's source page and write the text in your own words. Keep every fact and the
+   meaning as the source states them, and add no advice of your own.
+2. Set `lastVerified` to the date someone compared the post's facts and meaning with its source.
+   Whoever changes a post makes that comparison and updates the date in the same change.
+   `lastVerified` in the content files is the only record of when a post was verified.
+3. Update `frontend/src/content/krisinfo/krisinfo.test.ts` when a fact changes. These content
+   tests pin facts (phone numbers and their order, numbers for calls from abroad, signal
+   timings, links, MP3 links, sources and `lastVerified`), not wording, so a rewording alone
+   needs no test change.
+4. To add a section, add its ID and type to `KrisinfoSections` and its content to
+   `krisinfoSections` in `index.ts`. The section's `id` must equal its key.
+5. Run the frontend checks: `npm run lint`, `npm run format:check`, `npm run test` and
+   `npm run build`.
+
+### How content updates reach users
+
+A content change reaches users only through a new frontend publication. An installed app then
+shows the existing app update notice, and the new content appears first when the user selects
+**Uppdatera appen**. Until then the app shows the previous edition, also offline. There is no
+local copy in IndexedDB that could become outdated, and saved user data is not affected.
 
 ## Civil-defense shelters
 
