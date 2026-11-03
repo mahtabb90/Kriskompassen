@@ -1,13 +1,13 @@
 /** Which decorative icon a krisinfo overview card shows; `KrisinfoSectionCard` draws it. */
-export type KrisinfoSectionIcon = "info" | "phone" | "signal" | "calm"
+export type KrisinfoOverviewSectionIcon = "info" | "phone" | "signal" | "calm"
 
-export interface KrisinfoSection {
+export interface KrisinfoOverviewSection {
   /** Stable slug, used for element ids. */
   id: string
   to: string
   label: string
   description: string
-  icon: KrisinfoSectionIcon
+  icon: KrisinfoOverviewSectionIcon
 }
 
 /**
@@ -16,7 +16,7 @@ export interface KrisinfoSection {
  * Add a new part here and register its route in App.tsx. The icon is a key rather than an
  * element, so this list stays plain data.
  */
-export const krisinfoSections: readonly KrisinfoSection[] = [
+export const krisinfoOverviewSections: readonly KrisinfoOverviewSection[] = [
   {
     id: "innan-krisen",
     to: "/crisis",

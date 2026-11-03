@@ -19,7 +19,7 @@ export interface NavigationItem {
 export const navigationItems: readonly NavigationItem[] = [
   { to: "/", label: "Hem", end: true },
   {
-    // The overview's parts have no menu entries of their own; see krisinfoSections.ts.
+    // The overview's parts have no menu entries of their own; see krisinfoOverviewSections.ts.
     to: "/krisinformation",
     label: "Krisinformation",
     end: true,

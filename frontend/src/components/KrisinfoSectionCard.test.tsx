@@ -3,11 +3,14 @@ import { cleanup, render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { afterEach, describe, expect, it } from "vitest"
 import KrisinfoSectionCard from "./KrisinfoSectionCard"
-import type { KrisinfoSection, KrisinfoSectionIcon } from "./krisinfoSections"
+import type {
+  KrisinfoOverviewSection,
+  KrisinfoOverviewSectionIcon,
+} from "./krisinfoOverviewSections"
 
 afterEach(cleanup)
 
-const SECTION: KrisinfoSection = {
+const SECTION: KrisinfoOverviewSection = {
   id: "testdel",
   to: "/testdel",
   label: "Testdel",
@@ -15,7 +18,7 @@ const SECTION: KrisinfoSection = {
   icon: "info",
 }
 
-function renderCard(section: KrisinfoSection = SECTION) {
+function renderCard(section: KrisinfoOverviewSection = SECTION) {
   return render(
     <MemoryRouter>
       <KrisinfoSectionCard section={section} />
@@ -46,7 +49,7 @@ describe("KrisinfoSectionCard", () => {
     expect(cue.getAttribute("aria-hidden")).toBe("true")
   })
 
-  it.each<KrisinfoSectionIcon>(["info", "phone", "signal", "calm"])(
+  it.each<KrisinfoOverviewSectionIcon>(["info", "phone", "signal", "calm"])(
     "draws a decorative %s icon",
     (icon) => {
       renderCard({ ...SECTION, icon })

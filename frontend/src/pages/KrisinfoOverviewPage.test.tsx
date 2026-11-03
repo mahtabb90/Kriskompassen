@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { afterEach, describe, expect, it } from "vitest"
-import { krisinfoSections } from "../components/krisinfoSections"
+import { krisinfoOverviewSections } from "../components/krisinfoOverviewSections"
 import KrisinfoOverviewPage from "./KrisinfoOverviewPage"
 
 afterEach(cleanup)
@@ -49,7 +49,7 @@ describe("KrisinfoOverviewPage", () => {
   it("renders one card per entry in the shared section list", () => {
     renderPage()
     const hrefs = screen.getAllByRole("link").map((link) => link.getAttribute("href"))
-    expect(hrefs).toEqual(krisinfoSections.map((section) => section.to))
+    expect(hrefs).toEqual(krisinfoOverviewSections.map((section) => section.to))
   })
 
   it("names every card by its title, never by a generic link text", () => {

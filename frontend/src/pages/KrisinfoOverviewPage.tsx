@@ -1,9 +1,9 @@
 import KrisinfoSectionCard from "../components/KrisinfoSectionCard"
-import { krisinfoSections } from "../components/krisinfoSections"
+import { krisinfoOverviewSections } from "../components/krisinfoOverviewSections"
 
 /**
  * Overview of all crisis information: one card per part, linking to that part's page, in the
- * order of `krisinfoSections`.
+ * order of `krisinfoOverviewSections`.
  *
  * The page is static and performs no I/O, so it works offline. The cards are a list, so screen
  * readers announce how many parts there are.
@@ -23,7 +23,7 @@ function KrisinfoOverviewPage() {
         något redan har hänt.
       </p>
       <ul aria-label="Delar av krisinformationen" className="mt-6 grid gap-6 md:grid-cols-2">
-        {krisinfoSections.map((section) => (
+        {krisinfoOverviewSections.map((section) => (
           <li key={section.id}>
             <KrisinfoSectionCard section={section} />
           </li>

@@ -1,12 +1,15 @@
 import { Link } from "react-router-dom"
 import CalmIcon from "./CalmIcon"
 import HomeFeatureIcon from "./HomeFeatureIcon"
-import type { KrisinfoSection, KrisinfoSectionIcon } from "./krisinfoSections"
+import type {
+  KrisinfoOverviewSection,
+  KrisinfoOverviewSectionIcon,
+} from "./krisinfoOverviewSections"
 import SignalIcon from "./SignalIcon"
 
 const ICON_CLASSES = "text-blue-900"
 
-function renderIcon(icon: KrisinfoSectionIcon) {
+function renderIcon(icon: KrisinfoOverviewSectionIcon) {
   switch (icon) {
     case "info":
       return <HomeFeatureIcon name="info" className={ICON_CLASSES} />
@@ -20,7 +23,7 @@ function renderIcon(icon: KrisinfoSectionIcon) {
 }
 
 interface KrisinfoSectionCardProps {
-  section: KrisinfoSection
+  section: KrisinfoOverviewSection
 }
 
 /**
