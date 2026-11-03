@@ -19,7 +19,8 @@ export interface NavigationItem {
 export const navigationItems: readonly NavigationItem[] = [
   { to: "/", label: "Hem", end: true },
   {
-    to: "/crisis",
+    // The overview's parts have no menu entries of their own; see krisinfoSections.ts.
+    to: "/krisinformation",
     label: "Krisinformation",
     end: true,
     activePaths: [
@@ -28,12 +29,12 @@ export const navigationItems: readonly NavigationItem[] = [
       "/crisis/:id",
       "/telefonnummer",
       "/varningssignaler",
+      "/lugn-i-kris",
     ],
   },
   { to: "/crisis-kit", label: "Min krislåda", end: true },
   { to: "/skyddsrum", label: "Skyddsrum", end: true },
   { to: "/installningar", label: "Inställningar", end: true },
-  { to: "/lugn-i-kris", label: "Lugn i kris", end: true },
 ]
 
 /**

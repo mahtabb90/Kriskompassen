@@ -9,6 +9,7 @@ import CalmInCrisisPage from "../pages/CalmInCrisisPage"
 import CrisisInfoPage from "../pages/CrisisInfoPage"
 import CrisisKitPage from "../pages/CrisisKitPage"
 import HomePage from "../pages/HomePage"
+import KrisinfoOverviewPage from "../pages/KrisinfoOverviewPage"
 import NotFoundPage from "../pages/NotFoundPage"
 import { feed } from "../services/__fixtures__/vma"
 import { crisisArticles, crisisResponse } from "../services/__fixtures__/crisis"
@@ -72,6 +73,7 @@ function mountLayout(path: string) {
           <Routes>
             <Route element={<AppLayout />}>
               <Route path="/" element={<HomePage />} />
+              <Route path="/krisinformation" element={<KrisinfoOverviewPage />} />
               <Route path="/crisis" element={<CrisisInfoPage />} />
               <Route path="/crisis-kit" element={<CrisisKitPage />} />
               <Route path="/crisis/:id" element={<DetailedCrisisCard />} />
@@ -137,6 +139,7 @@ describe("routed page structure", () => {
     // The home page also has a Krisinformation card, so use the primary navigation link.
     const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
     fireEvent.click(within(navigation).getByRole("link", { name: "Krisinformation" }))
+    fireEvent.click(screen.getByRole("link", { name: "Innan krisen" }))
     fireEvent.click(await screen.findByRole("link", { name: /^Mat i kris/ }))
     const heading = screen.getByRole("heading", { level: 1 })
     expect(document.activeElement).toBe(heading)

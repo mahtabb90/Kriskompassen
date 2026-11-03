@@ -20,6 +20,7 @@ describe("isNavigationItemActive", () => {
     "/crisis/food-in-crisis",
     "/telefonnummer",
     "/varningssignaler",
+    "/lugn-i-kris",
   ])("marks Krisinformation, and only it, as current on %s", (pathname) => {
     expect(currentLabels(pathname)).toEqual(["Krisinformation"])
   })
@@ -30,6 +31,11 @@ describe("isNavigationItemActive", () => {
       expect(isNavigationItemActive(item("Krisinformation"), pathname)).toBe(false)
     }
   )
+
+  it("has no menu entry of its own for Lugn i kris, so only Krisinformation is current there", () => {
+    expect(navigationItems.map((candidate) => candidate.to)).not.toContain("/lugn-i-kris")
+    expect(currentLabels("/lugn-i-kris")).toEqual(["Krisinformation"])
+  })
 
   it("matches an item without activePaths on its own path only", () => {
     expect(isNavigationItemActive(item("Hem"), "/")).toBe(true)

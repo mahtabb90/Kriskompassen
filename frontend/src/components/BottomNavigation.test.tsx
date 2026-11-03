@@ -38,7 +38,7 @@ describe("BottomNavigation", () => {
     expect(current[0].textContent).toContain("Inställningar")
   })
 
-  it.each(["/telefonnummer", "/crisis/food-in-crisis"])(
+  it.each(["/telefonnummer", "/crisis/food-in-crisis", "/lugn-i-kris"])(
     "keeps Krisinformation current on the krisinfo subpage %s",
     (path) => {
       mountNavigation(path)
