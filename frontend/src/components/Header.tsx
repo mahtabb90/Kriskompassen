@@ -10,6 +10,7 @@ import ModeToggle from "./ModeToggle"
  * From 48rem the switch and active address align with the content edge, while installation sits
  * beside connectivity status on the same baseline as the address. Below 48rem the mobile menu
  * offers installation instead. Reserves the top device inset when no VMA notice owns it.
+ * The install wrapper offsets the button's vertical padding to keep the status row unchanged.
  *
  * @param reserveTopInset Whether the header is the first visible region in the page.
  */
@@ -48,7 +49,8 @@ function Header({ reserveTopInset = true }: { reserveTopInset?: boolean }) {
           <div className="self-stretch md:col-start-1 md:row-start-4 md:mt-3 md:self-baseline">
             <ConnectionStatus
               action={
-                <div className="empty:hidden max-md:hidden">
+                // Keep the 32px button's outer height and baseline equal to the 20px status line.
+                <div className="-my-1.5 flex empty:hidden max-md:hidden">
                   <InstallAppButton variant="text" />
                 </div>
               }

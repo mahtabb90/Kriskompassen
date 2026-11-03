@@ -371,8 +371,11 @@ Navigation and accessibility:
   its live region, and wraps below it when needed. The connection-loss notice stays below that
   row. Status/installation and the address share the final desktop grid row and align by their
   first text baseline. A flexible row above them accommodates longer switch help without spreading
-  the brand and tagline apart. Below `48rem`, header content stacks on the left and installation
-  stays in the menu.
+  the brand and tagline apart. The desktop install wrapper uses `-my-1.5 flex` to offset the
+  button's vertical padding: it contributes the status line's 20px outer height and baseline
+  while retaining the 32px visible button and 48px hit area, without reserving empty space.
+  Keep the offsets synchronized with the text-button padding. Below `48rem`, header content
+  stacks on the left and installation stays in the menu.
   See `DESIGN_SYSTEM.md` sections 6.5–6.6 for padding, spacing and target details.
 - Each routed page supplies one `h1` with `id="page-heading"` and `tabIndex={-1}`. The layout derives the document title from that heading and focuses it on pathname changes, including back/forward navigation. Initial loads and hash-only changes preserve browser focus.
 - Add public links to the typed `navigationItems` list in `components/navigationItems.ts` and register their routes in `App.tsx`. Navigation currently uses exact matching. The desktop `BottomNavigation` and the mobile `MobileMenu` both render that one list; never duplicate labels or paths.
@@ -483,6 +486,11 @@ Decided tooling:
   do not establish those results.
 - `pwaUpdateService.test.ts` covers registration failure only: a throwing or missing container, rejected `register`/`getRegistration`, and disabled bootstrap outside secure production builds. Update/activation flow tests remain out of scope.
 - Install prompt tests cover the service, hook, `InstallAppButton` and its focus handling in `Header` and `MobileMenu` with synthetic events from `services/__fixtures__/installPrompt.ts`. The browser's real prompt and install flow require manual checks.
+- Header tests also cover a late install offer with and without an active address, retaining
+  existing status/address nodes and keyboard focus while the offer appears and disappears.
+  jsdom cannot verify CSS layout. Check header/navigation bounds before and after an offer at
+  320, 375, 768 and 1024px with and without an address, plus the 48px hit area and focus clipping,
+  in a real browser. Keep temporary measurement fixtures outside the repository and application.
 - Install instruction tests cover platform detection as a pure function, dismissal storage failures
   and expiry, `useInstallState` and `InstallInstructions`. Real Safari, iOS and private-mode
   behaviour requires manual device checks.
