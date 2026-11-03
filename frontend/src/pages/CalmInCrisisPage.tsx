@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
+import BackLink from "../components/BackLink"
 import CalmHeroMotif from "../components/CalmHeroMotif"
 import CalmIcon, { type CalmIconName } from "../components/CalmIcon"
 
@@ -74,11 +75,13 @@ const ACCENT_BAR = (
  * Static "Lugn i kris" page with short, source-based advice for staying focused during a crisis.
  *
  * It stores and fetches nothing, so it is readable offline. The advice never replaces VMA or
- * other official instructions. The amber dots (hero motif and divider) are decoration only.
+ * other official instructions. The amber dots (hero motif and divider) are decoration only. A link
+ * back to the krisinfo overview sits above the hero card.
  */
 function CalmInCrisisPage() {
   return (
     <section>
+      <BackLink to="/krisinformation" label="Tillbaka till krisinformation" />
       <div className={CARD_CLASSES}>
         {ACCENT_BAR}
         <div className="flex flex-col items-center gap-3 p-6 sm:flex-row sm:gap-8 sm:p-10">

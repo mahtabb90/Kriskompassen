@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen, within } from "@testing-library/react"
+import { MemoryRouter } from "react-router-dom"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { krisinfoSections } from "../content/krisinfo/index"
 import { ModeProvider } from "../context/ModeProvider"
@@ -35,7 +36,9 @@ function phone(number: string) {
 function renderPage() {
   return render(
     <ModeProvider>
-      <PhoneNumbersPage />
+      <MemoryRouter>
+        <PhoneNumbersPage />
+      </MemoryRouter>
     </ModeProvider>
   )
 }
@@ -70,6 +73,14 @@ describe("PhoneNumbersPage", () => {
     await screen.findByText(section.summary)
     expect(screen.getByRole("heading", { level: 1 })).toBe(heading)
     expect(screen.queryByRole("status")).toBeNull()
+  })
+
+  it("links back to the krisinfo overview before the page heading", () => {
+    renderPage()
+    const back = screen.getByRole("link", { name: "Tillbaka till krisinformation" })
+    expect(back.getAttribute("href")).toBe("/krisinformation")
+    const heading = screen.getByRole("heading", { level: 1 })
+    expect(back.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it("names each number's heading with both the number and its label, in order", async () => {

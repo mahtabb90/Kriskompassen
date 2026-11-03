@@ -70,11 +70,20 @@ describe("CalmInCrisisPage", () => {
     expect(link.getAttribute("target")).toBeNull()
   })
 
+  it("links back to the krisinfo overview before the hero card and its heading", () => {
+    renderPage()
+    const back = screen.getByRole("link", { name: "Tillbaka till krisinformation" })
+    expect(back.getAttribute("href")).toBe("/krisinformation")
+    const heading = screen.getByRole("heading", { level: 1 })
+    expect(back.contains(heading)).toBe(false)
+    expect(back.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it("offers only the three official source links, opening in a new tab", () => {
     renderPage()
     const links = screen
       .getAllByRole("link")
-      .filter((link) => link.getAttribute("href") !== "/crisis")
+      .filter((link) => !["/crisis", "/krisinformation"].includes(link.getAttribute("href")!))
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "https://www.1177.se/liv--halsa/stresshantering-och-somn/mindfulness/",
       "https://www.krisinformation.se/din-beredskap/stod-vid-oro-och-kris/stodlinjer/",

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen, within } from "@testing-library/react"
+import { MemoryRouter } from "react-router-dom"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { krisinfoSections } from "../content/krisinfo/index"
 import { ModeProvider } from "../context/ModeProvider"
@@ -35,7 +36,9 @@ function signal(id: string) {
 function renderPage() {
   return render(
     <ModeProvider>
-      <WarningSignalsPage />
+      <MemoryRouter>
+        <WarningSignalsPage />
+      </MemoryRouter>
     </ModeProvider>
   )
 }
@@ -53,6 +56,11 @@ function signalCards() {
     .map((heading) => heading.closest("li")!)
 }
 
+/** Links that leave the app; the back link to the overview is internal and works offline. */
+function externalLinks() {
+  return screen.getAllByRole("link").filter((link) => !link.getAttribute("href")!.startsWith("/"))
+}
+
 function goOffline() {
   act(() => {
     window.dispatchEvent(new Event("offline"))
@@ -66,9 +74,29 @@ afterEach(() => {
 })
 
 describe("WarningSignalsPage", () => {
-  it("keeps one focusable page heading while loading and when ready", async () => {
+  it("names Hesa Fredrik visibly under the heading in every state, without a second heading", async () => {
     renderPage()
     const heading = screen.getByRole("heading", { level: 1 })
+    const subtitle = heading.nextElementSibling!
+    expect(subtitle.tagName).toBe("P")
+    expect(subtitle.textContent).toContain("Hesa Fredrik")
+
+    await screen.findByText(section.summary)
+    expect(heading.nextElementSibling).toBe(subtitle)
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1)
+  })
+
+  it("links back to the krisinfo overview before the page heading", () => {
+    renderPage()
+    const back = screen.getByRole("link", { name: "Tillbaka till krisinformation" })
+    expect(back.getAttribute("href")).toBe("/krisinformation")
+    const heading = screen.getByRole("heading", { level: 1 })
+    expect(back.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it("keeps one focusable page heading while loading and when ready", async () => {
+    renderPage()
+    const heading = screen.getByRole("heading", { level: 1, name: "Utomhusvarning" })
     expect(heading.id).toBe("page-heading")
     expect(heading.getAttribute("tabindex")).toBe("-1")
     expect(screen.getByRole("status").textContent).toBe("Läser in varningssignalerna…")
@@ -193,9 +221,9 @@ describe("WarningSignalsPage", () => {
   it("links once, between the lead paragraph and the cards, to MCF's page on the signals", async () => {
     await renderReady()
     const sourcesRegion = screen.getByRole("region", { name: "Källor" })
-    const lineLinks = screen
-      .getAllByRole("link")
-      .filter((link) => !link.closest("li") && !sourcesRegion.contains(link))
+    const lineLinks = externalLinks().filter(
+      (link) => !link.closest("li") && !sourcesRegion.contains(link)
+    )
     expect(lineLinks).toHaveLength(1)
     const [link] = lineLinks
     expect(link.getAttribute("href")).toBe(MCF_URL)
@@ -222,14 +250,17 @@ describe("WarningSignalsPage", () => {
     const contentLinks = signalCards().flatMap((card) => within(card).queryAllByRole("link"))
     // Four recordings, three action links and one meaning source.
     expect(contentLinks).toHaveLength(8)
-    // Every link on the page, including the MCF line and the sources, carries the note.
-    const allLinks = screen.getAllByRole("link")
+    // Every external link, including the MCF line and the sources, carries the note.
+    const allLinks = externalLinks()
     expect(allLinks).toHaveLength(11)
     for (const link of allLinks) {
       const note = document.getElementById(link.getAttribute("aria-describedby")!)
       expect(note?.textContent).toBe("Kräver internetanslutning.")
     }
     expect(screen.getAllByText("Kräver internetanslutning.")).toHaveLength(11)
+    // The back link stays inside the app, so it needs no internet note.
+    const back = screen.getByRole("link", { name: "Tillbaka till krisinformation" })
+    expect(back.hasAttribute("aria-describedby")).toBe(false)
     signalCards().forEach((card, index) => {
       const item = signal(SIGNAL_IDS[index])
       expect(within(card).getByText(item.patternDescription)).toBeTruthy()

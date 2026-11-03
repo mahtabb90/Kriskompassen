@@ -1,3 +1,4 @@
+import BackLink from "../components/BackLink"
 import KrisinfoSourcesCard from "../components/KrisinfoSourcesCard"
 import PhoneCard from "../components/PhoneCard"
 import { useMode } from "../context/modeContext"
@@ -13,7 +14,7 @@ import { collectSources } from "../utils/krisinfoSources"
  * its number as props, in content order. Sources are listed in order of first use by the
  * numbers and then the section; browser connectivity from `useMode()` lets their links say
  * when they need internet. The page heading stays mounted across loading states so the layout
- * can name and focus it.
+ * can name and focus it; a link back to the krisinfo overview sits above it.
  */
 function PhoneNumbersPage() {
   const { state, retry } = useKrisinfo("phone-numbers")
@@ -21,6 +22,7 @@ function PhoneNumbersPage() {
 
   return (
     <section>
+      <BackLink to="/krisinformation" label="Tillbaka till krisinformation" />
       <h1
         id="page-heading"
         tabIndex={-1}
