@@ -61,7 +61,7 @@ function DetailedCrisisCard() {
       </div>
 
       <div className="p-6 sm:p-8">
-        <BackLink to="/crisis" label="Tillbaka till krisinformation" />
+        <BackLink to="/crisis" label="Tillbaka till Innan krisen" />
 
         <h1
           ref={headingRef}
@@ -69,7 +69,7 @@ function DetailedCrisisCard() {
           tabIndex={-1}
           className="wrap-anywhere text-3xl font-bold text-blue-900"
         >
-          {item?.title ?? "Krisinformation"}
+          {item?.title ?? "Innan krisen"}
         </h1>
 
         {state.status !== "ready" && (

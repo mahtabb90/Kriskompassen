@@ -45,7 +45,7 @@ vi.mock("./components/AllSheltersMap", () => ({
 
 const startingPages = [
   ["/", "Din kompass i en kris"],
-  ["/crisis", "Krisinformation"],
+  ["/crisis", "Innan krisen"],
   ["/crisis-kit", "Min krislåda"],
   ["/skyddsrum", "Skyddsrum"],
   ["/skyddsrum/karta", "Kartan"],

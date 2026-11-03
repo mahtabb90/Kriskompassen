@@ -63,9 +63,9 @@ describe("CalmInCrisisPage", () => {
     ).toBeTruthy()
   })
 
-  it("links Krisinformation internally to /crisis in the same tab", () => {
+  it("links Innan krisen internally to /crisis in the same tab", () => {
     renderPage()
-    const link = screen.getByRole("link", { name: "Krisinformation" })
+    const link = screen.getByRole("link", { name: "Innan krisen" })
     expect(link.getAttribute("href")).toBe("/crisis")
     expect(link.getAttribute("target")).toBeNull()
   })

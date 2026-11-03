@@ -44,7 +44,7 @@ describe("DetailedCrisisCard link semantics", () => {
     )
 
     expect(
-      screen.getByRole("link", { name: "Tillbaka till krisinformation" }).getAttribute("href")
+      screen.getByRole("link", { name: "Tillbaka till Innan krisen" }).getAttribute("href")
     ).toBe("/crisis")
     const source = await screen.findByRole("link", { name: /öppnas i ny flik/ })
     expect(source.getAttribute("href")).toBe(item.sourceUrl)

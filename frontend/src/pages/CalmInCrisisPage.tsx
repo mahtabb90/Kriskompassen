@@ -31,7 +31,7 @@ const ADVICE_CARDS: readonly AdviceCard[] = [
       <>
         Följ aktuella säkerhetsinstruktioner och börja med det viktigaste. Du kan också gå till{" "}
         <Link to="/crisis" className="font-medium text-blue-900 underline underline-offset-4">
-          Krisinformation
+          Innan krisen
         </Link>{" "}
         för aktuella råd eller läsa information som du tidigare har sparat offline.
       </>
