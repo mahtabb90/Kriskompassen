@@ -69,6 +69,34 @@ describe("Header install button", () => {
     expect(screen.queryByRole("button", { name: "Installera app" })).toBe(null)
   })
 
+  it.each([false, true])(
+    "keeps existing controls and focus when a late install offer appears (saved address: %s)",
+    async (hasAddress) => {
+      vi.mocked(getSavedAddresses).mockResolvedValue(hasAddress ? [activeAddress] : [])
+      mountHeader()
+      await waitFor(() => expect(getSavedAddresses).toHaveBeenCalled())
+      const address = hasAddress ? await screen.findByRole("link", { name: "Storgatan 1" }) : null
+      const status = screen.getByRole("status")
+      const modeSwitch = screen.getByRole("switch", { name: "Sparad information" })
+      modeSwitch.focus()
+
+      offerInstall()
+
+      expect(screen.getByRole("button", { name: "Installera app" })).toBeTruthy()
+      expect(screen.getByRole("status")).toBe(status)
+      expect(screen.getByRole("switch", { name: "Sparad information" })).toBe(modeSwitch)
+      expect(document.activeElement).toBe(modeSwitch)
+      if (address) expect(screen.getByRole("link", { name: "Storgatan 1" })).toBe(address)
+
+      act(() => window.dispatchEvent(new Event("appinstalled")))
+
+      expect(screen.queryByRole("button", { name: "Installera app" })).toBe(null)
+      expect(screen.getByRole("status")).toBe(status)
+      expect(document.activeElement).toBe(modeSwitch)
+      if (address) expect(screen.getByRole("link", { name: "Storgatan 1" })).toBe(address)
+    }
+  )
+
   it("follows connectivity status before the mode switch and active address", async () => {
     vi.mocked(getSavedAddresses).mockResolvedValue([activeAddress])
     offerInstall()
