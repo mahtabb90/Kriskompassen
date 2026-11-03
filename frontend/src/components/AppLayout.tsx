@@ -121,18 +121,25 @@ function AppLayout() {
       const height = mobileFooterVisible()
         ? Math.ceil(mobileFooter.getBoundingClientRect().height)
         : 0
-
-      root.style.setProperty("--navigation-height", `${height}px`)
-      root.style.setProperty(
-        "--vma-banner-height",
-        `${Math.ceil(banner.getBoundingClientRect().height)}px`
-      )
+      const bannerHeight = Math.ceil(banner.getBoundingClientRect().height)
       const updateHeight =
         getComputedStyle(updateNotice).position === "sticky"
           ? Math.ceil(updateNotice.getBoundingClientRect().height)
           : 0
+
+      // A mobile browser's address bar hiding/showing during scroll fires its own resize
+      // events without any reserved space changing. Only re-run the focus check when one of
+      // these heights actually changed, so it doesn't fight an in-progress scroll by pulling
+      // the page back to whatever still holds focus.
+      const changed =
+        root.style.getPropertyValue("--navigation-height") !== `${height}px` ||
+        root.style.getPropertyValue("--vma-banner-height") !== `${bannerHeight}px` ||
+        root.style.getPropertyValue("--pwa-update-height") !== `${updateHeight}px`
+
+      root.style.setProperty("--navigation-height", `${height}px`)
+      root.style.setProperty("--vma-banner-height", `${bannerHeight}px`)
       root.style.setProperty("--pwa-update-height", `${updateHeight}px`)
-      scheduleFocusCheck()
+      if (changed) scheduleFocusCheck()
     }
 
     const observer = new ResizeObserver(() => {
