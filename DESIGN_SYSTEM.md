@@ -235,7 +235,7 @@ Content cards represent units of crisis information. They are clean, distinct su
 
 ### 5.2 The Signature Crisis Indicator Bar
 
-The signature top accent bar applies specifically to **crisis-information cards (`CrisisCard`) and crisis-detail surfaces (`DetailedCrisisCard`)**, not to every generic card, panel, empty state, or settings container in the application. Other uses are the white content cards of the static "Lugn i kris" page (section 5.4) and the home page hero and feature cards (section 5.5):
+The signature top accent bar applies specifically to **crisis-information cards (`CrisisCard`) and crisis-detail surfaces (`DetailedCrisisCard`)**, not to every generic card, panel, empty state, or settings container in the application. Other uses are the white content cards of the static "Lugn i kris" page (section 5.4), the home page hero and feature cards (section 5.5) and the krisinfo overview cards (section 5.8):
 
 ```html
 <div className="flex h-1.5 w-full" aria-hidden="true">
@@ -274,7 +274,7 @@ Crisis-information overview cards (`CrisisCard`) and the emergency-kit category 
 
 ### 5.4 Calm Page Motif and Panels ("Lugn i kris")
 
-The static `/lugn-i-kris` page uses a few decorative elements. They add no new colours, gradients or animation.
+The static `/lugn-i-kris` page uses a few decorative elements. They add no new colours, gradients or animation. It is a part of the krisinfo overview (section 5.8), and its back link (section 7.3) sits above the hero card, 24px from the card's top edge.
 
 - **Signature bar:** the hero, advice and sources cards carry the same blue/amber top bar as section 5.2 (without the hover colour), on an `overflow-hidden` card with padding on an inner element. The emergency panel does not.
 - **Hero:** a white content card (section 5.1) with the `h1`, a one-line `p` (`text-xl font-semibold text-blue-900`) and the lead paragraph. `CalmHeroMotif` sits beside the text from `sm`. On mobile it sits directly below the text with a tight `gap-3` and is smaller (`size-20`, `sm:size-40`) to keep the hero compact.
@@ -311,13 +311,15 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   outline, and one `text-amber-400` dot near the long needle point. It has no lettering or
   gradient, is `aria-hidden`, `focusable="false"`, titleless and not animated, and is hidden below
   `md` (`hidden md:block`).
-- **Feature overview:** an `h2` (**"Det här kan du göra i KrisKompassen"**) above five cards whose
+- **Feature overview:** an `h2` (**"Det här kan du göra i KrisKompassen"**) above four cards whose
   `h3` titles are the shared `navigationItems` labels. Each whole card is one link; its accessible
   name is the title (`aria-labelledby`) and its description is `aria-describedby`.
-- **Bento hierarchy:** from `md`, a six-column grid places Krisinformation and Min krislåda
-  (`col-span-3`, larger padding, `text-2xl` title, 56px icon circle with a `border-blue-200` edge
-  on `bg-blue-100`) on one row and Skyddsrum, Inställningar and Lugn i kris (`col-span-2`, `text-xl`
-  title, 48px `bg-blue-50` icon circle without border) on the next. Every card ends with the same
+- **Bento hierarchy:** from `md`, a six-column grid gives every card half a row (`col-span-3`),
+  so the four cards form two full rows. Krisinformation and Min krislåda come first, as primary
+  cards (larger padding, `text-2xl` title, 56px icon circle with a `border-blue-200` edge on
+  `bg-blue-100`); Skyddsrum and Inställningar follow as supporting cards (`text-xl` title, 48px
+  `bg-blue-50` icon circle without border). Lugn i kris is reached through the krisinfo
+  overview (section 5.8) and has no card here. Every card ends with the same
   decorative cue, pinned to the card bottom: the text **Öppna** and a 20px inline outline arrow
   (section 5.3 style, `currentColor`, `gap-2`), hidden from assistive technology as a whole
   because the link name comes from the title. Below `md` the cards stack in one column. Cards stretch to equal height within a
@@ -325,8 +327,8 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
 - **Card surface:** section 5.1 with the section 5.2 bar including its hover colour; the focus
   outline is drawn inside the clipped card. No transforms.
 - **Icons:** the section 5.3 outline style in a `bg-blue-50` circle (as in section 5.4). Min
-  krislåda reuses `CrisisIcon` (`other`), Lugn i kris reuses `CalmIcon` (`breath`); Krisinformation,
-  Skyddsrum and Inställningar use `HomeFeatureIcon`. All are `aria-hidden` and `text-blue-900`.
+  krislåda reuses `CrisisIcon` (`other`); Krisinformation, Skyddsrum and Inställningar use
+  `HomeFeatureIcon`. All are `aria-hidden` and `text-blue-900`.
 
 ### 5.6 Phone Numbers Page (proposal)
 
@@ -381,6 +383,11 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
 > `WarningSignalsPage`, `SignalCard`, `SignalPattern`, `SignalIcon` and `ExternalLink`. It reuses
 > existing tokens only; adopting it as a recurring pattern requires the team's agreement.
 
+- **Heading:** the `h1` and document title are **"Utomhusvarning"**, the name of the page's
+  overview card (section 5.8). Directly below it, a one-line `p` (`mt-2 text-lg font-semibold
+  text-blue-900 sm:mt-3 sm:text-xl`, as on the calm page in section 5.4) reads **"Hesa Fredrik –
+  de fyra varningssignalerna"**, so the familiar name stays visible in every loading state. It is
+  not a heading, so the page keeps one `h1`. `#1c398e` on the page background `#d7e2ef`: 7.91:1.
 - **Column:** the signal cards and the sources card share one `max-w-2xl` (672px) column in the
   source's order, so on wide screens the text and drawing fill each card instead of leaving an
   empty right-hand area. The `h1` and lead paragraph keep their normal widths. The phone numbers
@@ -459,6 +466,37 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   | `blue-900` | page `#d7e2ef` | `#1c398e` on `#d7e2ef` | 7.91:1 | Attribution link, its icon and focus outline |
 
   Recalculate these values when the tokens or the Tailwind version change.
+
+### 5.8 Krisinfo Overview (proposal)
+
+> **Status: proposal awaiting team approval (section 11.1).** Implemented in
+> `KrisinfoOverviewPage` and `KrisinfoSectionCard`, with the parts listed in
+> `krisinfoOverviewSections.ts`. It reuses the home page feature card (section 5.5) and adds no
+> colours, gradients or animation.
+
+- **Page:** `/krisinformation` with the `h1` **"Krisinformation"** and a lead paragraph
+  (`mt-4 max-w-prose text-lg leading-relaxed text-slate-700`), followed by a list named
+  **"Delar av krisinformationen"** (`aria-label`), so screen readers announce the number of
+  parts. The parts appear in list order: Innan krisen, Telefonnummer, Utomhusvarning, Lugn i kris.
+- **Cards:** the section 5.5 supporting card: section 5.1 surface with the section 5.2 bar and its
+  hover colour, `p-6`, a 48px `bg-blue-50` icon circle, an `h2` title in `text-xl font-bold
+  text-blue-900 wrap-anywhere`, a `text-slate-600` description and the decorative **Öppna** cue
+  pinned to the bottom. The whole card is one link named by its title (`aria-labelledby`) and
+  described by its text (`aria-describedby`), never by a generic "Läs mer". The focus outline is
+  drawn inside the clipped card.
+- **Grid:** one column below `md`, two from `md` (`md:grid-cols-2`, `gap-6`); cards stretch to
+  equal height within a row.
+- **Icons:** section 5.3 style, `aria-hidden`, `text-blue-900`: Innan krisen `HomeFeatureIcon`
+  (`info`), Telefonnummer `HomeFeatureIcon` (`phone`, an outline mobile phone), Utomhusvarning
+  `SignalIcon`, Lugn i kris `CalmIcon` (`breath`).
+- **Contrast** (WCAG 2.2 relative luminance, Tailwind 4.3.3 values as in section 5.6):
+
+  | Foreground | Background | sRGB | Ratio | Used for |
+  | --- | --- | --- | --- | --- |
+  | `blue-900` | `white` | `#1c398e` on `#ffffff` | 10.37:1 | Card titles, Öppna cue, icons |
+  | `slate-600` | `white` | `#45556c` on `#ffffff` | 7.58:1 | Card descriptions |
+  | `slate-700` | page background | `#314158` on `#d7e2ef` | 7.90:1 | Lead paragraph |
+  | `blue-900` | page background | `#1c398e` on `#d7e2ef` | 7.91:1 | `h1`, back links (section 7.3) and their focus outline |
 
 ---
 
@@ -671,6 +709,8 @@ To support keyboard and screen-reader navigation, a skip link is provided at the
 
 KrisKompassen shows the same primary links, from the shared `navigationItems` list, through two components: `BottomNavigation` (desktop) and `MobileMenu` (mobile). Never duplicate the labels or paths.
 
+Both decide the current page with `isNavigationItemActive()`. An item matches its own path exactly unless it lists `activePaths`: **Krisinformation** stays current on the overview and on every part (`/crisis`, `/crisis/:id`, `/telefonnummer`, `/varningssignaler`, `/lugn-i-kris`), and at most one item is current on any page.
+
 ### 7.1 Responsive Placement
 
 - **Mobile Viewports (`width < 48rem`, any height):**
@@ -681,8 +721,15 @@ KrisKompassen shows the same primary links, from the shared `navigationItems` li
 ### 7.2 Mobile Menu Dialog
 
 - A native modal `<dialog>` named **Meny** covers the whole viewport, including the header and the VMA notice, on a white surface with safe-area padding. The dialog element itself is fullscreen (`.mobile-menu-dialog`: fixed, `inset: 0`, no margin or border, `width: 100%`, `height`/`min-height: 100dvh`, no max-width/max-height), not only its backdrop. A **Stäng menyn** outlined button (48×48px minimum) sits in a fixed top row beside the heading; the link list below scrolls internally (`overscroll-contain`), so short screens and enlarged text remain usable. When the browser offers installation, a fixed footer below the list holds the **Installera app** button (section 6.6).
-- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Inställningar, Lugn i kris). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
-- The modal makes the page inert, locks page scrolling and wraps Tab at its boundaries. Escape and **Stäng menyn** return focus to the Meny button, as does selecting the current route. Selecting another route closes the menu and leaves focus to the layout page-heading focus. Crossing `48rem` while open closes it without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating). There is no animation.
+- Links are full-width 48px-minimum rows in list order (Hem, Krisinformation, Min krislåda, Skyddsrum, Inställningar). The current route uses `aria-current="page"` and the same non-colour cue as desktop (blue fill, bold, underline).
+- The modal makes the page inert, locks page scrolling and wraps Tab at its boundaries. Escape and **Stäng menyn** return focus to the Meny button, as does selecting the current route. Selecting another route closes the menu and leaves focus to the layout page-heading focus; this includes selecting Krisinformation while it is current on one of its parts, because that leads to the overview. Crossing `48rem` while open closes it without focusing the hidden button and moves focus to `#page-heading` (without scrolling or navigating). There is no animation.
+
+### 7.3 Back Links
+
+- Each krisinfo part and each article starts with a `BackLink` to its fixed parent: **"Tillbaka till krisinformation"** to `/krisinformation` on Innan krisen, Telefonnummer, Utomhusvarning and Lugn i kris, and **"Tillbaka till Innan krisen"** to `/crisis` on an article.
+- It is an ordinary router link, never `history.back()`, so it leads to the same page when the current page was opened directly or offline.
+- Style: `inline-flex min-h-12 items-center gap-1 font-medium text-blue-900 underline underline-offset-4` with a decorative `←` (`aria-hidden`), so the accessible name is the label alone. It includes its 24px (`mb-6`) spacing to the heading or card below it.
+- It sits before the `h1` in DOM order. Route focus moves to the `h1`, so keyboard users reach the link with Shift+Tab, as on article pages.
 
 ---
 

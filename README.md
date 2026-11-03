@@ -237,14 +237,25 @@ For configuration, alternative ports and further development instructions, see t
 ## Navigation and accessibility
 
 The main navigation links to **Hem** (Home), **Krisinformation** (Crisis information),
-**Min krislåda** (My emergency kit), **Skyddsrum** (Shelters), **Inställningar** (Settings)
-and **Lugn i kris** (Calm in a crisis), and clearly marks the current page. On phones, a
-**Meny** button opens a full-screen menu with the same links. Larger screens keep the
-navigation above the page content.
+**Min krislåda** (My emergency kit), **Skyddsrum** (Shelters) and **Inställningar** (Settings),
+and clearly marks the current page. On phones, a **Meny** button opens a full-screen menu with
+the same links. Larger screens keep the navigation above the page content.
 
-**Lugn i kris** is a short, static page with simple advice for staying focused during a
-crisis, based on 1177, Krisinformation.se and SOS Alarm. It works offline, stores nothing and
-does not replace healthcare, professional support or official emergency instructions.
+**Krisinformation** is an overview that gathers all crisis information in one place, split into
+four parts:
+
+- **Innan krisen** (Before the crisis): the preparedness articles, which can be saved for offline
+  reading.
+- **Telefonnummer** (Phone numbers): important numbers to call, with click-to-call links.
+- **Utomhusvarning** (Outdoor warning): what the "Hesa Fredrik" warning signals mean and what to
+  do, with links to the recordings at MCF.
+- **Lugn i kris** (Calm in a crisis): a short, static page with simple advice for staying
+  focused during a crisis, based on 1177, Krisinformation.se and SOS Alarm. It stores nothing
+  and does not replace healthcare, professional support or official emergency instructions.
+
+The overview and the phone, warning and calm pages work offline once the app has been opened.
+Each part has a link back to the overview, and **Krisinformation** stays marked in the menu
+while you are in any of them.
 
 Keyboard navigation includes a link to skip directly to the page content and visible focus
 indicators. Pages have descriptive headings and titles.

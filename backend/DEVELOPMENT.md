@@ -197,7 +197,7 @@ the backend serves from `src/data/crisis.json`.
 - **Phone numbers page:** `/telefonnummer` (`PhoneNumbersPage`) reads the section through
   `useKrisinfo` and renders each number with `PhoneCard`, which receives it as props and reads
   nothing itself. The page lists each distinct `source` once with the oldest `lastVerified`
-  among the posts that use it. It has no navigation entry yet.
+  among the posts that use it. It is reached from the krisinfo overview (see below).
 - **Warning signals page:** `/varningssignaler` (`WarningSignalsPage`) reads the section through
   `useKrisinfo` and browser connectivity through `useMode()`, and renders each signal with
   `SignalCard`, which receives the signal and `isOnline` as props. It shows the signals in
@@ -208,7 +208,21 @@ the backend serves from `src/data/crisis.json`.
   signal without `audioLinkUrl` shows no link. One line between the lead paragraph and the cards
   says that the recordings come from MCF and links to the section's `source` page on mcf.se. The
   recordings are not added to the sources card, because they are not a basis for the texts and
-  have no check date of their own. It has no navigation entry yet.
+  have no check date of their own. Its `h1` and document title are **Utomhusvarning**, the name
+  of its overview card, with a line under the heading that keeps the name "Hesa Fredrik"
+  visible; the address stays `/varningssignaler`. It is reached from the krisinfo overview.
+- **Overview and navigation:** `/krisinformation` (`KrisinfoOverviewPage`) is the entry point
+  for all crisis information, from the primary navigation, the home page card and its
+  "Se krisinformation" call to action. It lists the parts in the order of
+  `frontend/src/components/krisinfoOverviewSections.ts`: Innan krisen (`/crisis`, the
+  preparedness articles above), Telefonnummer (`/telefonnummer`), Utomhusvarning
+  (`/varningssignaler`) and Lugn i kris (`/lugn-i-kris`). The overview is static and reads no
+  content. Each part links back to it with `BackLink`; an article links back to Innan krisen.
+  No address changed, so there are no redirects. The **Krisinformation** menu item stays marked
+  as the current page on the overview, all four parts and `/crisis/:id` through its
+  `activePaths` in `navigationItems.ts`. Lugn i kris has no menu entry or home card of its own.
+  A new part is added as an entry in `krisinfoOverviewSections.ts`, a route in `App.tsx` and a
+  pattern in Krisinformation's `activePaths`.
 - **External links:** every external link on the krisinfo pages, including the sources, uses
   `ExternalLink` (`frontend/src/components/ExternalLink.tsx`). It opens a new tab with
   `rel="noopener noreferrer"`, says so in its accessible name and adds "Kräver
