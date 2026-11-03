@@ -433,6 +433,30 @@ describe("AppLayout VMA integration", () => {
     expect(document.documentElement.style.getPropertyValue("--navigation-height")).toBe("")
   })
 
+  it("does not re-run the focus-visibility check for a window resize that changes no reserved space", async () => {
+    // A mobile browser's address bar hiding/showing while the page is scrolled fires its own
+    // "resize" events without the banner/footer/update notice changing size. That must not
+    // re-run the correction and fight an in-progress scroll by pulling the page back to
+    // whatever still holds focus.
+    fetchMock.mockResolvedValue(Response.json(feed([])))
+    mountLayout()
+    const heading = await screen.findByRole("heading", { name: "Hem" })
+    for (const measure of measureCallbacks) measure()
+    await waitFor(() =>
+      expect(document.documentElement.style.getPropertyValue("--navigation-height")).not.toBe("")
+    )
+
+    vi.spyOn(heading, "getBoundingClientRect").mockReturnValue(new DOMRect(0, -50, 100, 40))
+    heading.focus()
+    await waitFor(() => expect(window.scrollBy).toHaveBeenCalledTimes(1))
+    vi.mocked(window.scrollBy).mockClear()
+
+    fireEvent(window, new Event("resize"))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(window.scrollBy).not.toHaveBeenCalled()
+  })
+
   it("reserves no bottom space when the mobile footer is hidden at desktop width", async () => {
     const originalStyle = window.getComputedStyle.bind(window)
     vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
