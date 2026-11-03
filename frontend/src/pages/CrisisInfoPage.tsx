@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useLocation } from "react-router-dom"
+import BackLink from "../components/BackLink"
 import CrisisCard from "../components/CrisisCard"
 import CrisisLoadFeedback from "../components/CrisisLoadFeedback"
 import { useMode, type Mode } from "../context/modeContext"
@@ -9,7 +10,8 @@ import { getOfflineItems } from "../services/offlineService"
 import type { CrisisItem } from "../types/crisis"
 
 /**
- * Lists crisis information for the currently selected mode.
+ * Lists crisis information for the currently selected mode, as the "Innan krisen" part of the
+ * krisinfo overview, with a link back to the overview above the heading.
  *
  * Online mode fetches full articles from the backend on every entry into that mode.
  * Offline mode reads only items saved in IndexedDB, making no article network call.
@@ -73,13 +75,14 @@ function CrisisInfoPage() {
 
   return (
     <section>
+      <BackLink to="/krisinformation" label="Tillbaka till krisinformation" />
       <h1
         ref={headingRef}
         id="page-heading"
         tabIndex={-1}
         className="text-3xl font-bold text-blue-900"
       >
-        Krisinformation
+        Innan krisen
       </h1>
 
       {notice && (

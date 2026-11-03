@@ -64,6 +64,19 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+describe("CrisisInfoPage heading and back link", () => {
+  it("is titled Innan krisen and links back to the overview before the heading", async () => {
+    mountPage("/crisis")
+    const h1s = await screen.findAllByRole("heading", { level: 1 })
+    expect(h1s).toHaveLength(1)
+    expect(h1s[0].textContent).toBe("Innan krisen")
+    expect(h1s[0].id).toBe("page-heading")
+    const back = screen.getByRole("link", { name: "Tillbaka till krisinformation" })
+    expect(back.getAttribute("href")).toBe("/krisinformation")
+    expect(back.compareDocumentPosition(h1s[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
+
 describe("CrisisInfoPage redirect notices", () => {
   it("hides the unsaved-item notice immediately when switching from offline back to online", async () => {
     mountPage()
@@ -73,7 +86,7 @@ describe("CrisisInfoPage redirect notices", () => {
     fireEvent.click(savedSwitch())
 
     expect(await screen.findByText(offlineNotice)).toBeTruthy()
-    expect(screen.getByRole("heading", { level: 1, name: "Krisinformation" })).toBeTruthy()
+    expect(screen.getByRole("heading", { level: 1, name: "Innan krisen" })).toBeTruthy()
     await screen.findByText("Ingen krisinformation är sparad.")
     expect(screen.queryByRole("heading", { level: 2, name: "Mat i kris" })).toBe(null)
 
@@ -174,7 +187,7 @@ describe("CrisisInfoPage focus after removing an offline item", () => {
 
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        screen.getByRole("heading", { level: 1, name: "Krisinformation" })
+        screen.getByRole("heading", { level: 1, name: "Innan krisen" })
       )
     )
     expect(await screen.findByText("Ingen krisinformation är sparad.")).toBeTruthy()

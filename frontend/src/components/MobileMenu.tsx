@@ -1,8 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type RefObject } from "react"
-import { NavLink, useLocation } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import InstallAppButton from "./InstallAppButton"
 import MobileFooter from "./MobileFooter"
-import { navigationItems } from "./navigationItems"
+import { isNavigationItemActive, navigationItems } from "./navigationItems"
 
 interface MobileMenuProps {
   footerRef: RefObject<HTMLElement | null>
@@ -151,27 +151,32 @@ function MobileMenu({ footerRef }: MobileMenuProps) {
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
             <ul className="space-y-2">
-              {navigationItems.map(({ to, label, end }) => (
-                <li key={to}>
-                  <NavLink
-                    to={to}
-                    end={end}
-                    onClick={() => {
-                      // Re-selecting the current route changes nothing for AppLayout to focus.
-                      closeReason.current = pathname === to ? "manual" : "navigation"
-                      dialogRef.current?.close()
-                    }}
-                    className={({ isActive }) =>
-                      "flex min-h-12 items-center rounded-xl px-4 py-3 text-lg leading-normal wrap-anywhere " +
-                      (isActive
-                        ? "bg-blue-900 font-bold text-white underline decoration-2 underline-offset-4"
-                        : "font-medium text-slate-700 hover:bg-slate-100 hover:text-blue-900")
-                    }
-                  >
-                    {label}
-                  </NavLink>
-                </li>
-              ))}
+              {navigationItems.map((item) => {
+                const { to, label } = item
+                const isActive = isNavigationItemActive(item, pathname)
+                return (
+                  <li key={to}>
+                    <Link
+                      to={to}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={() => {
+                        // Re-selecting the exact current route changes nothing for AppLayout to
+                        // focus; an item that is current on a subpage still navigates.
+                        closeReason.current = pathname === to ? "manual" : "navigation"
+                        dialogRef.current?.close()
+                      }}
+                      className={
+                        "flex min-h-12 items-center rounded-xl px-4 py-3 text-lg leading-normal wrap-anywhere " +
+                        (isActive
+                          ? "bg-blue-900 font-bold text-white underline decoration-2 underline-offset-4"
+                          : "font-medium text-slate-700 hover:bg-slate-100 hover:text-blue-900")
+                      }
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           </div>
           <div className="flex shrink-0 justify-end border-t border-slate-200 px-4 py-3 empty:hidden">

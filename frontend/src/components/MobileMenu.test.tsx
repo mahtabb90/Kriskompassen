@@ -84,7 +84,6 @@ describe("MobileMenu", () => {
       "Min krislåda",
       "Skyddsrum",
       "Inställningar",
-      "Lugn i kris",
     ])
     expect(links.map((link) => link.getAttribute("href"))).toEqual(
       navigationItems.map((item) => item.to)
@@ -93,13 +92,36 @@ describe("MobileMenu", () => {
   })
 
   it("marks only the current route with aria-current", () => {
-    const { dialog } = openMenu("/crisis")
+    const { dialog } = openMenu("/krisinformation")
     const current = within(dialog)
       .getAllByRole("link")
       .filter((link) => link.hasAttribute("aria-current"))
     expect(current).toHaveLength(1)
     expect(current[0].getAttribute("aria-current")).toBe("page")
     expect(current[0].textContent).toBe("Krisinformation")
+  })
+
+  it.each(["/varningssignaler", "/crisis/food-in-crisis", "/lugn-i-kris"])(
+    "keeps Krisinformation current on the krisinfo subpage %s",
+    (path) => {
+      const { dialog } = openMenu(path)
+      const current = within(dialog)
+        .getAllByRole("link")
+        .filter((link) => link.hasAttribute("aria-current"))
+      expect(current).toHaveLength(1)
+      expect(current[0].getAttribute("aria-current")).toBe("page")
+      expect(current[0].textContent).toBe("Krisinformation")
+      expect(current[0].className).toContain("underline")
+    }
+  )
+
+  it("navigates from a krisinfo subpage through its current Krisinformation link", () => {
+    const { trigger, dialog } = openMenu("/telefonnummer")
+    fireEvent.click(within(dialog).getByRole("link", { name: "Krisinformation" }))
+    expect(screen.getByTestId("pathname").textContent).toBe("/krisinformation")
+    expect(screen.queryByRole("dialog")).toBe(null)
+    // A different route leaves focus to the layout's route heading focus.
+    expect(document.activeElement).not.toBe(trigger)
   })
 
   it("closes with Stäng menyn and returns focus to the trigger", () => {
@@ -139,7 +161,7 @@ describe("MobileMenu", () => {
     const link = within(dialog).getByRole("link", { name: "Krisinformation" })
     link.focus()
     fireEvent.click(link)
-    expect(screen.getByTestId("pathname").textContent).toBe("/crisis")
+    expect(screen.getByTestId("pathname").textContent).toBe("/krisinformation")
     expect(screen.queryByRole("dialog")).toBe(null)
     expect(trigger.getAttribute("aria-expanded")).toBe("false")
     expect(document.activeElement).not.toBe(trigger)
@@ -154,9 +176,9 @@ describe("MobileMenu", () => {
   })
 
   it("closes on selecting the current route and returns focus to the trigger", () => {
-    const { trigger, dialog } = openMenu("/crisis")
+    const { trigger, dialog } = openMenu("/krisinformation")
     fireEvent.click(within(dialog).getByRole("link", { name: "Krisinformation" }))
-    expect(screen.getByTestId("pathname").textContent).toBe("/crisis")
+    expect(screen.getByTestId("pathname").textContent).toBe("/krisinformation")
     expect(screen.queryByRole("dialog")).toBe(null)
     expect(document.activeElement).toBe(trigger)
   })
@@ -182,7 +204,7 @@ describe("MobileMenu", () => {
   it("wraps Tab and Shift+Tab between the first and last control", () => {
     const { dialog } = openMenu()
     const first = within(dialog).getByRole("button", { name: "Stäng menyn" })
-    const last = within(dialog).getByRole("link", { name: "Lugn i kris" })
+    const last = within(dialog).getByRole("link", { name: "Inställningar" })
     last.focus()
     fireEvent.keyDown(last, { key: "Tab" })
     expect(document.activeElement).toBe(first)
@@ -273,7 +295,7 @@ describe("MobileMenu install button", () => {
     const { dialog } = openMenu()
     const install = within(dialog).getByRole("button", { name: "Installera app" })
     const first = within(dialog).getByRole("button", { name: "Stäng menyn" })
-    const lastLink = within(dialog).getByRole("link", { name: "Lugn i kris" })
+    const lastLink = within(dialog).getByRole("link", { name: "Inställningar" })
     expect(
       lastLink.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy()

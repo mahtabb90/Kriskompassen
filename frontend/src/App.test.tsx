@@ -45,7 +45,7 @@ vi.mock("./components/AllSheltersMap", () => ({
 
 const startingPages = [
   ["/", "Din kompass i en kris"],
-  ["/crisis", "Krisinformation"],
+  ["/crisis", "Innan krisen"],
   ["/crisis-kit", "Min krislåda"],
   ["/skyddsrum", "Skyddsrum"],
   ["/skyddsrum/karta", "Kartan"],
@@ -243,6 +243,136 @@ describe("settings navigation through the app router", () => {
     await expectSettings()
     expect(screen.queryByRole("dialog", { name: "Meny" })).toBeNull()
     expect(screen.getByRole("region", { name: "Installera appen" })).toBeTruthy()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+})
+
+const krisinfoPages = [
+  ["/krisinformation", "Krisinformation"],
+  ["/crisis", "Innan krisen"],
+  ["/telefonnummer", "Viktiga telefonnummer"],
+  ["/varningssignaler", "Utomhusvarning"],
+  ["/lugn-i-kris", "Lugn i kris"],
+] as const
+
+const overviewParts = [
+  ["Innan krisen", "/crisis", "Innan krisen"],
+  ["Telefonnummer", "/telefonnummer", "Viktiga telefonnummer"],
+  ["Utomhusvarning", "/varningssignaler", "Utomhusvarning"],
+  ["Lugn i kris", "/lugn-i-kris", "Lugn i kris"],
+] as const
+
+function expectOnlyKrisinformationCurrent(container: HTMLElement) {
+  const current = within(container)
+    .getAllByRole("link")
+    .filter((link) => link.hasAttribute("aria-current"))
+  expect(current).toHaveLength(1)
+  expect(current[0].textContent).toContain("Krisinformation")
+  expect(current[0].getAttribute("aria-current")).toBe("page")
+}
+
+async function expectPage(path: string, title: string, navigated = true) {
+  const heading = await screen.findByRole("heading", { level: 1, name: title })
+  await waitFor(() => expect(document.title).toBe(`${title} | KrisKompassen`))
+  expect(window.location.pathname).toBe(path)
+  expect(heading.id).toBe("page-heading")
+  expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1)
+  if (navigated) expect(document.activeElement).toBe(heading)
+  return heading
+}
+
+describe("krisinfo overview and its parts through the app router", () => {
+  it.each(krisinfoPages)("opens %s directly with its heading and title", async (path, title) => {
+    mountApp(path)
+
+    await expectPage(path, title, false)
+    expectOnlyKrisinformationCurrent(screen.getByRole("navigation", { name: "Huvudnavigation" }))
+  })
+
+  it.each(krisinfoPages.slice(1))("links %s back to the overview", async (path, title) => {
+    mountApp(path)
+    await expectPage(path, title, false)
+
+    fireEvent.click(screen.getByRole("link", { name: "Tillbaka till krisinformation" }))
+
+    await expectPage("/krisinformation", "Krisinformation")
+  })
+
+  it("goes from the home card to the overview, into every part and back", async () => {
+    mountApp()
+    fireEvent.click(within(screen.getByRole("main")).getByRole("link", { name: "Krisinformation" }))
+    await expectPage("/krisinformation", "Krisinformation")
+
+    for (const [card, path, title] of overviewParts) {
+      fireEvent.click(within(screen.getByRole("main")).getByRole("link", { name: card }))
+      await expectPage(path, title)
+      expectOnlyKrisinformationCurrent(screen.getByRole("navigation", { name: "Huvudnavigation" }))
+
+      fireEvent.click(screen.getByRole("link", { name: "Tillbaka till krisinformation" }))
+      await expectPage("/krisinformation", "Krisinformation")
+    }
+  })
+
+  it("opens the overview from the home page's call to action", async () => {
+    mountApp()
+
+    fireEvent.click(screen.getByRole("link", { name: "Se krisinformation" }))
+
+    await expectPage("/krisinformation", "Krisinformation")
+  })
+
+  it("leads from an article back to Innan krisen with Krisinformation still current", async () => {
+    mountApp("/crisis/food-in-crisis")
+    await expectPage("/crisis/food-in-crisis", "Mat i kris", false)
+    expectOnlyKrisinformationCurrent(screen.getByRole("navigation", { name: "Huvudnavigation" }))
+
+    fireEvent.click(screen.getByRole("link", { name: "Tillbaka till Innan krisen" }))
+
+    await expectPage("/crisis", "Innan krisen")
+  })
+
+  it("offers Lugn i kris only through the overview, not in the menus or on the home page", async () => {
+    mountApp()
+    await expectPage("/", "Din kompass i en kris", false)
+    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
+    expect(within(navigation).queryByRole("link", { name: "Lugn i kris" })).toBeNull()
+    expect(within(screen.getByRole("main")).queryByRole("link", { name: "Lugn i kris" })).toBeNull()
+
+    desktop = false
+    cleanup()
+    mountApp("/lugn-i-kris")
+    await expectPage("/lugn-i-kris", "Lugn i kris", false)
+    fireEvent.click(screen.getByRole("button", { name: "Meny" }))
+    const dialog = screen.getByRole("dialog", { name: "Meny" })
+    expect(within(dialog).queryByRole("link", { name: "Lugn i kris" })).toBeNull()
+    expectOnlyKrisinformationCurrent(dialog)
+
+    fireEvent.click(within(dialog).getByRole("link", { name: "Krisinformation" }))
+
+    await expectPage("/krisinformation", "Krisinformation")
+    expect(screen.queryByRole("dialog", { name: "Meny" })).toBeNull()
+  })
+
+  it("shows the not-found page's krisinfo link leading to the overview", async () => {
+    mountApp("/no-such-page")
+    await screen.findByRole("heading", { level: 1, name: "Sidan kunde inte hittas" })
+
+    fireEvent.click(screen.getByRole("link", { name: "Visa krisinformation" }))
+
+    await expectPage("/krisinformation", "Krisinformation")
+  })
+
+  it("moves between the overview and the static parts while offline without fetching", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+    mountApp("/krisinformation")
+    await expectPage("/krisinformation", "Krisinformation", false)
+
+    for (const [card, path, title] of overviewParts.slice(1)) {
+      fireEvent.click(within(screen.getByRole("main")).getByRole("link", { name: card }))
+      await expectPage(path, title)
+      fireEvent.click(screen.getByRole("link", { name: "Tillbaka till krisinformation" }))
+      await expectPage("/krisinformation", "Krisinformation")
+    }
     expect(fetch).not.toHaveBeenCalled()
   })
 })

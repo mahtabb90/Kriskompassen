@@ -21,7 +21,7 @@ function NotFoundPage() {
           Till startsidan
         </Link>
         <Link
-          to="/crisis"
+          to="/krisinformation"
           className={
             "inline-flex min-h-12 items-center rounded-xl border border-blue-900 px-5 py-3 " +
             "font-semibold text-blue-900 underline underline-offset-4 hover:bg-blue-50"

@@ -1,3 +1,4 @@
+import BackLink from "../components/BackLink"
 import ExternalLink from "../components/ExternalLink"
 import KrisinfoSourcesCard from "../components/KrisinfoSourcesCard"
 import SignalCard from "../components/SignalCard"
@@ -6,8 +7,9 @@ import { useKrisinfo } from "../hooks/useKrisinfo"
 import { collectSources } from "../utils/krisinfoSources"
 
 /**
- * Explains the four outdoor warning signals ("Hesa Fredrik"): how each one sounds, what it
- * means and what to do, followed by every source with its check date.
+ * The "Utomhusvarning" page: explains the four outdoor warning signals ("Hesa Fredrik", named in
+ * a line under the heading): how each one sounds, what it means and what to do, followed by
+ * every source with its check date. A link back to the krisinfo overview sits above the heading.
  *
  * Reads through `useKrisinfo`, so the content is available offline once the app is installed and
  * makes no network request. It is the only reader of the content and of `useMode()`; each
@@ -25,13 +27,18 @@ function WarningSignalsPage() {
 
   return (
     <section>
+      <BackLink to="/krisinformation" label="Tillbaka till krisinformation" />
       <h1
         id="page-heading"
         tabIndex={-1}
         className="wrap-anywhere text-3xl font-bold text-blue-900"
       >
-        Hesa Fredrik – varningssignalerna
+        Utomhusvarning
       </h1>
+      {/* Keeps the familiar name visible beside the heading, which matches the overview card. */}
+      <p className="mt-2 text-lg font-semibold text-blue-900 sm:mt-3 sm:text-xl">
+        Hesa Fredrik – de fyra varningssignalerna
+      </p>
 
       {state.status === "loading" && (
         <p role="status" className="mt-4">

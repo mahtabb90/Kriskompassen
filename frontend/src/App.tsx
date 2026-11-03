@@ -8,6 +8,7 @@ import CrisisInfoPage from "./pages/CrisisInfoPage"
 import CrisisKitPage from "./pages/CrisisKitPage"
 import HomePage from "./pages/HomePage"
 import IndexedDbTest from "./pages/IndexedDbTest"
+import KrisinfoOverviewPage from "./pages/KrisinfoOverviewPage"
 import NotFoundPage from "./pages/NotFoundPage"
 import PhoneNumbersPage from "./pages/PhoneNumbersPage"
 import SettingsPage from "./pages/SettingsPage"
@@ -30,6 +31,7 @@ function App() {
           <Routes>
             <Route element={<AppLayout />}>
               <Route path="/" element={<HomePage />} />
+              <Route path="/krisinformation" element={<KrisinfoOverviewPage />} />
               <Route path="/crisis" element={<CrisisInfoPage />} />
               <Route path="/crisis-kit" element={<CrisisKitPage />} />
               <Route path="/crisis/:id" element={<DetailedCrisisCard />} />

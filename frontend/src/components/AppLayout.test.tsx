@@ -43,7 +43,7 @@ function mountLayout() {
             <Routes>
               <Route element={<AppLayout />}>
                 <Route index element={<Page title="Hem" />} />
-                <Route path="crisis" element={<Page title="Krisinformation" />} />
+                <Route path="krisinformation" element={<Page title="Krisinformation" />} />
               </Route>
             </Routes>
           </MemoryRouter>
