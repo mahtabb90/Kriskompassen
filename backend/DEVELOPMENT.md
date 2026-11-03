@@ -203,8 +203,12 @@ the backend serves from `src/data/crisis.json`.
   `SignalCard`, which receives the signal and `isOnline` as props. It shows the signals in
   content order with a decorative timeline (`SignalPattern`), `patternDescription` as text,
   `meaning` only when present (with `meaningSource` as its own link), and `whatToDo` as an
-  ordered list that is left out when empty. `audioLinkUrl` is not shown on the page. It has no
-  navigation entry yet.
+  ordered list that is left out when empty. Each card's pattern panel ends with an external
+  link to the signal's recording at `audioLinkUrl`, labelled with the signal's name and MCF; a
+  signal without `audioLinkUrl` shows no link. One line between the lead paragraph and the cards
+  says that the recordings come from MCF and links to the section's `source` page on mcf.se. The
+  recordings are not added to the sources card, because they are not a basis for the texts and
+  have no check date of their own. It has no navigation entry yet.
 - **External links:** every external link on the krisinfo pages, including the sources, uses
   `ExternalLink` (`frontend/src/components/ExternalLink.tsx`). It opens a new tab with
   `rel="noopener noreferrer"`, says so in its accessible name and adds "Kräver
@@ -243,8 +247,11 @@ the backend serves from `src/data/crisis.json`.
   [Sveriges Radio's channel list](https://www.sverigesradio.se/kanaler), because P4 is a set of
   local channels without one national page.
 - **Signal recordings:** `audioLinkUrl` is an external link to MCF's MP3 file, which the browser
-  opens in its own player. The app does not bundle, play or cache audio, and Workbox is not
-  configured for `.mp3`.
+  opens in a new tab in its own player. The URLs are the ones linked from the section's source
+  page, MCF's page on Hesa Fredrik, and the content tests pin them. The app does not bundle, play
+  or cache audio, and Workbox is not configured for `.mp3` or for MCF's pages. Like every other
+  external link, the recording links say that they need internet while the browser reports no
+  connection; the rest of the page works offline.
 
 ### Adding or changing krisinfo content
 

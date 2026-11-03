@@ -395,7 +395,16 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   sounds. Its first row holds `SignalIcon`, a loudspeaker with two sound waves in the section
   5.3 outline style, in a 48px `rounded-full bg-white` circle, beside the pattern description
   (`gap-3`). The timeline follows below at the panel's full width (`mt-4`), so it has room even
-  on narrow screens. The panel has no heading of its own.
+  on narrow screens. The panel has no heading of its own. When the content has a recording, the
+  panel ends with an `ExternalLink` to it (`mt-2`), labelled **"Lyssna på signalen {namn} hos
+  MCF"**, so the accessible name states the signal, MCF and, through the link's hidden text, the
+  new tab. It is the card's first link, before the meaning source and the action links.
+- **Recording attribution:** one metadata line (section 3.2, `mt-3 max-w-prose text-sm
+  text-slate-600`) between the lead paragraph and the cards: **"Ljuden kommer från Myndigheten
+  för civilt försvar (MCF)."** followed, outside the sentence, by an `ExternalLink` **"MCF:s sida
+  om Hesa Fredrik på mcf.se"** to the section's source page. The sentence stays complete without
+  the link. It appears once on the page, not in each card, and the recordings are not listed in
+  the sources card.
 - **Timeline (`SignalPattern`):** a 4px `fill-blue-300` track with fully rounded ends spans the
   signal's whole duration, with one 10px-high, fully rounded (pill-shaped) `currentColor` stroke
   per tone in `text-blue-900` on top; gaps are the pauses. The SVG has no `viewBox`: positions
@@ -444,6 +453,10 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
   | `blue-900` | `blue-50` | `#1c398e` on `#eff6ff` | 9.53:1 | Tone strokes against the panel |
   | `blue-900` | `blue-300` `oklch(80.9% 0.105 251.813)` | `#1c398e` on `#8ec5ff` | 5.72:1 | Tone strokes against the track |
   | `blue-300` | `blue-50` | `#8ec5ff` on `#eff6ff` | 1.67:1 | Decorative track against the panel |
+  | `blue-900` | `blue-50` | `#1c398e` on `#eff6ff` | 9.53:1 | Recording link and its focus outline in the panel |
+  | `slate-600` | `blue-50` | `#45556c` on `#eff6ff` | 6.97:1 | "Kräver internetanslutning." below the recording link |
+  | `slate-600` | page `#d7e2ef` | `#45556c` on `#d7e2ef` | 5.78:1 | Recording attribution line and its offline note |
+  | `blue-900` | page `#d7e2ef` | `#1c398e` on `#d7e2ef` | 7.91:1 | Attribution link, its icon and focus outline |
 
   Recalculate these values when the tokens or the Tailwind version change.
 
