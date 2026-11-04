@@ -352,6 +352,31 @@ Frontend conventions visible in the existing code:
 - Manifest, iOS meta tags and precache (app shell, `assets/` images/fonts, `includeAssets` icons; `navigateFallback` `index.html`) are configured in `vite.config.ts` and `index.html`, with icon paths in one constant. A maskable icon is pending. `getServiceWorkerContainer()` treats a blocked `navigator.serviceWorker` as unsupported so the app still renders. User-facing behaviour: README "PWA and offline access".
 - Style with Tailwind utility classes in `className`. There are no separate CSS files beyond `index.css`.
 - Follow [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) for visual tokens and component patterns. VMA warning colours use the central `vma-surface`, `vma-foreground`, `vma-border` and `vma-focus` aliases in `index.css`; keep their documented contrast and focus treatment in sync with the implementation.
+- `OfflineToggle` uses the blue primary variant for saving and the red outlined destructive
+  variant for **Ta bort offlinekopia**, shared by article cards and the detail page. **Läs mer**
+  precedes the save/remove action in visual and keyboard order. Both controls reserve the longer
+  removal label with invisible, aria-hidden text, keeping equal dimensions and wrapping stable
+  across saved-state changes. They stack when whole words cannot fit on one row; standalone
+  save/remove actions are right-aligned. Retain the global focus outline and offline storage behaviour.
+  The status line reserves the longer **Sparad offline** label with an invisible, aria-hidden
+  copy and equal-width icon slots, so enlarged text cannot add a row when the saved state changes.
+  The article-specific success message stays visible below the controls in a persistent
+  `role="status"`, initially empty. Its grid cell reserves the larger natural height of the save
+  and removal messages using two invisible, aria-hidden sizing copies outside the live region.
+  Only confirmation names are abbreviated: titles longer than ten characters use the first
+  seven characters (trimmed at the end) followed by `...`. Headings, reading links, button
+  accessible names and stored article data retain the full title.
+  The same strings and typography are used for sizing and display, adapting to width and enlarged
+  text without fixed heights or clipping. Align the real message to the bottom of the reserved
+  cell so unused space does not collect below it. The separate alert region stays mounted in
+  the same feedback block and adds spacing only when an error exists. Storage failures remain
+  visible and may take the space they need.
+- `CrisisInfoPage` uses `auto-rows-fr` so every article card in the list has the same height,
+  including cards on different rows. Height adapts to the tallest card at the current viewport
+  and text size without fixed pixel heights or clipping article text.
+  List-card horizontal padding is capped at the normal 24px/28px spacing and detail padding at
+  24px/32px using `min(rem, px)`, preserving room for enlarged button labels and focus outlines.
+  Normal-size layout and scalable vertical spacing stay unchanged.
 - `ShelterSaveToggle` places extra actions such as **Visa detaljer** before its right-hand
   save/remove button in both DOM and visual order. Equal-width controls share a wrapping flex
   row while their whole words fit, then stack instead of splitting words. A standalone toggle
@@ -539,8 +564,16 @@ Running E2E (from `frontend/`):
 - `npm run test:e2e` builds the app and starts `vite preview` on port 4173, then runs `e2e/*.spec.ts` in Chromium. Locally an already running preview on 4173 is reused, so stop it after app changes.
 - `npm run test:e2e:ui` opens Playwright's UI mode; `npm run test:e2e:report` opens the last HTML report.
 - Traces: locally add `--trace on`, then open the report or `npx playwright show-trace <trace.zip>`. From a failed Actions run, download and unzip the `playwright-report` artifact and run `npx playwright show-report <unzipped>/playwright-report`; traces are under its `test-results/`.
-- Tests use roles and Swedish visible text, not test IDs. Each test gets a fresh browser context, so IndexedDB starts empty. API calls (`**/api/v1/**`) are aborted because no backend runs.
+- Tests use roles and Swedish visible text, not test IDs. Each test gets a fresh browser context, so IndexedDB starts empty. API calls (`**/api/v1/**`) are intercepted because no backend runs: most tests abort them; the offline-article feedback tests fulfil article requests with synthetic content while keeping real IndexedDB save/remove operations.
 - Current coverage: crisis kit scroll position on card clicks and saving a custom item across a reload, and the install button with a synthetic `beforeinstallprompt` at 320, 375, 768 and 1024px. Header-height and navigation-height checks are expected to pass at all four widths. It also covers the sticky desktop navigation at 1024px (pinned below the VMA notice after scrolling, header scrolled away, a focused link revealed from behind it) with the unchanged mobile bottom bar at 375px.
+- Offline-article feedback tests cover widths from 320 to 1920px, the 639/640 and 767/768px
+  breakpoint edges and 568×320, 667×375 and 844×390 landscape views. They also cover 200% text
+  at 320, 375, 640, 768, 1024 and 1440px and detail controls at normal/enlarged text sizes.
+  Confirmations, headings and descriptions stay unclipped; controls and their full focus outlines
+  stay within their cards with at least 48×48px targets. Four cards with different title/summary lengths
+  cover multiple grid rows and must share one height. Card heights and control positions relative to the
+  card remain stable within 1 CSS pixel. Geometry checks complement the component tests for the
+  initially empty live region, hidden sizing copies, completed writes and visible errors.
 
 **Hard rule (team decision): keep existing tests in sync with the code.**
 

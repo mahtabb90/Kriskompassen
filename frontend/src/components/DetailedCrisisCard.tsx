@@ -18,6 +18,8 @@ import OfflineToggle from "./OfflineToggle"
  * redirects to the crisis list with an explanation tagged with the selected mode. The list
  * shows the explanation only while that mode is selected. Transport failures remain explicit
  * retryable errors. The same heading node survives loading, errors and successful responses.
+ * Horizontal padding is capped at its default pixel size to preserve space for enlarged text
+ * and the standalone save/remove control on narrow screens.
  */
 function DetailedCrisisCard() {
   const { id } = useParams()
@@ -60,7 +62,7 @@ function DetailedCrisisCard() {
         <span className="h-full w-8 bg-amber-400" />
       </div>
 
-      <div className="p-6 sm:p-8">
+      <div className="px-[min(1.5rem,24px)] py-6 sm:px-[min(2rem,32px)] sm:py-8">
         <BackLink to="/crisis" label="Tillbaka till Innan krisen" />
 
         <h1

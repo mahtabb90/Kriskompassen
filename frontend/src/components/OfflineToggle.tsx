@@ -14,19 +14,34 @@ interface OfflineToggleProps {
  *
  * Reads the stored state from IndexedDB on mount. The displayed state only changes after the
  * storage operation succeeds; failures show an error message and keep the previous state.
- * Success and error messages are announced through live regions.
+ * Full success messages remain visible in a persistent live region. Invisible, aria-hidden
+ * copies of both messages reserve their larger natural height in a shared grid cell, keeping
+ * the controls stable when a message appears at different widths and text sizes. Aligning the
+ * message to the cell's bottom keeps unused space above it; an empty error adds no extra gap.
+ * Errors stay visible and announced.
+ * Confirmation names longer than ten characters use seven characters followed by "...";
+ * article headings and the controls' accessible names retain the full title.
+ * The saved-state line also reserves its longer label, preventing a row-height change when
+ * enlarged text wraps "Sparad offline" more than "Inte sparad".
+ * Saving uses the primary button variant; removal uses the destructive outlined variant.
+ * Reserves the longer removal label in both states so adjacent actions do not move when saving.
+ * Paired controls share a row while whole words fit, then stack without splitting words.
  *
  * @param item The crisis item to save or remove. Its full content is stored when saving.
  * @param onToggle Called with the new saved state after a save or remove succeeds. Not called
  * when the storage operation fails.
- * @param actions Optional extra controls rendered in the same row as the save/remove button.
- * They stay separate from the button and own their own behaviour.
+ * @param actions Optional controls rendered before the right-hand save/remove button in visual
+ * and keyboard order. They stay separate from the button and own their own behaviour.
  */
 function OfflineToggle({ item, onToggle, actions }: OfflineToggleProps) {
   const [saved, setSaved] = useState<boolean | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirmation, setConfirmation] = useState("")
   const [error, setError] = useState("")
+  const confirmationTitle =
+    item.title.length > 10 ? `${item.title.slice(0, 7).trimEnd()}...` : item.title
+  const savedConfirmation = `"${confirmationTitle}" har sparats för offlineåtkomst.`
+  const removedConfirmation = `"${confirmationTitle}" har tagits bort från offlinelagringen.`
 
   useEffect(() => {
     let cancelled = false
@@ -60,11 +75,7 @@ function OfflineToggle({ item, onToggle, actions }: OfflineToggleProps) {
         await removeOffline(item.id)
       }
       setSaved(saving)
-      setConfirmation(
-        saving
-          ? `"${item.title}" har sparats för offlineåtkomst.`
-          : `"${item.title}" har tagits bort från offlinelagringen.`
-      )
+      setConfirmation(saving ? savedConfirmation : removedConfirmation)
       onToggle?.(saving)
     } catch {
       setError(
@@ -81,35 +92,68 @@ function OfflineToggle({ item, onToggle, actions }: OfflineToggleProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <span aria-hidden="true">{saved === null ? "…" : saved ? "✓" : "○"}</span>
-        {saved === null ? "Kontrollerar sparad status…" : saved ? "Sparad offline" : "Inte sparad"}
+      <p className="grid grid-cols-1 items-center text-sm font-semibold text-slate-700">
+        <span className="invisible col-start-1 row-start-1 select-none" aria-hidden="true">
+          <span className="mr-2 inline-block w-4 text-center">✓</span>
+          Sparad offline
+        </span>
+        <span className="col-start-1 row-start-1">
+          <span className="mr-2 inline-block w-4 text-center" aria-hidden="true">
+            {saved === null ? "…" : saved ? "✓" : "○"}
+          </span>
+          {saved === null
+            ? "Kontrollerar sparad status…"
+            : saved
+              ? "Sparad offline"
+              : "Inte sparad"}
+        </span>
       </p>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div
+        className={
+          actions
+            ? "flex flex-wrap justify-end gap-3 *:min-w-min *:flex-1 *:px-2"
+            : "flex justify-end"
+        }
+      >
+        {actions}
         <button
           type="button"
           onClick={handleClick}
           disabled={busy || saved === null}
           className={
-            "inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl " +
-            "border-2 border-blue-900 px-5 py-3 font-semibold disabled:opacity-60 " +
+            "inline-grid min-h-12 w-fit min-w-12 shrink-0 items-center justify-items-center rounded-xl wrap-normal " +
+            "border-2 px-5 py-3 text-center font-semibold disabled:opacity-60 max-sm:px-2 " +
             (saved
-              ? "bg-white text-blue-900 hover:bg-blue-50"
-              : "bg-blue-900 text-white hover:bg-blue-950")
+              ? "border-red-800 bg-white text-red-800 hover:bg-red-50"
+              : "border-blue-900 bg-blue-900 text-white hover:bg-blue-950")
           }
         >
-          {busy ? "Arbetar…" : label}
-          <span className="sr-only">: {item.title}</span>
+          <span className="invisible col-start-1 row-start-1 select-none" aria-hidden="true">
+            Ta bort offlinekopia
+          </span>
+          <span className="col-start-1 row-start-1">
+            {busy ? "Arbetar…" : label}
+            <span className="sr-only">: {item.title}</span>
+          </span>
         </button>
-        {actions}
       </div>
 
-      <div role="status" className="text-sm font-medium text-green-800">
-        {confirmation}
-      </div>
-      <div role="alert" className="text-sm font-medium text-red-800">
-        {error}
+      <div className="min-w-0">
+        <div className="grid min-w-0 grid-cols-1 text-sm font-medium wrap-break-word text-green-800">
+          <span className="invisible col-start-1 row-start-1 select-none" aria-hidden="true">
+            {savedConfirmation}
+          </span>
+          <span className="invisible col-start-1 row-start-1 select-none" aria-hidden="true">
+            {removedConfirmation}
+          </span>
+          <div role="status" className="col-start-1 row-start-1 self-end">
+            {confirmation}
+          </div>
+        </div>
+        <div role="alert" className={"text-sm font-medium text-red-800" + (error ? " mt-3" : "")}>
+          {error}
+        </div>
       </div>
     </div>
   )
