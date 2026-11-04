@@ -12,8 +12,9 @@ describe("ShelterSaveToggle when unsaved", () => {
     const onToggle = vi.fn()
     render(<ShelterSaveToggle saved={false} onToggle={onToggle} />)
 
-    expect(screen.getByText("Inte sparat")).toBeTruthy()
+    expect(screen.getByText("Inte sparat", { ignore: '[aria-hidden="true"]' })).toBeTruthy()
     const button = screen.getByRole("button", { name: "Spara skyddsrum" })
+    expect(screen.queryByRole("button", { name: "Ta bort sparat skyddsrum" })).toBeNull()
     fireEvent.click(button)
     expect(onToggle).toHaveBeenCalledOnce()
   })
@@ -24,8 +25,9 @@ describe("ShelterSaveToggle when saved", () => {
     const onToggle = vi.fn()
     render(<ShelterSaveToggle saved={true} onToggle={onToggle} />)
 
-    expect(screen.getByText("Sparat skyddsrum")).toBeTruthy()
+    expect(screen.getByText("Sparat skyddsrum", { ignore: '[aria-hidden="true"]' })).toBeTruthy()
     const button = screen.getByRole("button", { name: "Ta bort sparat skyddsrum" })
+    expect(screen.queryByRole("button", { name: "Spara skyddsrum" })).toBeNull()
     fireEvent.click(button)
     expect(onToggle).toHaveBeenCalledOnce()
   })
@@ -52,15 +54,22 @@ describe("ShelterSaveToggle map image removal warning", () => {
 })
 
 describe("ShelterSaveToggle actions slot", () => {
-  it("renders extra actions in the same row as the button", () => {
+  it.each([false, true])("puts the detail link before the toggle when saved=%s", (saved) => {
     render(
       <ShelterSaveToggle
-        saved={false}
+        saved={saved}
         onToggle={vi.fn()}
         actions={<a href="/x">Visa detaljer</a>}
       />
     )
 
-    expect(screen.getByRole("link", { name: "Visa detaljer" })).toBeTruthy()
+    const detailsLink = screen.getByRole("link", { name: "Visa detaljer" })
+    const toggle = screen.getByRole("button", {
+      name: saved ? "Ta bort sparat skyddsrum" : "Spara skyddsrum",
+    })
+    expect(detailsLink.parentElement).toBe(toggle.parentElement)
+    expect(
+      detailsLink.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 })

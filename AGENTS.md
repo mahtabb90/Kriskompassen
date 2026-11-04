@@ -129,6 +129,7 @@ Backend versions are pinned in `backend/requirements.txt` and `backend/requireme
     └── src/
         ├── components/  # shared layout/header/footer/navigation (desktop `BottomNavigation`, mobile `MobileFooter` and `MobileMenu`, shared `navigationItems`), VMA banner/dialog, AddressSection, AddressIndicator, PwaUpdateNotice, InstallAppButton, InstallInstructions, crisis/offline controls, AllSheltersMap.tsx (the one shelter map in the app - every shelter nationally, GeoJSONSource clustering, viewport-fetched via `useSheltersWithinBounds`, nearest/saved shelters marked with their own `map.addImage()` icons) and ShelterLocationMap.tsx (ShelterDetailPage's simpler single-shelter map, no popups/clustering) - both plain maplibre-gl, no React wrapper, mirroring the sister project IntresseKlubben's LocationPickerMap.jsx pattern; both lazy-loaded via `React.lazy` (one of two lazy-loaded components in the app, alongside `pages/ShelterMapPage.tsx`'s own lazy import of `AllSheltersMap.tsx`) and mocked with `vi.mock` in tests, since the real map is verified manually; AllSheltersMap.tsx's click-popup content (including its save/remove button, mirroring ShelterSaveToggle) is built as plain DOM by `shelterMapPopup.ts`, split out of the component file to satisfy react-refresh/only-export-components and so it has its own direct `shelterMapPopup.test.tsx` coverage under jsdom - the real map needs a WebGL canvas jsdom can't provide
         ├── config/      # backend address, article/VMA/geocode endpoints, request timeout, and mapConfig.ts (OpenFreeMap style URL - free, key-less vector tiles, no quota)
+        ├── content/     # static crisis-information content (krisinfo/): warning signals, important phone numbers and shared overview metadata
         ├── context/     # ModeProvider.tsx + modeContext.ts and AddressProvider.tsx + addressContext.ts (context object, hook — split to satisfy react-refresh/only-export-components)
         ├── data/        # predefined emergency-kit recommendations (recommendedCrisisKit.ts)
         ├── db/          # browser-local Dexie database (db.ts), schema version 5
@@ -351,6 +352,26 @@ Frontend conventions visible in the existing code:
 - Manifest, iOS meta tags and precache (app shell, `assets/` images/fonts, `includeAssets` icons; `navigateFallback` `index.html`) are configured in `vite.config.ts` and `index.html`, with icon paths in one constant. A maskable icon is pending. `getServiceWorkerContainer()` treats a blocked `navigator.serviceWorker` as unsupported so the app still renders. User-facing behaviour: README "PWA and offline access".
 - Style with Tailwind utility classes in `className`. There are no separate CSS files beyond `index.css`.
 - Follow [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) for visual tokens and component patterns. VMA warning colours use the central `vma-surface`, `vma-foreground`, `vma-border` and `vma-focus` aliases in `index.css`; keep their documented contrast and focus treatment in sync with the implementation.
+- `ShelterSaveToggle` places extra actions such as **Visa detaljer** before its right-hand
+  save/remove button in both DOM and visual order. Equal-width controls share a wrapping flex
+  row while their whole words fit, then stack instead of splitting words. A standalone toggle
+  is right-aligned. Saving uses the blue primary
+  style; removal uses the red outlined style documented in `DESIGN_SYSTEM.md` §6.2.4.
+  `shelterMapPopup.ts` mirrors the alignment and state-dependent colours in its plain-DOM control.
+  Both status and action reserve their longer saved-state label with invisible, aria-hidden
+  text so saving does not change their dimensions at the current width or text size. The detail
+  page's **Spara kartbild** shares the blue primary style, reserved size and right alignment;
+  its confirmation stays below the button.
+- `observePopupLayout` bounds the map popup with a 16px inset, caps its labelled scroll region
+  to the remaining map height and adjusts its CSS translation without moving the camera.
+  ResizeObserver covers the map, popup and entry sizes; map movement also updates its bounds.
+  Closing the popup (including map removal) disconnects the observer and movement listener.
+  Settings address actions retain a shared right edge on mobile and desktop, with button widths
+  capped at the card width so the current-place status stays above its removal button. For an
+  inactive address, activation and removal share a `w-max` grid with `px-2` horizontal padding
+  and equal-height rows, including when enlarged text wraps. The active address keeps its
+  compact standalone removal button. Only the narrow portrait layout adds `my-2` around the
+  paired controls and increases their gap to `gap-3`; landscape and wide layouts retain `gap-2`.
 - Put IndexedDB access in `db/` and `services/`, not in UI components. (`IndexedDbTest.tsx` is a test page and an exception.)
 - Prettier decides formatting (`frontend/.prettierrc`: no semicolons, double quotes, `printWidth` 100). `npm run format:check` must pass.
 - `endOfLine` is `"auto"` because Windows clones with `core.autocrlf=true` have CRLF working trees while the repo stores LF; `"lf"` would fail the check after every checkout.

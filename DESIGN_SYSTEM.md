@@ -554,6 +554,44 @@ the header and in the mobile menu footer).
   visible box and neighbouring controls.
 - **Focus:** The universal focus outline (section 8.1) surrounds the visible box.
 
+#### 6.2.4 Destructive / Outlined Button
+
+Used for removal actions such as deleting a saved address, a custom crisis-kit item or a saved
+shelter. Reuses the existing red outlined treatment; the visible label explains what is removed.
+
+- **Colours:** `border-2 border-red-800 bg-white text-red-800 hover:bg-red-50`.
+- **Shelter controls:** Keep `min-h-12 min-w-12`, `rounded-xl`, `px-5 py-3` and the universal
+  focus outline. **Visa detaljer** precedes the save/remove button in both DOM and visual order,
+  occupying the left side of a wrapping flex row. Both controls reserve the same label and have
+  equal widths. **Spara skyddsrum** remains blue and **Ta bort sparat skyddsrum** uses the red
+  outlined style, on the right while the row fits.
+- **Stable saved/unsaved size:** Both the status and action reserve the longer saved-state
+  label in an invisible, `aria-hidden` span sharing the visible label's grid cell. This keeps
+  the larger dimensions in both states while adapting to width and enlarged text. The sizing
+  text is excluded from accessible names. Map popup controls use the same pattern.
+- **Narrow cards / enlarged text:** Use `wrap-normal` for control labels and preserve each
+  whole word's intrinsic minimum width. The paired actions use `*:min-w-min *:flex-1 *:px-2`
+  and stack when two buttons cannot fit. Standalone save actions use `max-sm:px-2` in narrow
+  viewports. Verify that words, targets and focus outlines fit within the card at 320px and
+  with enlarged text; do not force word splitting to retain a two-column action row.
+- **Standalone controls:** Right-align the save/remove button on the shelter detail page and
+  in map popups as well. The status line and any saved-map removal warning keep their reading order.
+  **Spara kartbild** uses the same blue primary treatment and sizing label as **Spara skyddsrum**,
+  stays on the right, and places its confirmation below so the button does not shift left.
+- **Saved addresses:** The current-place status and removal button share a right edge at every
+  breakpoint. Action buttons are capped at the card's available width, including with enlarged text.
+  For an inactive address, **Ange som aktuell plats** and **Ta bort** fill the same `w-max`
+  column with `auto-rows-fr` and `px-2` horizontal padding. Both buttons have equal width and
+  height even when labels wrap, with their width determined by the longer label.
+  The active address retains its compact standalone removal button.
+  Below `sm` in portrait orientation, the paired controls add `my-2` and use `gap-3`.
+  Landscape and wider layouts keep their existing margins and `gap-2` spacing.
+- **Map popups:** Constrain the popup to the map with a 16px inset, retaining room for focus
+  outlines and rounded map edges. Content is a labelled, keyboard-focusable scroll region with
+  `p-2` inside the popup's own padding. Maximum height accounts for the popup's padding and tip;
+  width is capped at 24rem and the available map width. Resize and movement updates keep the
+  popup visible without panning the camera; closing it releases its observers and listener.
+
 ### 6.3 Text and Content Links
 
 - **Standalone Text Links:**
