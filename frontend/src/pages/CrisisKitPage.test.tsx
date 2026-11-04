@@ -698,7 +698,7 @@ describe("CrisisKitPage category sections", () => {
     ])
   })
 
-  it("automatically expands subcategories with active items when a category opens", async () => {
+  it("keeps all subcategories collapsed when a category opens", async () => {
     const activeItem = {
       ...recommendedFoodItem,
       id: "active-rice",
@@ -744,17 +744,15 @@ describe("CrisisKitPage category sections", () => {
     // Open the parent category.
     fireEvent.click(foodHeading.closest("summary")!)
 
-    // The active subcategory should expand automatically.
-    await waitFor(() => {
-      expect(activeDetails.open).toBe(true)
-    })
-
-    // The deactivated-only subcategory should remain collapsed.
+    // Both subcategories should remain collapsed.
+    expect(activeDetails.open).toBe(false)
     expect(deactivatedDetails.open).toBe(false)
 
-    // The user should still be able to expand it manually.
-    fireEvent.click(deactivatedHeading.closest("summary")!)
+    // The user should still be able to expand either subcategory manually.
+    fireEvent.click(activeHeading.closest("summary")!)
+    expect(activeDetails.open).toBe(true)
 
+    fireEvent.click(deactivatedHeading.closest("summary")!)
     expect(deactivatedDetails.open).toBe(true)
   })
 })
@@ -956,5 +954,82 @@ describe("CrisisKitPage sources", () => {
       await screen.findByText("Det gick inte att läsa in din krislåda. Försök igen.")
     ).toBeTruthy()
     expect(screen.getByRole("region", { name: "Källor" })).toBeTruthy()
+  })
+})
+
+describe("CrisisKitPage category completion counts", () => {
+  it("shows the correct category and subcategory counts", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      { ...recommendedFoodItem, id: "1", isOwned: true },
+      { ...recommendedFoodItem, id: "2", isOwned: false },
+      {
+        ...recommendedFoodItem,
+        id: "3",
+        name: "Egna bönor",
+        isOwned: true,
+        isCustom: true,
+      },
+    ])
+
+    mountPage()
+
+    const categoryHeading = await screen.findByRole("heading", {
+      name: "Mat",
+      level: 2,
+    })
+    const categoryDetails = categoryHeading.closest("details")!
+
+    expect(within(categoryDetails).getAllByText("2 av 3")).toHaveLength(2)
+
+    fireEvent.click(categoryHeading.closest("summary")!)
+
+    const subcategoryHeading = within(categoryDetails).getByRole("heading", {
+      name: "Torrvaror",
+      level: 3,
+    })
+    const subcategoryDetails = subcategoryHeading.closest("details")!
+
+    expect(within(subcategoryDetails).getByText("2 av 3")).toBeTruthy()
+  })
+
+  it("excludes items marked as not needed from category and subcategory counts", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      { ...recommendedFoodItem, id: "1", isOwned: true },
+      { ...recommendedFoodItem, id: "2", isOwned: false, isNotNeeded: true },
+    ])
+
+    mountPage()
+
+    const categoryHeading = await screen.findByRole("heading", {
+      name: "Mat",
+      level: 2,
+    })
+    const categoryDetails = categoryHeading.closest("details")!
+
+    expect(within(categoryDetails).getAllByText("1 av 1")).toHaveLength(2)
+
+    fireEvent.click(categoryHeading.closest("summary")!)
+
+    const subcategoryHeading = within(categoryDetails).getByRole("heading", {
+      name: "Torrvaror",
+      level: 3,
+    })
+    const subcategoryDetails = subcategoryHeading.closest("details")!
+
+    expect(within(subcategoryDetails).getByText("1 av 1")).toBeTruthy()
+  })
+
+  it("hides completion counts for empty categories", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValueOnce([])
+
+    mountPage()
+
+    const categoryHeading = await screen.findByRole("heading", {
+      name: "Mat",
+      level: 2,
+    })
+    const categoryDetails = categoryHeading.closest("details")!
+
+    expect(within(categoryDetails).queryByText("0 av 0")).toBeNull()
   })
 })

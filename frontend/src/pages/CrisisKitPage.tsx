@@ -641,6 +641,8 @@ function CrisisKitPage() {
         <div className="mt-6 space-y-4">
           {CRISIS_KIT_CATEGORIES.map((category) => {
             const categoryItems = items.filter((item) => item.category === category)
+            const activeCategoryItems = categoryItems.filter((item) => !item.isNotNeeded)
+            const categoryOwnedCount = activeCategoryItems.filter((item) => item.isOwned).length
             const subcategories = Array.from(
               new Set(categoryItems.map((item) => item.subcategory || "Övrigt"))
             ).sort((a, b) => a.localeCompare(b, "sv"))
@@ -648,17 +650,6 @@ function CrisisKitPage() {
             return (
               <details
                 key={category}
-                onToggle={(event) => {
-                  const categoryDetails = event.currentTarget
-
-                  if (event.target !== categoryDetails || !categoryDetails.open) return
-
-                  categoryDetails
-                    .querySelectorAll<HTMLDetailsElement>(".subcategory-group")
-                    .forEach((subcategoryDetails) => {
-                      subcategoryDetails.open = subcategoryDetails.dataset.hasActiveItems === "true"
-                    })
-                }}
                 className="relative group overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-sm"
               >
                 <CardAccent />
@@ -672,7 +663,18 @@ function CrisisKitPage() {
                   </span>
                   <span className="flex min-w-0 flex-1 items-center gap-3">
                     <CrisisIcon name={iconForKitCategory(category)} className="text-blue-900" />
-                    <h2 className="min-w-0 text-lg font-semibold">{category}</h2>
+                    <h2 className="min-w-0 flex-1 wrap-anywhere text-lg font-semibold">
+                      {category}
+                    </h2>
+
+                    {activeCategoryItems.length > 0 && (
+                      <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold tabular-nums text-blue-900">
+                        {categoryOwnedCount === activeCategoryItems.length && (
+                          <span aria-hidden="true">✓</span>
+                        )}
+                        {categoryOwnedCount} av {activeCategoryItems.length}
+                      </span>
+                    )}
                   </span>
                   <span
                     aria-hidden="true"
@@ -692,14 +694,33 @@ function CrisisKitPage() {
                         .filter((item) => (item.subcategory || "Övrigt") === subcategory)
                         .sort((a, b) => a.name.localeCompare(b.name, "sv"))
 
+                      const activeSubcategoryItems = subcategoryItems.filter(
+                        (item) => !item.isNotNeeded
+                      )
+                      const subcategoryOwnedCount = activeSubcategoryItems.filter(
+                        (item) => item.isOwned
+                      ).length
+
                       return (
                         <details
                           key={subcategory}
                           data-has-active-items={subcategoryItems.some((item) => !item.isNotNeeded)}
                           className="subcategory-group rounded-xl border border-blue-100 bg-slate-50"
                         >
-                          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-xl p-4 font-semibold text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
-                            <h3 className="text-base font-semibold">{subcategory}</h3>
+                          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-xl p-4 font-semibold text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
+                            <h3 className="min-w-0 flex-1 wrap-anywhere text-base font-semibold">
+                              {subcategory}
+                            </h3>
+
+                            {activeSubcategoryItems.length > 0 && (
+                              <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold tabular-nums text-blue-900">
+                                {subcategoryOwnedCount === activeSubcategoryItems.length && (
+                                  <span aria-hidden="true">✓</span>
+                                )}
+                                {subcategoryOwnedCount} av {activeSubcategoryItems.length}
+                              </span>
+                            )}
+
                             <span
                               aria-hidden="true"
                               className="shrink-0 text-lg transition-transform [details.subcategory-group[open]_&]:rotate-180"
