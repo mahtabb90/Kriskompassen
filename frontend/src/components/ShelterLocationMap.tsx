@@ -6,21 +6,43 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react"
 import { mapConfig } from "../config/mapConfig"
 import type { Shelter } from "../types/shelter"
 import type { GeoPoint } from "../utils/distance"
-import { captureMapSnapshot } from "../utils/mapSnapshot"
-import { originMarkerElement, shelterMarkerElement } from "../utils/shelterMapIcons"
+import { captureMapSnapshot, loadSvgImage, type MarkerSnapshot } from "../utils/mapSnapshot"
+import {
+  ORIGIN_MARKER_SIZE,
+  ORIGIN_MARKER_SVG,
+  originMarkerElement,
+  SHELTER_MARKER_SIZE,
+  SHELTER_MARKER_SVG,
+  shelterMarkerElement,
+} from "../utils/shelterMapIcons"
+
+/**
+ * "loading" until the style and its initial tiles have actually finished downloading, "ready"
+ * once they have, "error" if a resource request failed. Distinct from ShelterDetailPage's
+ * `mode === "online"` check: that only reflects `navigator.onLine` (is there a network
+ * interface), not whether the tile host itself is reachable - a captive portal, DNS issue, or
+ * outage at the tile host leaves `mode` saying "online" while this map never actually loads.
+ */
+export type ShelterLocationMapStatus = "loading" | "ready" | "error"
 
 interface ShelterLocationMapProps {
   shelter: Pick<Shelter, "lat" | "lon">
   /** The user's own position, when known. Omitted entirely (no marker, no implied claim about
    * "your position") when there is no active address - this page is reachable without one. */
   origin: GeoPoint | null
+  /** Reports the map's load status so the parent can keep "Spara kartbild" disabled until
+   * there's an actual map to capture - without this, the button stayed clickable even when the
+   * tile host was unreachable, silently saving a blank snapshot. */
+  onStatusChange?: (status: ShelterLocationMapStatus) => void
 }
 
 /** Lets ShelterDetailPage save exactly the view the user panned/zoomed to, without reaching into
  * maplibre-gl internals itself. */
 export interface ShelterLocationMapHandle {
   /** Captures the map's current on-screen view, downscaled per utils/mapSnapshot.ts. Resolves
-   * null if the map isn't mounted yet. */
+   * null if the map isn't mounted yet, or hasn't reached "ready" (see ShelterLocationMapStatus) -
+   * callers should prefer disabling their save action via onStatusChange instead of relying on
+   * this, since by then the user has already clicked a seemingly-live button for nothing. */
   captureImage: () => Promise<Blob | null>
 }
 
@@ -34,14 +56,54 @@ export interface ShelterLocationMapHandle {
  * recreating them with the map.
  */
 const ShelterLocationMap = forwardRef<ShelterLocationMapHandle, ShelterLocationMapProps>(
-  function ShelterLocationMap({ shelter, origin }, ref) {
+  function ShelterLocationMap({ shelter, origin, onStatusChange }, ref) {
     const containerRef = useRef<HTMLDivElement>(null)
     const mapRef = useRef<MapLibreMap | null>(null)
+    const statusRef = useRef<ShelterLocationMapStatus>("loading")
+    // A ref, not an effect dependency, so the mount effect below can always call the latest
+    // callback without needing onStatusChange in its deps (which would force it to recreate the
+    // map - and therefore reload the style from scratch - on every parent re-render).
+    const onStatusChangeRef = useRef(onStatusChange)
+    onStatusChangeRef.current = onStatusChange
 
     useImperativeHandle(ref, () => ({
-      captureImage: () => {
+      captureImage: async () => {
         const map = mapRef.current
-        return map ? captureMapSnapshot(map.getCanvas()) : Promise.resolve(null)
+        if (!map || statusRef.current !== "ready") return null
+
+        // map.getCanvas() alone never contains the shelter/origin markers - they're separate DOM
+        // elements maplibre-gl positions on top of the canvas with CSS, not pixels drawn into it.
+        // So each one is rasterized and composited back on manually, at its on-screen position.
+        const canvas = map.getCanvas()
+        // Canvas pixels are CSS pixels * pixel ratio (clamped by maxCanvasSize internally), while
+        // map.project() returns CSS pixels - measuring both live, rather than trusting
+        // map.getPixelRatio(), keeps this correct even when that clamp kicks in.
+        const pixelRatio = canvas.width / canvas.clientWidth
+
+        const toMarkerSnapshot = async (
+          lngLat: [number, number],
+          svg: string,
+          size: number
+        ): Promise<MarkerSnapshot> => {
+          const point = map.project(lngLat)
+          const image = await loadSvgImage(svg)
+          return {
+            x: point.x * pixelRatio,
+            y: point.y * pixelRatio,
+            image,
+            width: size * pixelRatio,
+            height: size * pixelRatio,
+          }
+        }
+
+        const markers = await Promise.all([
+          toMarkerSnapshot([shelter.lon, shelter.lat], SHELTER_MARKER_SVG, SHELTER_MARKER_SIZE),
+          ...(origin
+            ? [toMarkerSnapshot([origin.lon, origin.lat], ORIGIN_MARKER_SVG, ORIGIN_MARKER_SIZE)]
+            : []),
+        ])
+
+        return captureMapSnapshot(canvas, markers)
       },
     }))
 
@@ -61,6 +123,18 @@ const ShelterLocationMap = forwardRef<ShelterLocationMapHandle, ShelterLocationM
       })
       map.addControl(new NavigationControl({ showCompass: false }), "top-right")
       map.scrollZoom.disable()
+      // "load" only fires once the style and its initial tiles have actually downloaded - not
+      // just once the Map object exists, which happens synchronously above regardless of
+      // network. "error" fires for a failed style/tile/sprite/glyph request - e.g. the tile host
+      // being unreachable even though the device itself has a network connection.
+      map.on("load", () => {
+        statusRef.current = "ready"
+        onStatusChangeRef.current?.("ready")
+      })
+      map.on("error", () => {
+        statusRef.current = "error"
+        onStatusChangeRef.current?.("error")
+      })
       mapRef.current = map
       return () => {
         map.remove()

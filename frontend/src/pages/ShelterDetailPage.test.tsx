@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { forwardRef, useImperativeHandle } from "react"
+import { forwardRef, useEffect, useImperativeHandle } from "react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useAddresses, type AddressContextValue } from "../context/addressContext"
@@ -33,14 +33,30 @@ vi.mock("../services/shelterStorageService", () => ({
   setSavedShelterMapImage: vi.fn(),
 }))
 
-const { mockCaptureImage } = vi.hoisted(() => ({ mockCaptureImage: vi.fn() }))
+type MockMapStatus = "loading" | "ready" | "error"
+
+const { mockCaptureImage, mockMapStatus } = vi.hoisted(() => ({
+  mockCaptureImage: vi.fn(),
+  // A mutable box, not a plain value - tests for the "loading"/"error" gap set .current before
+  // rendering, while everything else leaves it at the default "ready" so the map behaves exactly
+  // as it does once ShelterLocationMap.tsx's real "load" event has already fired.
+  mockMapStatus: { current: "ready" as MockMapStatus },
+}))
 
 // The real MapLibre map is verified manually, not here - this just confirms the embedded map
-// mounts (or doesn't, offline) correctly, and that the "Spara kartbild" flow reaches the map's
-// exposed captureImage() handle (ShelterLocationMap.tsx) correctly.
+// mounts (or doesn't, offline) correctly, that the "Spara kartbild" flow reaches the map's
+// exposed captureImage() handle (ShelterLocationMap.tsx) correctly, and that its reported load
+// status (mockMapStatus) drives the button's disabled state and error message.
 vi.mock("../components/ShelterLocationMap", () => ({
-  default: forwardRef(function MockShelterLocationMap(_props: unknown, ref) {
+  default: forwardRef(function MockShelterLocationMap(
+    props: { onStatusChange?: (status: MockMapStatus) => void },
+    ref
+  ) {
     useImperativeHandle(ref, () => ({ captureImage: mockCaptureImage }))
+    useEffect(() => {
+      props.onStatusChange?.(mockMapStatus.current)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
     return <div data-testid="shelter-location-map" />
   }),
 }))
@@ -109,6 +125,7 @@ beforeEach(() => {
   vi.mocked(setSavedShelterComment).mockResolvedValue(undefined)
   vi.mocked(setSavedShelterMapImage).mockResolvedValue(undefined)
   mockCaptureImage.mockReset()
+  mockMapStatus.current = "ready"
 })
 
 afterEach(() => {
@@ -336,7 +353,12 @@ describe("ShelterDetailPage map image", () => {
         mapImage: image,
       },
     ])
-    const saveImageButton = screen.getByRole("button", { name: "Spara kartbild" })
+    const saveImageButton = screen.getByRole<HTMLButtonElement>("button", {
+      name: "Spara kartbild",
+    })
+    // The map loads lazily - the button starts disabled until ShelterLocationMap's mock reports
+    // "ready", same as the real component waiting for maplibre-gl to actually load.
+    await waitFor(() => expect(saveImageButton.disabled).toBe(false))
     fireEvent.click(saveImageButton)
 
     expect(await screen.findByText("Kartbild sparad.")).toBeTruthy()
@@ -362,7 +384,11 @@ describe("ShelterDetailPage map image", () => {
         mapImage: image,
       },
     ])
-    fireEvent.click(screen.getByRole("button", { name: "Spara kartbild" }))
+    const saveImageButton = screen.getByRole<HTMLButtonElement>("button", {
+      name: "Spara kartbild",
+    })
+    await waitFor(() => expect(saveImageButton.disabled).toBe(false))
+    fireEvent.click(saveImageButton)
     expect(await screen.findByText("Kartbild sparad.")).toBeTruthy()
 
     vi.mocked(getSavedShelters).mockResolvedValue([])
@@ -400,7 +426,10 @@ describe("ShelterDetailPage map image", () => {
         mapImage: image,
       },
     ])
-    const saveImageButton = screen.getByRole("button", { name: "Spara kartbild" })
+    const saveImageButton = screen.getByRole<HTMLButtonElement>("button", {
+      name: "Spara kartbild",
+    })
+    await waitFor(() => expect(saveImageButton.disabled).toBe(false))
     fireEvent.click(saveImageButton)
 
     expect(await screen.findByText("Kartbild sparad.")).toBeTruthy()
@@ -414,13 +443,46 @@ describe("ShelterDetailPage map image", () => {
     renderDetail()
     await screen.findByRole("heading", { name: "Kantarellen 11, Solna kommun" })
 
-    const saveImageButton = screen.getByRole("button", { name: "Spara kartbild" })
+    const saveImageButton = screen.getByRole<HTMLButtonElement>("button", {
+      name: "Spara kartbild",
+    })
+    // The button is enabled here (the map reported "ready") - this test covers captureImage()
+    // itself resolving null, a different case from the map never finishing loading at all.
+    await waitFor(() => expect(saveImageButton.disabled).toBe(false))
     fireEvent.click(saveImageButton)
     await Promise.resolve()
 
     expect(saveShelter).not.toHaveBeenCalled()
     expect(setSavedShelterMapImage).not.toHaveBeenCalled()
     expect(screen.queryByText("Kartbild sparad.")).toBeNull()
+  })
+
+  it("disables 'Spara kartbild' while the map hasn't reported ready yet", async () => {
+    mockMapStatus.current = "loading"
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    renderDetail()
+    await screen.findByRole("heading", { name: "Kantarellen 11, Solna kommun" })
+
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Spara kartbild" }).disabled).toBe(
+      true
+    )
+    expect(screen.queryByRole("alert")).toBeNull()
+  })
+
+  it("disables 'Spara kartbild' and explains why when the map fails to load - e.g. the tile host is unreachable even though mode is 'online'", async () => {
+    mockMapStatus.current = "error"
+    vi.mocked(getCachedShelterById).mockResolvedValue(fullShelter)
+    renderDetail()
+    await screen.findByRole("heading", { name: "Kantarellen 11, Solna kommun" })
+
+    // findByText, not getByText - the mock map mounts lazily, same race as the save-image tests
+    // above, so the "error" status (and the message it drives) may not have landed yet.
+    expect(
+      await screen.findByText("Kartan kunde inte laddas. Kartbilden går inte att spara just nu.")
+    ).toBeTruthy()
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Spara kartbild" }).disabled).toBe(
+      true
+    )
   })
 
   it("shows the saved map image, offline and online alike, once one exists", async () => {
