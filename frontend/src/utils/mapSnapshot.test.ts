@@ -79,4 +79,39 @@ describe("captureMapSnapshot", () => {
 
     expect(result).toBeNull()
   })
+
+  it("composites each marker, centered on its position, through the same crop/scale transform as the base image", async () => {
+    // Square source, so coverSourceRect(960, 960, 480, 320) crops the top/bottom symmetrically -
+    // makes the expected sy/scale easy to reason about by hand.
+    const source = document.createElement("canvas")
+    source.width = 960
+    source.height = 960
+    const drawImage = vi.fn()
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage,
+    } as unknown as CanvasRenderingContext2D)
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(function (
+      this: HTMLCanvasElement,
+      callback: BlobCallback
+    ) {
+      callback(new Blob())
+    })
+    const markerImage = {} as CanvasImageSource
+
+    await captureMapSnapshot(source, [
+      { x: 480, y: 480, image: markerImage, width: 64, height: 64 },
+    ])
+
+    const { sx, sy, sw, sh } = coverSourceRect(960, 960, MAP_SNAPSHOT_WIDTH, MAP_SNAPSHOT_HEIGHT)
+    const scaleX = MAP_SNAPSHOT_WIDTH / sw
+    const scaleY = MAP_SNAPSHOT_HEIGHT / sh
+    expect(drawImage).toHaveBeenNthCalledWith(
+      2,
+      markerImage,
+      (480 - sx) * scaleX - (64 * scaleX) / 2,
+      (480 - sy) * scaleY - (64 * scaleY) / 2,
+      64 * scaleX,
+      64 * scaleY
+    )
+  })
 })
