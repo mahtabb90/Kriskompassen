@@ -214,12 +214,13 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
 ### 4.3 Responsive Content Grids
 
 - **Crisis List Grid:**
-  - Mobile (< 640px): 1 column (`grid auto-rows-fr gap-6`).
-  - Tablet & Desktop (>= 640px): 2 equal columns (`grid auto-rows-fr gap-6 sm:grid-cols-2`).
+  - Mobile (< 640px): 1 column (`grid gap-6`).
+  - Tablet & Desktop (>= 640px): 2 equal columns (`grid gap-6 sm:auto-rows-fr sm:grid-cols-2`).
 - **Cards Equal Height:**
-  Article cards use `h-full flex flex-col` and the grid uses `auto-rows-fr`, giving every card
-  the same height across all rows. The tallest card determines the height at the current width
-  and text size; retain full headings and summaries without fixed pixel heights or clipping.
+  Article cards use `h-full flex flex-col` and, from `sm`, the grid uses `sm:auto-rows-fr`,
+  giving every card the same height across all rows. The tallest card determines the height at
+  the current width and text size; retain full headings and summaries without fixed pixel
+  heights or clipping. The single-column mobile layout keeps each card at its natural height.
 - **Enlarged text in article cards:** Cap horizontal padding at its default size: 24px below
   `sm`, 28px on list cards from `sm`, and 32px on article detail from `sm`. Use `min()` with the
   corresponding rem spacing as the normal maximum. List footers and detail content use flexible
@@ -911,8 +912,11 @@ KrisKompassen performs offline storage operations and network calls that must be
   - Screen readers announce politely without interrupting critical ongoing speech.
   - **Offline articles:** Keep the confirmation sentence visible below the controls in the green
     style above. Shorten only names longer than ten characters to the first seven characters
-    (trimmed at the end) followed by `...`, for example **"Toalett..."**. Keep the rest of the
+    (trimmed at the end) followed by `…`, for example **"Toalett…"**. Keep the rest of the
     sentence intact and preserve full article titles in headings, links and button names.
+    Inside `role="status"`, the shortened sentence is `aria-hidden` and an `sr-only` copy
+    carries the full sentence with the complete title, so screen readers announce which
+    article was saved or removed.
     A single grid cell reserves the larger natural height of the save
     and removal messages from the start, using invisible, `aria-hidden` sizing copies outside
     the actual live region. Reuse the same message strings, width and typography for sizing and

@@ -364,15 +364,16 @@ Frontend conventions visible in the existing code:
   `role="status"`, initially empty. Its grid cell reserves the larger natural height of the save
   and removal messages using two invisible, aria-hidden sizing copies outside the live region.
   Only confirmation names are abbreviated: titles longer than ten characters use the first
-  seven characters (trimmed at the end) followed by `...`. Headings, reading links, button
+  seven characters (trimmed at the end) followed by `…`, while an `sr-only` copy in the same
+  `role="status"` announces the full title. Headings, reading links, button
   accessible names and stored article data retain the full title.
   The same strings and typography are used for sizing and display, adapting to width and enlarged
   text without fixed heights or clipping. Align the real message to the bottom of the reserved
   cell so unused space does not collect below it. The separate alert region stays mounted in
   the same feedback block and adds spacing only when an error exists. Storage failures remain
   visible and may take the space they need.
-- `CrisisInfoPage` uses `auto-rows-fr` so every article card in the list has the same height,
-  including cards on different rows. Height adapts to the tallest card at the current viewport
+- `CrisisInfoPage` uses `sm:auto-rows-fr` so from `sm` every article card in the list has the
+  same height, including cards on different rows. Height adapts to the tallest card at the current viewport
   and text size without fixed pixel heights or clipping article text.
   List-card body padding is capped at the normal 24px/28px spacing using `min(rem, px)`.
   List footers and detail content use a three-column grid: the middle track has a `min-content`
