@@ -38,6 +38,18 @@ function CardAccent() {
   )
 }
 
+function formatReviewCount(count: number): string {
+  return count === 1 ? "sak att se över" : "saker att se över"
+}
+
+function formatExpiredCount(count: number): string {
+  return count === 1 ? "utgången vara" : "utgångna varor"
+}
+
+function formatSoonExpiringCount(count: number): string {
+  return count === 1 ? "vara går snart ut" : "varor går snart ut"
+}
+
 function CrisisKitPage() {
   const [items, setItems] = useState<CrisisKitItemType[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -256,8 +268,8 @@ function CrisisKitPage() {
               </svg>
             </span>
             <p className="min-w-0 flex-1 text-lg font-bold text-slate-700 sm:text-xl">
-              <span className="text-2xl tabular-nums sm:text-3xl">{totalItemsToReview}</span> saker
-              att se över
+              <span className="text-2xl tabular-nums sm:text-3xl">{totalItemsToReview}</span>{" "}
+              {formatReviewCount(totalItemsToReview)}
             </p>
           </div>
 
@@ -313,7 +325,9 @@ function CrisisKitPage() {
                 <p className="text-3xl font-bold tabular-nums text-slate-900">
                   {expiredItems.length}
                 </p>
-                <p className="font-semibold text-slate-700">utgångna varor</p>
+                <p className="font-semibold text-slate-700">
+                  {formatExpiredCount(expiredItems.length)}
+                </p>
               </div>
             </div>
 
@@ -335,7 +349,9 @@ function CrisisKitPage() {
               </span>
               <div className="flex flex-wrap items-baseline justify-center gap-x-2">
                 <p className="text-3xl font-bold tabular-nums text-slate-900">{soonItems.length}</p>
-                <p className="font-semibold text-slate-700">varor går snart ut</p>
+                <p className="font-semibold text-slate-700">
+                  {formatSoonExpiringCount(soonItems.length)}
+                </p>
               </div>
             </div>
           </div>
