@@ -36,7 +36,11 @@ const articles = [
     fetchedAt: "2026-11-04T12:00:00.000Z",
   },
 ]
-const confirmationNames = ["Mat", "Mat och...", "Toalett...", "Kommuni..."]
+const confirmationNames = ["Mat", "Mat och…", "Toalett…", "Kommuni…"]
+
+function escapeRegExp(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
 
 async function boxOf(locator: Locator) {
   const box = await locator.boundingBox()
@@ -59,7 +63,15 @@ async function measurePanel(panel: Locator, controls: Locator[]) {
   }
 }
 
-async function expectEqualCardHeights(cards: Locator[]) {
+/** Equal heights apply only from `sm`; the single-column layout keeps natural card heights. */
+async function expectCardHeights(cards: Locator[], viewportWidth: number) {
+  if (viewportWidth < 640) {
+    const autoRows = await cards[0]
+      .locator("..")
+      .evaluate((grid) => getComputedStyle(grid).gridAutoRows)
+    expect(autoRows, "single-column grid rows").toBe("auto")
+    return
+  }
   const heights = await Promise.all(cards.map(async (card) => (await boxOf(card)).height))
   expect(
     Math.max(...heights) - Math.min(...heights),
@@ -120,9 +132,15 @@ function expectUnchanged(
 }
 
 /** Visibility alone also accepts sr-only content, so verify unclipped text and card bounds. */
-async function expectFullConfirmation(panel: Locator, controls: Locator[], message: string) {
+async function expectFullConfirmation(
+  panel: Locator,
+  controls: Locator[],
+  message: string,
+  spokenMessage: string
+) {
   const status = panel.getByRole("status")
-  await expect(status).toHaveText(message)
+  await expect(status.locator(":scope > [aria-hidden='true']")).toHaveText(message)
+  await expect(status.locator(":scope > .sr-only")).toHaveText(spokenMessage)
   await expect(status).toBeVisible()
   await expect(status).not.toHaveClass(/\bsr-only\b/)
   expect(
@@ -154,7 +172,8 @@ async function expectFullConfirmation(panel: Locator, controls: Locator[], messa
 
   const spacing = await status.evaluate((element) => {
     const range = document.createRange()
-    range.selectNodeContents(element)
+    // Measure the visible message; the screen-reader-only copy is positioned out of flow.
+    range.selectNodeContents(element.querySelector(":scope > [aria-hidden='true']") ?? element)
     const statusBottom = element.getBoundingClientRect().bottom
     const card = element.closest(".group")
     const footer = card?.lastElementChild
@@ -183,8 +202,9 @@ async function checkSaveAndRemove(
   confirmationName: string
 ) {
   const button = controls[controls.length - 1]
+  const escapedTitle = escapeRegExp(title)
   await expect(button).toBeEnabled()
-  await expect(button).toHaveAccessibleName(new RegExp(`^Spara offline\\s*:\\s*${title}$`))
+  await expect(button).toHaveAccessibleName(new RegExp(`^Spara offline\\s*:\\s*${escapedTitle}$`))
   await expect(panel.getByRole("status")).toBeEmpty()
   await expectCardReflow(panel, controls)
   const before = await measurePanel(panel, controls)
@@ -194,9 +214,12 @@ async function checkSaveAndRemove(
   await expectFullConfirmation(
     panel,
     controls,
-    `"${confirmationName}" har sparats för offlineåtkomst.`
+    `"${confirmationName}" har sparats för offlineåtkomst.`,
+    `"${title}" har sparats för offlineåtkomst.`
   )
-  await expect(button).toHaveAccessibleName(new RegExp(`^Ta bort offlinekopia\\s*:\\s*${title}$`))
+  await expect(button).toHaveAccessibleName(
+    new RegExp(`^Ta bort offlinekopia\\s*:\\s*${escapedTitle}$`)
+  )
   await expectCardReflow(panel, controls)
   expectUnchanged(before, await measurePanel(panel, controls))
 
@@ -205,9 +228,10 @@ async function checkSaveAndRemove(
   await expectFullConfirmation(
     panel,
     controls,
-    `"${confirmationName}" har tagits bort från offlinelagringen.`
+    `"${confirmationName}" har tagits bort från offlinelagringen.`,
+    `"${title}" har tagits bort från offlinelagringen.`
   )
-  await expect(button).toHaveAccessibleName(new RegExp(`^Spara offline\\s*:\\s*${title}$`))
+  await expect(button).toHaveAccessibleName(new RegExp(`^Spara offline\\s*:\\s*${escapedTitle}$`))
   await expectCardReflow(panel, controls)
   expectUnchanged(before, await measurePanel(panel, controls))
 }
@@ -228,7 +252,6 @@ async function openPage(page: Page, path: string, textPercent = 100, reservedScr
       await page.evaluate(() => innerWidth - document.body.getBoundingClientRect().width)
     ).toBe(15)
   }
-  await page.waitForLoadState("networkidle")
   await page.evaluate(() => document.fonts.ready)
 }
 
@@ -267,16 +290,16 @@ for (const { width, height, textPercent, reservedScrollbar } of scenarios) {
   test.describe(`offline feedback cards at ${width}px, ${textPercent}% text${reservedScrollbar ? ", reserved scrollbar" : ""}`, () => {
     test.use({ viewport: { width, height } })
 
-    test("keeps all cards equally high with visible feedback and stable controls", async ({
-      page,
-    }) => {
+    test("keeps card heights, visible feedback and controls stable", async ({ page }) => {
       await openPage(page, "/crisis", textPercent, reservedScrollbar)
       const cards = articles.map((article) =>
         page.locator("div.group").filter({
           has: page.getByRole("heading", { level: 2, name: article.title, exact: true }),
         })
       )
-      await expectEqualCardHeights(cards)
+      // Saved-state checks finish asynchronously; measure only once every card is ready.
+      for (const card of cards) await expect(card.getByRole("button")).toBeEnabled()
+      await expectCardHeights(cards, width)
       for (const [index, article] of articles.entries()) {
         const card = cards[index]
         const reading = card.getByRole("link", { name: `Läs mer om ${article.title}` })
@@ -286,7 +309,7 @@ for (const { width, height, textPercent, reservedScrollbar } of scenarios) {
           article.title,
           confirmationNames[index]
         )
-        await expectEqualCardHeights(cards)
+        await expectCardHeights(cards, width)
       }
     })
   })

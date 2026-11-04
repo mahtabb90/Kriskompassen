@@ -14,13 +14,14 @@ interface OfflineToggleProps {
  *
  * Reads the stored state from IndexedDB on mount. The displayed state only changes after the
  * storage operation succeeds; failures show an error message and keep the previous state.
- * Full success messages remain visible in a persistent live region. Invisible, aria-hidden
+ * Success messages remain visible in a persistent live region. Invisible, aria-hidden
  * copies of both messages reserve their larger natural height in a shared grid cell, keeping
  * the controls stable when a message appears at different widths and text sizes. Aligning the
  * message to the cell's bottom keeps unused space above it; an empty error adds no extra gap.
  * Errors stay visible and announced.
- * Confirmation names longer than ten characters use seven characters followed by "...";
- * article headings and the controls' accessible names retain the full title.
+ * Visible confirmation names longer than ten characters use seven characters followed by "…";
+ * a screen-reader-only copy in the same live region announces the full title, as do article
+ * headings and the controls' accessible names.
  * The saved-state line also reserves its longer label, preventing a row-height change when
  * enlarged text wraps "Sparad offline" more than "Inte sparad".
  * Saving uses the primary button variant; removal uses the destructive outlined variant.
@@ -36,12 +37,14 @@ interface OfflineToggleProps {
 function OfflineToggle({ item, onToggle, actions }: OfflineToggleProps) {
   const [saved, setSaved] = useState<boolean | null>(null)
   const [busy, setBusy] = useState(false)
-  const [confirmation, setConfirmation] = useState("")
+  const [confirmation, setConfirmation] = useState<"saved" | "removed" | null>(null)
   const [error, setError] = useState("")
   const confirmationTitle =
-    item.title.length > 10 ? `${item.title.slice(0, 7).trimEnd()}...` : item.title
+    item.title.length > 10 ? `${item.title.slice(0, 7).trimEnd()}…` : item.title
   const savedConfirmation = `"${confirmationTitle}" har sparats för offlineåtkomst.`
   const removedConfirmation = `"${confirmationTitle}" har tagits bort från offlinelagringen.`
+  const fullSavedConfirmation = `"${item.title}" har sparats för offlineåtkomst.`
+  const fullRemovedConfirmation = `"${item.title}" har tagits bort från offlinelagringen.`
 
   useEffect(() => {
     let cancelled = false
@@ -65,7 +68,7 @@ function OfflineToggle({ item, onToggle, actions }: OfflineToggleProps) {
   async function handleClick() {
     const saving = !saved
     setBusy(true)
-    setConfirmation("")
+    setConfirmation(null)
     setError("")
 
     try {
@@ -75,7 +78,7 @@ function OfflineToggle({ item, onToggle, actions }: OfflineToggleProps) {
         await removeOffline(item.id)
       }
       setSaved(saving)
-      setConfirmation(saving ? savedConfirmation : removedConfirmation)
+      setConfirmation(saving ? "saved" : "removed")
       onToggle?.(saving)
     } catch {
       setError(
@@ -148,7 +151,16 @@ function OfflineToggle({ item, onToggle, actions }: OfflineToggleProps) {
             {removedConfirmation}
           </span>
           <div role="status" className="col-start-1 row-start-1 self-end">
-            {confirmation}
+            {confirmation && (
+              <>
+                <span aria-hidden="true">
+                  {confirmation === "saved" ? savedConfirmation : removedConfirmation}
+                </span>
+                <span className="sr-only">
+                  {confirmation === "saved" ? fullSavedConfirmation : fullRemovedConfirmation}
+                </span>
+              </>
+            )}
           </div>
         </div>
         <div role="alert" className={"text-sm font-medium text-red-800" + (error ? " mt-3" : "")}>
