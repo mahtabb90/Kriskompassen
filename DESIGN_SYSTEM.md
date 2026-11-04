@@ -215,9 +215,19 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
 
 - **Crisis List Grid:**
   - Mobile (< 640px): 1 column (`grid gap-6`).
-  - Tablet & Desktop (>= 640px): 2 equal columns (`grid gap-6 sm:grid-cols-2`).
+  - Tablet & Desktop (>= 640px): 2 equal columns (`grid gap-6 sm:auto-rows-fr sm:grid-cols-2`).
 - **Cards Equal Height:**
-  Cards in the grid use `h-full flex flex-col` so that neighbouring cards match heights gracefully regardless of summary length.
+  Article cards use `h-full flex flex-col` and, from `sm`, the grid uses `sm:auto-rows-fr`,
+  giving every card the same height across all rows. The tallest card determines the height at
+  the current width and text size; retain full headings and summaries without fixed pixel
+  heights or clipping. The single-column mobile layout keeps each card at its natural height.
+- **Enlarged text in article cards:** Cap horizontal padding at its default size: 24px below
+  `sm`, 28px on list cards from `sm`, and 32px on article detail from `sm`. Use `min()` with the
+  corresponding rem spacing as the normal maximum. List footers and detail content use flexible
+  grid gutters around a `minmax(min-content, 1fr)` column. When enlarged whole button words
+  need more space, both gutters shrink to a minimum of 8px instead of letting the controls overflow
+  their row. This includes layouts narrowed by classic scrollbars and preserves the full 3px/4px
+  focus outline. Normal-size spacing stays unchanged; vertical spacing keeps scaling.
 
 ### 4.4 Stacking Layers
 
@@ -523,7 +533,7 @@ The static `/lugn-i-kris` page uses a few decorative elements. They add no new c
 - **Rationale vs WCAG Baseline:**
   This intentionally exceeds the WCAG 2.2 AA minimum requirement (Level AA SC 2.5.8 requires 24×24 CSS pixels). Exceeding this baseline ensures comfortable target acquisition on touchscreens, accommodates reduced motor precision among older users or cold/trembling hands during emergencies, and minimizes missed taps under high-stress conditions.
 - **Isolated Actions:**
-  Interactive controls must never be nested inside other interactive controls. In `CrisisCard`, the entire card title/body links to the detail page, but the offline toggle button and a separate secondary-styled "Läs mer" link (same destination, accessible name `Läs mer om <title>`) reside in an isolated, wrapping action row outside the link, with the toggle on the left and "Läs mer" on the right.
+  Interactive controls must never be nested inside other interactive controls. In `CrisisCard`, the entire card title/body links to the detail page, but a separate secondary-styled "Läs mer" link (same destination, accessible name `Läs mer om <title>`) and the offline toggle button reside in an isolated, wrapping action row outside the link. "Läs mer" comes first on the left and Save/Remove follows on the right, matching visual and keyboard order. Both controls reserve the longer removal label to prevent movement on saved-state changes, and stack when whole words cannot fit side by side.
 
 ### 6.2 Button Variants
 
@@ -539,7 +549,7 @@ Used for primary actions (e.g. "Spara offline", "Till startsidan").
   - Disabled: `opacity-60` with disabled pointer events.
 
 #### 6.2.2 Secondary / Outlined Button
-Used for toggled states or alternate actions (e.g. "Ta bort offlinekopia", "Visa krisinformation").
+Used for alternate, non-destructive actions (e.g. "Läs mer", "Visa krisinformation").
 
 - **Classes:**
   `inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white text-blue-900 font-semibold px-5 py-3 hover:bg-blue-50 active:bg-blue-50 disabled:opacity-60`
@@ -570,10 +580,25 @@ the header and in the mobile menu footer).
 
 #### 6.2.4 Destructive / Outlined Button
 
-Used for removal actions such as deleting a saved address, a custom crisis-kit item or a saved
-shelter. Reuses the existing red outlined treatment; the visible label explains what is removed.
+Used for removal actions such as deleting an offline article copy, a saved address, a custom
+crisis-kit item or a saved shelter. Reuses the existing red outlined treatment; the visible
+label explains what is removed.
 
 - **Colours:** `border-2 border-red-800 bg-white text-red-800 hover:bg-red-50`.
+- **Offline articles:** `OfflineToggle` uses this variant for **Ta bort offlinekopia** on both
+  article cards and the detail page. **Spara offline** stays primary blue and **Läs mer** stays
+  secondary blue. Reading comes before the right-hand save/remove action in DOM and visual order;
+  a standalone toggle is right-aligned. Both paired controls use an invisible, `aria-hidden`
+  **Ta bort offlinekopia** sizing label sharing the visible label's grid cell, preserving equal
+  dimensions and wrapping across saved/unsaved/busy states. Use the shelter controls' wrapping
+  flex row with `*:min-w-min *:flex-1 *:px-2` and `wrap-normal`, stacking whole controls when
+  words cannot fit side by side. Keep the universal focus outline and disabled opacity.
+  The saved-state line also reserves **Sparad offline** using an invisible, `aria-hidden` copy
+  and equal icon slots; both states keep the same line height even when enlarged text wraps.
+- **Contrast:** The installed Tailwind `red-800` text and border have **8.37:1** contrast
+  against `white` and **7.67:1** against the `red-50` hover surface, calculated from the
+  OKLCH tokens with the WCAG relative-luminance formula. Both exceed the text and UI targets
+  in section 2.5; retain the universal blue focus outline.
 - **Shelter controls:** Keep `min-h-12 min-w-12`, `rounded-xl`, `px-5 py-3` and the universal
   focus outline. **Visa detaljer** precedes the save/remove button in both DOM and visual order,
   occupying the left side of a wrapping flex row. Both controls reserve the same label and have
@@ -885,6 +910,22 @@ KrisKompassen performs offline storage operations and network calls that must be
   - Text colour: `text-green-800 font-medium text-sm`.
   - Used for non-disruptive confirmations (e.g. *"Artikel har sparats för offlineåtkomst"*).
   - Screen readers announce politely without interrupting critical ongoing speech.
+  - **Offline articles:** Keep the confirmation sentence visible below the controls in the green
+    style above. Shorten only names longer than ten characters to the first seven characters
+    (trimmed at the end) followed by `…`, for example **"Toalett…"**. Keep the rest of the
+    sentence intact and preserve full article titles in headings, links and button names.
+    Inside `role="status"`, the shortened sentence is `aria-hidden` and an `sr-only` copy
+    carries the full sentence with the complete title, so screen readers announce which
+    article was saved or removed.
+    A single grid cell reserves the larger natural height of the save
+    and removal messages from the start, using invisible, `aria-hidden` sizing copies outside
+    the actual live region. Reuse the same message strings, width and typography for sizing and
+    display, allowing natural wrapping and enlarged text without fixed heights, clipping or
+    overlapping controls. The real `role="status"` stays mounted and empty until an operation
+    succeeds, then retains its message until the next action or page change. Align its text to
+    the bottom of the reserved cell, leaving only the normal card padding below the message.
+    Keep the error region mounted in the same feedback block; only a non-empty error adds
+    `mt-3` spacing. Storage errors remain visible and may expand as needed.
 - **Urgent Errors (`role="alert"`):**
   - Text colour: `text-red-800 font-medium text-sm`.
   - Used for action failures (e.g. storage quota exceeded, device storage blocked).
