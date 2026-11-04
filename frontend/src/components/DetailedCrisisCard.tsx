@@ -18,8 +18,9 @@ import OfflineToggle from "./OfflineToggle"
  * redirects to the crisis list with an explanation tagged with the selected mode. The list
  * shows the explanation only while that mode is selected. Transport failures remain explicit
  * retryable errors. The same heading node survives loading, errors and successful responses.
- * Horizontal padding is capped at its default pixel size to preserve space for enlarged text
- * and the standalone save/remove control on narrow screens.
+ * Horizontal grid gutters keep the normal padding while room permits, then shrink to fit the
+ * control's intrinsic width. Their 8px minimum preserves the full focus outline on narrow screens
+ * with enlarged text, including platforms whose scrollbars consume layout width.
  */
 function DetailedCrisisCard() {
   const { id } = useParams()
@@ -62,65 +63,72 @@ function DetailedCrisisCard() {
         <span className="h-full w-8 bg-amber-400" />
       </div>
 
-      <div className="px-[min(1.5rem,24px)] py-6 sm:px-[min(2rem,32px)] sm:py-8">
-        <BackLink to="/crisis" label="Tillbaka till Innan krisen" />
+      <div className="grid grid-cols-[minmax(8px,var(--card-padding))_minmax(min-content,1fr)_minmax(8px,var(--card-padding))] py-6 [--card-padding:min(1.5rem,24px)] sm:py-8 sm:[--card-padding:min(2rem,32px)]">
+        <div className="col-start-2 min-w-0">
+          <BackLink to="/crisis" label="Tillbaka till Innan krisen" />
 
-        <h1
-          ref={headingRef}
-          id="page-heading"
-          tabIndex={-1}
-          className="wrap-anywhere text-3xl font-bold text-blue-900"
-        >
-          {item?.title ?? "Innan krisen"}
-        </h1>
+          <h1
+            ref={headingRef}
+            id="page-heading"
+            tabIndex={-1}
+            className="wrap-anywhere text-3xl font-bold text-blue-900"
+          >
+            {item?.title ?? "Innan krisen"}
+          </h1>
 
-        {state.status !== "ready" && (
-          <div className="mt-6 text-slate-600">
-            <CrisisLoadFeedback state={state} mode={mode} onRetry={retry} headingRef={headingRef} />
-          </div>
-        )}
-
-        {item && (
-          <>
-            <p className="mt-6 max-w-prose whitespace-pre-line wrap-anywhere text-base leading-relaxed text-slate-700">
-              {item.content}
-            </p>
-
-            {mode === "offline" &&
-              (savedAt ? (
-                <p className="mt-4 text-sm text-slate-600">
-                  <span className="font-medium">Sparad offline:</span>{" "}
-                  {new Date(savedAt).toLocaleString("sv-SE", {
-                    dateStyle: "long",
-                    timeStyle: "short",
-                  })}
-                </p>
-              ) : (
-                <p className="mt-4 text-sm text-slate-600">Tidpunkt för sparande saknas</p>
-              ))}
-
-            <div className="mt-8">
-              <OfflineToggle key={`${mode}:${item.id}`} item={item} />
+          {state.status !== "ready" && (
+            <div className="mt-6 text-slate-600">
+              <CrisisLoadFeedback
+                state={state}
+                mode={mode}
+                onRetry={retry}
+                headingRef={headingRef}
+              />
             </div>
+          )}
 
-            <div className="mt-8 border-t border-slate-200 pt-6">
-              <p className="text-sm text-slate-600">
-                Källa: <span className="font-medium">{item.source}</span>
+          {item && (
+            <>
+              <p className="mt-6 max-w-prose whitespace-pre-line wrap-anywhere text-base leading-relaxed text-slate-700">
+                {item.content}
               </p>
 
-              {sourceUrl && (
-                <a
-                  href={sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-flex min-h-12 items-center font-medium text-blue-900 underline underline-offset-4"
-                >
-                  Läs mer på källan (öppnas i ny flik)
-                </a>
-              )}
-            </div>
-          </>
-        )}
+              {mode === "offline" &&
+                (savedAt ? (
+                  <p className="mt-4 text-sm text-slate-600">
+                    <span className="font-medium">Sparad offline:</span>{" "}
+                    {new Date(savedAt).toLocaleString("sv-SE", {
+                      dateStyle: "long",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                ) : (
+                  <p className="mt-4 text-sm text-slate-600">Tidpunkt för sparande saknas</p>
+                ))}
+
+              <div className="mt-8">
+                <OfflineToggle key={`${mode}:${item.id}`} item={item} />
+              </div>
+
+              <div className="mt-8 border-t border-slate-200 pt-6">
+                <p className="text-sm text-slate-600">
+                  Källa: <span className="font-medium">{item.source}</span>
+                </p>
+
+                {sourceUrl && (
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex min-h-12 items-center font-medium text-blue-900 underline underline-offset-4"
+                  >
+                    Läs mer på källan (öppnas i ny flik)
+                  </a>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </article>
   )

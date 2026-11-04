@@ -73,6 +73,11 @@ async function expectCardReflow(panel: Locator, controls: Locator[]) {
   const bounds = await boxOf(panel)
   for (const control of controls) {
     const box = await boxOf(control)
+    const row = await control.locator("..").boundingBox()
+    expect(row, "the control's action row should be rendered").not.toBeNull()
+    if (box.x < row!.x - 1 || box.x + box.width > row!.x + row!.width + 1) {
+      issues.push(`control outside action row: ${JSON.stringify({ row, control: box })}`)
+    }
     if (
       box.x - 7 < bounds.x ||
       box.x + box.width + 7 > bounds.x + bounds.width ||
@@ -207,11 +212,21 @@ async function checkSaveAndRemove(
   expectUnchanged(before, await measurePanel(panel, controls))
 }
 
-async function openPage(page: Page, path: string, textPercent = 100) {
+async function openPage(page: Page, path: string, textPercent = 100, reservedScrollbar = false) {
   await page.goto(path)
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
   if (textPercent !== 100) {
     await page.addStyleTag({ content: `html { font-size: ${textPercent}% }` })
+  }
+  if (reservedScrollbar) {
+    // Reserve classic-scrollbar space even on macOS, whose native overlay uses no layout width.
+    // Hide the native scrollbar so Linux/Windows do not reserve the same space twice.
+    await page.addStyleTag({
+      content: "html { scrollbar-gutter: auto; scrollbar-width: none; padding-right: 15px }",
+    })
+    expect(
+      await page.evaluate(() => innerWidth - document.body.getBoundingClientRect().width)
+    ).toBe(15)
   }
   await page.waitForLoadState("networkidle")
   await page.evaluate(() => document.fonts.ready)
@@ -238,15 +253,24 @@ const scenarios = [
   ].map(([width, height]) => ({ width, height, textPercent: 100 })),
   ...[320, 375, 640, 768, 1024, 1440].map((width) => ({ width, height: 900, textPercent: 200 })),
 ]
+  .map((scenario) => ({ ...scenario, reservedScrollbar: false }))
+  .concat(
+    [320, 640].map((width) => ({
+      width,
+      height: 900,
+      textPercent: 200,
+      reservedScrollbar: true,
+    }))
+  )
 
-for (const { width, height, textPercent } of scenarios) {
-  test.describe(`offline feedback cards at ${width}px, ${textPercent}% text`, () => {
+for (const { width, height, textPercent, reservedScrollbar } of scenarios) {
+  test.describe(`offline feedback cards at ${width}px, ${textPercent}% text${reservedScrollbar ? ", reserved scrollbar" : ""}`, () => {
     test.use({ viewport: { width, height } })
 
     test("keeps all cards equally high with visible feedback and stable controls", async ({
       page,
     }) => {
-      await openPage(page, "/crisis", textPercent)
+      await openPage(page, "/crisis", textPercent, reservedScrollbar)
       const cards = articles.map((article) =>
         page.locator("div.group").filter({
           has: page.getByRole("heading", { level: 2, name: article.title, exact: true }),
@@ -268,18 +292,20 @@ for (const { width, height, textPercent } of scenarios) {
   })
 }
 
-for (const { width, textPercent } of [
+for (const { width, textPercent, reservedScrollbar } of [
   { width: 375, textPercent: 100 },
   { width: 1024, textPercent: 100 },
   { width: 320, textPercent: 200 },
   { width: 1024, textPercent: 200 },
-]) {
-  test.describe(`offline feedback detail at ${width}px, ${textPercent}% text`, () => {
+]
+  .map((scenario) => ({ ...scenario, reservedScrollbar: false }))
+  .concat({ width: 320, textPercent: 200, reservedScrollbar: true })) {
+  test.describe(`offline feedback detail at ${width}px, ${textPercent}% text${reservedScrollbar ? ", reserved scrollbar" : ""}`, () => {
     test.use({ viewport: { width, height: 900 } })
 
     test("keeps the standalone action and full confirmation stable", async ({ page }) => {
       const article = articles[1]
-      await openPage(page, `/crisis/${article.id}`, textPercent)
+      await openPage(page, `/crisis/${article.id}`, textPercent, reservedScrollbar)
       const panel = page.getByRole("article")
       await checkSaveAndRemove(
         panel,

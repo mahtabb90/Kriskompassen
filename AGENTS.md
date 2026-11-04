@@ -374,9 +374,12 @@ Frontend conventions visible in the existing code:
 - `CrisisInfoPage` uses `auto-rows-fr` so every article card in the list has the same height,
   including cards on different rows. Height adapts to the tallest card at the current viewport
   and text size without fixed pixel heights or clipping article text.
-  List-card horizontal padding is capped at the normal 24px/28px spacing and detail padding at
-  24px/32px using `min(rem, px)`, preserving room for enlarged button labels and focus outlines.
-  Normal-size layout and scalable vertical spacing stay unchanged.
+  List-card body padding is capped at the normal 24px/28px spacing using `min(rem, px)`.
+  List footers and detail content use a three-column grid: the middle track has a `min-content`
+  minimum, while both gutters can shrink from the normal 24px/28px (list) or 24px/32px (detail)
+  spacing to 8px. This fits whole enlarged button words even when classic scrollbars consume
+  viewport width, while preserving the full 3px/4px focus outline. Normal-size layout and scalable
+  vertical spacing stay unchanged.
 - `ShelterSaveToggle` places extra actions such as **Visa detaljer** before its right-hand
   save/remove button in both DOM and visual order. Equal-width controls share a wrapping flex
   row while their whole words fit, then stack instead of splitting words. A standalone toggle
@@ -570,7 +573,10 @@ Running E2E (from `frontend/`):
   breakpoint edges and 568×320, 667×375 and 844×390 landscape views. They also cover 200% text
   at 320, 375, 640, 768, 1024 and 1440px and detail controls at normal/enlarged text sizes.
   Confirmations, headings and descriptions stay unclipped; controls and their full focus outlines
-  stay within their cards with at least 48×48px targets. Four cards with different title/summary lengths
+  stay within their cards with at least 48×48px targets. Controls must also fit within their action
+  row. Three additional enlarged-text cases reserve 15px for a scrollbar independently of native
+  overlay-scrollbar settings, covering 320px list/detail and 640px list layouts without double
+  reservation on Linux/Windows. Four cards with different title/summary lengths
   cover multiple grid rows and must share one height. Card heights and control positions relative to the
   card remain stable within 1 CSS pixel. Geometry checks complement the component tests for the
   initially empty live region, hidden sizing copies, completed writes and visible errors.

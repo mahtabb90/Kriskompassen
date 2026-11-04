@@ -18,7 +18,8 @@ interface CrisisCardProps {
  * Reading comes before the right-hand save/remove action. Both controls reserve the longer
  * removal label so their equal dimensions and wrapping stay stable across saved-state changes.
  * Horizontal padding is capped at its default pixel size so enlarged text retains room for
- * whole button-label words and focus outlines in narrow cards.
+ * whole button-label words and focus outlines in narrow cards. The footer's grid gutters can
+ * shrink further to fit the controls' intrinsic width, retaining at least 8px for focus outlines.
  *
  * @param item The crisis information to display.
  * @param onToggle Called after the item is saved or removed offline, with the new saved state.
@@ -41,7 +42,7 @@ function CrisisCard({ item, onToggle }: CrisisCardProps) {
         </div>
         <p className="mt-3 text-base leading-relaxed text-slate-600">{item.description}</p>
       </Link>
-      <div className="px-[min(1.5rem,24px)] pb-3 sm:px-[min(1.75rem,28px)] sm:pb-4">
+      <div className="grid grid-cols-[minmax(8px,var(--card-padding))_minmax(min-content,1fr)_minmax(8px,var(--card-padding))] pb-3 [--card-padding:min(1.5rem,24px)] *:col-start-2 sm:pb-4 sm:[--card-padding:min(1.75rem,28px)]">
         <OfflineToggle
           item={item}
           onToggle={onToggle}

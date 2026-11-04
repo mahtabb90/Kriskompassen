@@ -222,8 +222,11 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
   and text size; retain full headings and summaries without fixed pixel heights or clipping.
 - **Enlarged text in article cards:** Cap horizontal padding at its default size: 24px below
   `sm`, 28px on list cards from `sm`, and 32px on article detail from `sm`. Use `min()` with the
-  corresponding rem spacing so normal-size layout stays unchanged while 200% text retains
-  room for whole button-label words and the 3px/4px focus outline. Vertical spacing keeps scaling.
+  corresponding rem spacing as the normal maximum. List footers and detail content use flexible
+  grid gutters around a `minmax(min-content, 1fr)` column. When enlarged whole button words
+  need more space, both gutters shrink to a minimum of 8px instead of letting the controls overflow
+  their row. This includes layouts narrowed by classic scrollbars and preserves the full 3px/4px
+  focus outline. Normal-size spacing stays unchanged; vertical spacing keeps scaling.
 
 ### 4.4 Stacking Layers
 
