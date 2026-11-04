@@ -34,6 +34,18 @@ function Page({ title }: { title: string }) {
   )
 }
 
+/** Simulates computed styles from 48rem: a sticky desktop navigation and a hidden mobile footer. */
+function mockDesktopStyles() {
+  const originalStyle = window.getComputedStyle.bind(window)
+  vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+    const style = originalStyle(element)
+    const label = element.getAttribute("aria-label")
+    if (label === "Huvudnavigation") style.setProperty("position", "sticky")
+    if (label === "Huvudmeny") style.setProperty("display", "none")
+    return style
+  })
+}
+
 function mountLayout() {
   return render(
     <StrictMode>
@@ -497,6 +509,39 @@ describe("AppLayout VMA integration", () => {
     )
     unmount()
     expect(document.documentElement.style.getPropertyValue("--sticky-navigation-height")).toBe("")
+  })
+
+  it("reveals keyboard focus below the VMA banner and the sticky desktop navigation", async () => {
+    mockDesktopStyles()
+    fetchMock.mockResolvedValue(Response.json(feed()))
+    mountLayout()
+    const notice = await screen.findByRole("complementary")
+    const slot = notice.parentElement!
+    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
+    vi.stubGlobal("innerHeight", 768)
+    vi.spyOn(slot, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 1024, 120))
+    vi.spyOn(navigation, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 120, 1024, 72))
+    const heading = screen.getByRole("heading", { name: "Hem" })
+    vi.spyOn(heading, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 150, 100, 40))
+    heading.focus()
+    // 150 - (navigation bottom 192 + 8): the heading moves out from under the navigation.
+    await waitFor(() =>
+      expect(window.scrollBy).toHaveBeenCalledWith({ top: -50, behavior: "instant" })
+    )
+  })
+
+  it("does not scroll when focus moves within the sticky desktop navigation", async () => {
+    mockDesktopStyles()
+    fetchMock.mockResolvedValue(Response.json(feed([])))
+    mountLayout()
+    await screen.findByRole("heading", { name: "Hem" })
+    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
+    vi.spyOn(navigation, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 1024, 72))
+    const link = within(navigation).getByRole("link", { name: "Krisinformation" })
+    vi.spyOn(link, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 12, 150, 48))
+    link.focus()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(window.scrollBy).not.toHaveBeenCalled()
   })
 
   it("reserves no sticky navigation height while the desktop navigation is not sticky", async () => {

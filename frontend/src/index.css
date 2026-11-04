@@ -10,7 +10,11 @@
 html {
   /* Reserve scrollbar space so routes of different heights keep the same content width. */
   scrollbar-gutter: stable;
-  scroll-padding-block: calc(var(--vma-banner-height, 0px) + var(--pwa-update-height, 0px) + 1rem)
+  /* The sticky desktop navigation's measured height is 0px below 48rem. */
+  scroll-padding-block: calc(
+      var(--vma-banner-height, 0px) + var(--sticky-navigation-height, 0px) +
+        var(--pwa-update-height, 0px) + 1rem
+    )
     calc(var(--navigation-height, 0px) + 1rem);
 }
 

@@ -22,7 +22,8 @@ import type { VmaMessage } from "../types/vma"
  * measured mobile menu bar, VMA and app-update heights reserve scroll space around focused
  * content, and the bar reserves none from 48rem upwards. From 48rem the desktop navigation's
  * measured height is published as `--sticky-navigation-height` while it is sticky (0 otherwise),
- * so the sticky app-update notice is placed below it. The shared `Footer` follows `main`
+ * so the sticky app-update notice, root scroll padding and focused content are placed below it;
+ * focus inside the pinned navigation itself never scrolls the page. The shared `Footer` follows `main`
  * and is followed by a spacer for the menu bar's reserve, so it ends visibly above the bar. VMA requests and the update
  * subscription belong to this persistent layout, not individual routes.
  * Resize notifications defer measurement to avoid resizing observed elements during delivery.
@@ -87,18 +88,22 @@ function AppLayout() {
       if (focused === main) return
 
       const stickyUpdate = getComputedStyle(updateNotice).position === "sticky"
+      const stickyNavigation = getComputedStyle(navigation).position === "sticky"
       if (
         !(focused instanceof HTMLElement) ||
         banner.contains(focused) ||
         (stickyUpdate && updateNotice.contains(focused)) ||
+        (stickyNavigation && navigation.contains(focused)) ||
         (!main.contains(focused) && !navigation.contains(focused))
       )
         return
 
       const bannerBottom = banner.getBoundingClientRect().bottom
+      // Before the navigation is pinned its bottom is below the header, still above main content.
+      const navigationBottom = stickyNavigation ? navigation.getBoundingClientRect().bottom : 0
       const updateBounds = updateNotice.getBoundingClientRect()
       const updateBottom = stickyUpdate && updateBounds.height > 0 ? updateBounds.bottom : 0
-      const visibleTop = Math.max(bannerBottom, updateBottom) + 8
+      const visibleTop = Math.max(bannerBottom, navigationBottom, updateBottom) + 8
       const visibleBottom = mobileFooterVisible()
         ? mobileFooter.getBoundingClientRect().top - 8
         : window.innerHeight - 8
