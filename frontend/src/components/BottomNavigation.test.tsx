@@ -30,6 +30,35 @@ describe("BottomNavigation", () => {
     expect(screen.getByRole("link", { name: "Krisinformation" })).toBeTruthy()
   })
 
+  it("sticks below the VMA banner on a solid surface from 48rem and stays hidden below it", () => {
+    mountNavigation()
+    const classes = [...screen.getByRole("navigation", { name: "Huvudnavigation" }).classList]
+    expect(classes).toEqual(
+      expect.arrayContaining([
+        "max-md:hidden",
+        "md:sticky",
+        "md:top-[var(--vma-banner-height,0px)]",
+        "md:z-20",
+        "bg-white",
+        "md:shadow-sm",
+        "border-b-slate-200",
+      ])
+    )
+    // Sticky placement must not apply below the breakpoint, where MobileMenu takes over.
+    expect(classes).not.toContain("sticky")
+  })
+
+  it("keeps marking the current route while sticky", () => {
+    mountNavigation("/skyddsrum")
+    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
+    expect(navigation.classList).toContain("md:sticky")
+    const current = screen.getAllByRole("link").filter((link) => link.hasAttribute("aria-current"))
+    expect(current).toHaveLength(1)
+    expect(current[0].textContent).toContain("Skyddsrum")
+    expect(current[0].className).toContain("bg-blue-900")
+    expect(current[0].className).toContain("underline")
+  })
+
   it("exposes only the current route with aria-current", () => {
     mountNavigation("/installningar")
     const current = screen.getAllByRole("link").filter((link) => link.hasAttribute("aria-current"))

@@ -50,6 +50,17 @@ describe("MobileFooter", () => {
     expect(trigger.getAttribute("aria-expanded")).toBe("true")
   })
 
+  it("stays fixed at the bottom below 48rem and never becomes a sticky top bar", () => {
+    mountFooter()
+    const classes = screen.getByRole("navigation", { name: "Huvudmeny" }).classList
+    expect([...classes]).toEqual(
+      expect.arrayContaining(["fixed", "inset-x-0", "bottom-0", "z-5", "md:hidden"])
+    )
+    expect([...classes].some((name) => name.includes("sticky") || name.includes("top-"))).toBe(
+      false
+    )
+  })
+
   it("requests opening when the button is selected", () => {
     const { onOpen } = mountFooter()
     fireEvent.click(screen.getByRole("button", { name: "Meny" }))
