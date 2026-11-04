@@ -52,9 +52,14 @@ function ShelterListItem({
   const detailsLink = (
     <Link
       to={`/skyddsrum/${shelter.id}`}
-      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-center font-semibold text-blue-900 hover:bg-blue-50"
+      className="inline-grid min-h-12 min-w-min items-center justify-items-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-center font-semibold wrap-normal text-blue-900 hover:bg-blue-50"
     >
-      Visa detaljer
+      {onToggleSave && (
+        <span className="invisible col-start-1 row-start-1 select-none" aria-hidden="true">
+          Ta bort sparat skyddsrum
+        </span>
+      )}
+      <span className="col-start-1 row-start-1">Visa detaljer</span>
     </Link>
   )
 

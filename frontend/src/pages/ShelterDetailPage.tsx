@@ -258,14 +258,21 @@ function ShelterDetailPage() {
                       onStatusChange={setMapStatus}
                     />
                   </Suspense>
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                  {/* Reserve the bookmark action's larger size so both save buttons match. */}
+                  <div className="mt-3 flex flex-col items-end gap-3">
                     <button
                       type="button"
                       onClick={handleSaveMapImage}
                       disabled={mapStatus !== "ready"}
-                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-center font-semibold text-blue-900 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-grid min-h-12 w-fit min-w-12 shrink-0 items-center justify-items-center rounded-xl border-2 border-blue-900 bg-blue-900 px-5 py-3 text-center font-semibold wrap-normal text-white hover:bg-blue-950 disabled:cursor-not-allowed disabled:opacity-50 max-sm:px-2"
                     >
-                      Spara kartbild
+                      <span
+                        className="invisible col-start-1 row-start-1 select-none"
+                        aria-hidden="true"
+                      >
+                        Ta bort sparat skyddsrum
+                      </span>
+                      <span className="col-start-1 row-start-1">Spara kartbild</span>
                     </button>
                     {savedRecord?.mapImage && (
                       <div role="status" className="text-sm font-medium text-green-800">

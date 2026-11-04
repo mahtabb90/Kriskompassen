@@ -113,7 +113,14 @@ function SettingsPage() {
                     : "Hämtad automatiskt – ungefärlig"}
                 </p>
               </div>
-              <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+              <div
+                className={
+                  "max-w-full shrink-0 gap-2 " +
+                  (address.isActive
+                    ? "flex flex-col items-end"
+                    : "grid w-max min-w-0 grid-cols-1 auto-rows-fr self-end max-sm:portrait:my-2 max-sm:portrait:gap-3 sm:self-auto")
+                }
+              >
                 {address.isActive ? (
                   <p className="flex min-h-12 items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-green-800">
                     <span aria-hidden="true">✓</span> Aktuell plats
@@ -122,7 +129,7 @@ function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => handleSetActive(address.id)}
-                    className="min-h-12 w-60 rounded-xl border-2 border-blue-900 bg-white px-4 py-2 text-center text-sm font-semibold text-blue-900 hover:bg-blue-50"
+                    className="min-h-12 w-full max-w-full rounded-xl border-2 border-blue-900 bg-white px-2 py-2 text-center text-sm font-semibold text-blue-900 hover:bg-blue-50"
                   >
                     Ange som aktuell plats
                   </button>
@@ -134,7 +141,10 @@ function SettingsPage() {
                     else removeButtonRefs.current.delete(address.id)
                   }}
                   onClick={(event) => setPendingRemoval({ address, trigger: event.currentTarget })}
-                  className="min-h-12 w-28 rounded-xl border-2 border-red-800 bg-white px-4 py-2 text-center text-sm font-semibold text-red-800 hover:bg-red-50"
+                  className={
+                    "min-h-12 max-w-full rounded-xl border-2 border-red-800 bg-white py-2 text-center text-sm font-semibold text-red-800 hover:bg-red-50 " +
+                    (address.isActive ? "w-28 px-4" : "w-full px-2")
+                  }
                 >
                   Ta bort
                   <span className="sr-only">

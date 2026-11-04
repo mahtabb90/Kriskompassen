@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { getByRole, getByText } from "@testing-library/dom"
+import type { Map as MapLibreMap, Popup } from "maplibre-gl"
 import type { Shelter } from "../types/shelter"
-import { buildPopupContent } from "./shelterMapPopup"
+import { buildPopupContent, observePopupLayout } from "./shelterMapPopup"
 
 // MapLibre itself needs a real WebGL canvas and can't run under jsdom, so the map component as
 // a whole (AllSheltersMap.tsx) is only exercised manually (see AGENTS.md's PR checklist) or,
@@ -30,6 +32,14 @@ function saveToggleButton(entry: Element): HTMLButtonElement {
   return button
 }
 
+function expectAction(entry: Element, name: string) {
+  expect(getByRole(entry as HTMLElement, "button", { name })).toBe(saveToggleButton(entry))
+}
+
+function expectStatus(entry: Element, text: string) {
+  expect(getByText(entry as HTMLElement, text, { ignore: '[aria-hidden="true"]' })).toBeTruthy()
+}
+
 describe("buildPopupContent", () => {
   it("shows the unsaved label and status for a shelter that isn't saved", () => {
     const shelter = makeShelter()
@@ -44,9 +54,11 @@ describe("buildPopupContent", () => {
     )
 
     const entry = content.children[0]
-    const button = saveToggleButton(entry)
-    expect(button.textContent).toBe("Spara skyddsrum")
-    expect(entry.textContent).toContain("Inte sparat")
+    expectAction(entry, "Spara skyddsrum")
+    expectStatus(entry, "Inte sparat")
+    expect(content.getAttribute("role")).toBe("region")
+    expect(content.getAttribute("aria-label")).toBe("Skyddsrum vid vald plats")
+    expect(content.tabIndex).toBe(0)
   })
 
   it("shows the saved label and status for a shelter that is already saved", () => {
@@ -62,9 +74,8 @@ describe("buildPopupContent", () => {
     )
 
     const entry = content.children[0]
-    const button = saveToggleButton(entry)
-    expect(button.textContent).toBe("Ta bort sparat skyddsrum")
-    expect(entry.textContent).toContain("Sparat skyddsrum")
+    expectAction(entry, "Ta bort sparat skyddsrum")
+    expectStatus(entry, "Sparat skyddsrum")
   })
 
   it("meets the 48x48px minimum touch target (DESIGN_SYSTEM.md §6.1)", () => {
@@ -109,8 +120,9 @@ describe("buildPopupContent", () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(button.textContent).toBe("Ta bort sparat skyddsrum")
-    expect(entry.textContent).toContain("Sparat skyddsrum")
+    expectAction(entry, "Ta bort sparat skyddsrum")
+    expectStatus(entry, "Sparat skyddsrum")
+    expect(saveToggleButton(entry)).toBe(button)
   })
 
   it("calls remove() with the shelter's id when clicked while saved, then flips to the unsaved label", async () => {
@@ -129,8 +141,9 @@ describe("buildPopupContent", () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(button.textContent).toBe("Spara skyddsrum")
-    expect(entry.textContent).toContain("Inte sparat")
+    expectAction(entry, "Spara skyddsrum")
+    expectStatus(entry, "Inte sparat")
+    expect(saveToggleButton(entry)).toBe(button)
   })
 
   it("gives every shelter in a multi-shelter popup its own independent save/remove control", async () => {
@@ -152,8 +165,8 @@ describe("buildPopupContent", () => {
 
     expect(content.children.length).toBe(2)
     const [savedEntry, unsavedEntry] = Array.from(content.children)
-    expect(saveToggleButton(savedEntry).textContent).toBe("Ta bort sparat skyddsrum")
-    expect(saveToggleButton(unsavedEntry).textContent).toBe("Spara skyddsrum")
+    expectAction(savedEntry, "Ta bort sparat skyddsrum")
+    expectAction(unsavedEntry, "Spara skyddsrum")
 
     // Toggling the first entry must not affect the second one's label or trigger its callback.
     saveToggleButton(savedEntry).click()
@@ -162,11 +175,11 @@ describe("buildPopupContent", () => {
 
     expect(remove).toHaveBeenCalledTimes(1)
     expect(remove).toHaveBeenCalledWith(savedShelter.id)
-    expect(saveToggleButton(savedEntry).textContent).toBe("Spara skyddsrum")
-    expect(saveToggleButton(unsavedEntry).textContent).toBe("Spara skyddsrum")
+    expectAction(savedEntry, "Spara skyddsrum")
+    expectAction(unsavedEntry, "Spara skyddsrum")
   })
 
-  it("still renders a working 'Visa detaljer' link alongside the save/remove button", () => {
+  it.each([false, true])("keeps a working detail link before the toggle when saved=%s", (saved) => {
     const onNavigate = vi.fn()
     const shelter = makeShelter()
     const content = buildPopupContent(
@@ -174,7 +187,7 @@ describe("buildPopupContent", () => {
       null,
       new Map(),
       onNavigate,
-      () => false,
+      () => saved,
       vi.fn(),
       vi.fn()
     )
@@ -183,8 +196,145 @@ describe("buildPopupContent", () => {
     const link = entry.querySelector("a")
     expect(link).not.toBeNull()
     expect(link?.getAttribute("href")).toBe(`/skyddsrum/${shelter.id}`)
+    expect(
+      link!.compareDocumentPosition(saveToggleButton(entry)) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
 
     link?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
     expect(onNavigate).toHaveBeenCalledWith(`/skyddsrum/${shelter.id}`)
+  })
+})
+
+describe("observePopupLayout", () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  function setup() {
+    const geometry = { width: 320, height: 400, contentHeight: 600 }
+    const mapElement = document.createElement("div")
+    const popupElement = document.createElement("div")
+    const content = document.createElement("div")
+    content.appendChild(document.createElement("div"))
+    popupElement.appendChild(content)
+    let open = true
+    let resize = () => {}
+    let move = () => {}
+    let close = () => {}
+    const observe = vi.fn()
+    const disconnect = vi.fn()
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: () => void) {
+          resize = callback
+        }
+        observe = observe
+        disconnect = disconnect
+      }
+    )
+
+    Object.defineProperties(mapElement, {
+      clientWidth: { get: () => geometry.width },
+      clientHeight: { get: () => geometry.height },
+    })
+    Object.defineProperty(content, "offsetHeight", {
+      get: () => Math.min(geometry.contentHeight, parseFloat(content.style.maxHeight) || Infinity),
+    })
+    Object.defineProperty(popupElement, "offsetHeight", {
+      get: () => content.offsetHeight + 30,
+    })
+    mapElement.getBoundingClientRect = () => new DOMRect(20, 40, geometry.width, geometry.height)
+    popupElement.getBoundingClientRect = () => {
+      const [x = 0, y = 0] = popupElement.style.translate
+        .split(" ")
+        .map((value) => parseFloat(value))
+      return new DOMRect(
+        -50 + (x || 0),
+        -250 + (y || 0),
+        Math.min(280, geometry.width - 32),
+        popupElement.offsetHeight
+      )
+    }
+    const map = {
+      getContainer: () => mapElement,
+      resize: vi.fn(),
+      on: vi.fn((_event: string, callback: () => void) => {
+        move = callback
+      }),
+      off: vi.fn(),
+    }
+    let maxWidth = "240px"
+    const popup = {
+      getElement: () => popupElement,
+      getMaxWidth: () => maxWidth,
+      setMaxWidth: vi.fn((value: string) => {
+        maxWidth = value
+      }),
+      isOpen: () => open,
+      getLngLat: () => ({ lng: 18.07, lat: 59.33 }),
+      setLngLat: vi.fn(),
+      once: vi.fn((_event: string, callback: () => void) => {
+        close = callback
+      }),
+    }
+    observePopupLayout(map as unknown as MapLibreMap, popup as unknown as Popup, content)
+    return {
+      geometry,
+      map,
+      popup,
+      content,
+      mapElement,
+      popupElement,
+      observe,
+      disconnect,
+      resize: () => resize(),
+      move: () => move(),
+      close: () => {
+        open = false
+        close()
+      },
+    }
+  }
+
+  it("caps long content and keeps the popup inside the map without panning it", () => {
+    const { content, popupElement, mapElement, map, popup } = setup()
+    const bounds = popupElement.getBoundingClientRect()
+    const mapBounds = mapElement.getBoundingClientRect()
+
+    expect(content.style.maxHeight).toBe("338px")
+    expect(popup.setMaxWidth).toHaveBeenCalledWith("min(24rem, 288px)")
+    expect(bounds.left).toBeGreaterThanOrEqual(mapBounds.left + 16)
+    expect(bounds.top).toBeGreaterThanOrEqual(mapBounds.top + 16)
+    expect(bounds.right).toBeLessThanOrEqual(mapBounds.right - 16)
+    expect(bounds.bottom).toBeLessThanOrEqual(mapBounds.bottom - 16)
+    expect(map.resize).not.toHaveBeenCalled()
+  })
+
+  it("recalculates after content or map resizing and map movement", () => {
+    const test = setup()
+    test.geometry.width = 220
+    test.geometry.height = 500
+    test.geometry.contentHeight = 1200
+    test.resize()
+    test.move()
+
+    expect(test.content.style.maxHeight).toBe("438px")
+    expect(test.popup.setMaxWidth).toHaveBeenLastCalledWith("min(24rem, 188px)")
+    expect(test.observe).toHaveBeenCalledWith(test.content.firstElementChild)
+    expect(test.map.resize).toHaveBeenCalledOnce()
+    const bounds = test.popupElement.getBoundingClientRect()
+    expect(bounds.top).toBeGreaterThanOrEqual(56)
+    expect(bounds.bottom).toBeLessThanOrEqual(524)
+    expect(bounds.right).toBeLessThanOrEqual(224)
+  })
+
+  it("disconnects on close and ignores a late observer callback", () => {
+    const test = setup()
+    const callback = test.map.on.mock.calls[0][1]
+    test.close()
+    test.resize()
+
+    expect(test.disconnect).toHaveBeenCalledOnce()
+    expect(test.map.off).toHaveBeenCalledWith("move", callback)
+    expect(test.map.resize).not.toHaveBeenCalled()
   })
 })

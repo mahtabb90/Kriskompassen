@@ -112,7 +112,12 @@ describe("SettingsPage", () => {
 
     expect(await screen.findByText("Hemgatan 1")).toBeTruthy()
     expect(screen.getByText("Jobbgatan 2")).toBeTruthy()
-    expect(screen.getByText("Aktuell plats")).toBeTruthy()
+    const activeStatus = screen.getByText("Aktuell plats")
+    const remove = screen.getByRole("button", { name: /Ta bort.*Hemgatan 1/ })
+    expect(activeStatus.parentElement).toBe(remove.parentElement)
+    expect(
+      activeStatus.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
     expect(screen.getByRole("button", { name: "Ange som aktuell plats" })).toBeTruthy()
   })
 

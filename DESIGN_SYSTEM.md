@@ -209,6 +209,7 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
   When the mobile menu bar is fixed at the bottom of the viewport (below `48rem`), the root element tracks its measured height as `--navigation-height` via `ResizeObserver`. The shared page footer (section 6.8), the last element in the layout, is followed by an `aria-hidden` spacer of that height:
   `h-[var(--navigation-height,0px)]`
   This reserves sufficient scroll space so no content is obscured behind the bar, including its safe-area padding and enlarged text. It is `0px` from `48rem` upwards, where the bar is hidden. `main` itself uses a plain `pb-8`.
+  From `48rem`, the layout also tracks the sticky desktop navigation's measured height as `--sticky-navigation-height` (`0px` while it is not sticky, so always below `48rem`). The root scroll padding, the sticky app-update slot and the focused-content check add it below the VMA height, so anchors, route headings and focused controls are revealed below the pinned bar. Focus within the bar itself never scrolls the page.
 
 ### 4.3 Responsive Content Grids
 
@@ -217,6 +218,19 @@ KrisKompassen uses an 8pt / 4px base spacing grid consistent with Tailwind CSS c
   - Tablet & Desktop (>= 640px): 2 equal columns (`grid gap-6 sm:grid-cols-2`).
 - **Cards Equal Height:**
   Cards in the grid use `h-full flex flex-col` so that neighbouring cards match heights gracefully regardless of summary length.
+
+### 4.4 Stacking Layers
+
+| Layer | z-index | Element |
+| --- | --- | --- |
+| Top layer | — | Native modal dialogs (Meny, VMA message, confirmations) |
+| Skip link | 50 | Focused "Hoppa till huvudinnehållet" |
+| VMA notice | 30 | Sticky at the viewport top |
+| Desktop navigation | 20 | Sticky below the VMA notice from `48rem` |
+| App update | 10 | Sticky below the navigation at heights ≥ `40rem` |
+| Mobile footer | 5 | Fixed at the bottom below `48rem` |
+
+Page content uses no z-index. Local overlays (map hints, popovers) stay within their own stacking context or below 20.
 
 ---
 
@@ -554,6 +568,44 @@ the header and in the mobile menu footer).
   visible box and neighbouring controls.
 - **Focus:** The universal focus outline (section 8.1) surrounds the visible box.
 
+#### 6.2.4 Destructive / Outlined Button
+
+Used for removal actions such as deleting a saved address, a custom crisis-kit item or a saved
+shelter. Reuses the existing red outlined treatment; the visible label explains what is removed.
+
+- **Colours:** `border-2 border-red-800 bg-white text-red-800 hover:bg-red-50`.
+- **Shelter controls:** Keep `min-h-12 min-w-12`, `rounded-xl`, `px-5 py-3` and the universal
+  focus outline. **Visa detaljer** precedes the save/remove button in both DOM and visual order,
+  occupying the left side of a wrapping flex row. Both controls reserve the same label and have
+  equal widths. **Spara skyddsrum** remains blue and **Ta bort sparat skyddsrum** uses the red
+  outlined style, on the right while the row fits.
+- **Stable saved/unsaved size:** Both the status and action reserve the longer saved-state
+  label in an invisible, `aria-hidden` span sharing the visible label's grid cell. This keeps
+  the larger dimensions in both states while adapting to width and enlarged text. The sizing
+  text is excluded from accessible names. Map popup controls use the same pattern.
+- **Narrow cards / enlarged text:** Use `wrap-normal` for control labels and preserve each
+  whole word's intrinsic minimum width. The paired actions use `*:min-w-min *:flex-1 *:px-2`
+  and stack when two buttons cannot fit. Standalone save actions use `max-sm:px-2` in narrow
+  viewports. Verify that words, targets and focus outlines fit within the card at 320px and
+  with enlarged text; do not force word splitting to retain a two-column action row.
+- **Standalone controls:** Right-align the save/remove button on the shelter detail page and
+  in map popups as well. The status line and any saved-map removal warning keep their reading order.
+  **Spara kartbild** uses the same blue primary treatment and sizing label as **Spara skyddsrum**,
+  stays on the right, and places its confirmation below so the button does not shift left.
+- **Saved addresses:** The current-place status and removal button share a right edge at every
+  breakpoint. Action buttons are capped at the card's available width, including with enlarged text.
+  For an inactive address, **Ange som aktuell plats** and **Ta bort** fill the same `w-max`
+  column with `auto-rows-fr` and `px-2` horizontal padding. Both buttons have equal width and
+  height even when labels wrap, with their width determined by the longer label.
+  The active address retains its compact standalone removal button.
+  Below `sm` in portrait orientation, the paired controls add `my-2` and use `gap-3`.
+  Landscape and wider layouts keep their existing margins and `gap-2` spacing.
+- **Map popups:** Constrain the popup to the map with a 16px inset, retaining room for focus
+  outlines and rounded map edges. Content is a labelled, keyboard-focusable scroll region with
+  `p-2` inside the popup's own padding. Maximum height accounts for the popup's padding and tip;
+  width is capped at 24rem and the available map width. Resize and movement updates keep the
+  popup visible without panning the camera; closing it releases its observers and listener.
+
 ### 6.3 Text and Content Links
 
 - **Standalone Text Links:**
@@ -723,7 +775,7 @@ Both decide the current page with `isNavigationItemActive()`. An item matches it
 - **Mobile Viewports (`width < 48rem`, any height):**
   The in-flow navigation is hidden. `MobileFooter` is a fixed, full-width `<nav aria-label="Huvudmeny">` at the bottom of the viewport (`fixed inset-x-0 bottom-0 z-5`) with a continuous yellow surface (`bg-amber-300`) and a 2px blue top border (`border-t-2 border-blue-900`). Its single native **Meny** button fills the width, including the safe-area padding described in section 4.2, without a separate rounded frame. The button centres a decorative 24×24px hamburger SVG (`aria-hidden`, `focusable="false"`) and the visible text "Meny" with a 12px gap (`gap-3`), normal-weight 16px text and a dark blue foreground (`text-blue-900`). It uses at least 48×48px targets, 12px top padding, `hover:bg-amber-200` and `active:bg-amber-400`. The whole button surface opens the menu. The field stays fixed while scrolling and in landscape; its measured height continues to reserve content space.
 - **Desktop & Wide Viewports (`width >= 48rem`):**
-  `BottomNavigation` renders in standard document flow directly beneath the header, with a 2px top border in the page canvas colour (`border-t-2 border-t-[#D7E2EF]`) and a 1px bottom border (`border-b border-b-slate-200`). Links wrap onto further rows; there is no horizontal scrolling. The Meny button and dialog are not shown.
+  `BottomNavigation` sits directly beneath the header, with a 2px top border in the page canvas colour (`border-t-2 border-t-[#D7E2EF]`) and a 1px bottom border (`border-b border-b-slate-200`). It is sticky (`md:sticky md:top-[var(--vma-banner-height,0px)] md:z-20`): the header scrolls away while the bar stays pinned directly below the VMA notice, or at the viewport top when no notice is shown. Its solid white surface keeps content from showing through, and a subtle `shadow-sm` separates it from content scrolling beneath. The shadow is always shown from `48rem`, because CSS cannot detect when the bar is pinned. The current link keeps its non-colour cue while pinned. Links wrap onto further rows; there is no horizontal scrolling. The Meny button and dialog are not shown.
 
 ### 7.2 Mobile Menu Dialog
 
@@ -812,7 +864,8 @@ KrisKompassen performs offline storage operations and network calls that must be
   `rounded-2xl`, `shadow-sm`, blue heading and primary button. It is informational; it does not
   use the active VMA warning surface or icon.
 - The notice appears before routed content. At heights of at least `40rem`, its layout slot is
-  sticky below the measured VMA height with z-index 10 (VMA 30, mobile footer 5). The visible region
+  sticky below the measured VMA and sticky desktop navigation heights with z-index 10 (VMA 30,
+  desktop navigation 20, mobile footer 5). The visible region
   is limited to `25dvh` and scrolls internally. Lower viewports use unrestricted normal flow.
 - The layout includes the measured slot height in `--pwa-update-height` and root scroll padding.
   Focused page controls are revealed below both notices; update controls in normal flow receive

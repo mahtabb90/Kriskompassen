@@ -429,7 +429,8 @@ describe("CrisisKitPage expiration summary", () => {
     await waitFor(() => {
       expect(within(reviewSection).getByText("4", { selector: "span" })).toBeTruthy()
     })
-    expect(within(reviewSection).getByText(/saker att se över/)).toBeTruthy()
+    expect(within(reviewSection).getByText("4", { selector: "span" })).toBeTruthy()
+    expect(within(reviewSection).getByText("saker att se över")).toBeTruthy()
     expect(screen.getAllByText("2", { selector: "p.text-3xl" })).toHaveLength(2)
     expect(screen.getByText("utgångna varor")).toBeTruthy()
     expect(screen.getByText("varor går snart ut")).toBeTruthy()
@@ -442,6 +443,48 @@ describe("CrisisKitPage expiration summary", () => {
         name: "Utgången (2)",
       })
     ).toBeTruthy()
+  })
+
+  it("uses singular wording when only one item needs review", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      {
+        ...recommendedFoodItem,
+        id: "expired-1",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(-5),
+      },
+    ])
+
+    mountPage()
+
+    const reviewSection = await screen.findByRole("region", {
+      name: "Utgångsdatum att se över",
+    })
+
+    expect(within(reviewSection).getByText("1", { selector: "span" })).toBeTruthy()
+    expect(within(reviewSection).getByText("sak att se över")).toBeTruthy()
+    expect(screen.getByText("utgången vara")).toBeTruthy()
+  })
+
+  it("uses singular wording when only one item is expiring soon", async () => {
+    vi.mocked(getCrisisKitItems).mockResolvedValue([
+      {
+        ...recommendedFoodItem,
+        id: "soon-1",
+        isOwned: true,
+        expirationDate: dateOffsetFromToday(15),
+      },
+    ])
+
+    mountPage()
+
+    const reviewSection = await screen.findByRole("region", {
+      name: "Utgångsdatum att se över",
+    })
+
+    expect(within(reviewSection).getByText("1", { selector: "span" })).toBeTruthy()
+    expect(within(reviewSection).getByText("sak att se över")).toBeTruthy()
+    expect(screen.getByText("vara går snart ut")).toBeTruthy()
   })
 
   it("shows expired and soon-to-expire items in separate groups when expanded", async () => {
