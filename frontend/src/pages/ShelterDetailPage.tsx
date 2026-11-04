@@ -4,7 +4,10 @@ import type { StoredMapView } from "../components/AllSheltersMap"
 import SavedShelterMapImage from "../components/SavedShelterMapImage"
 import ShelterDistance from "../components/ShelterDistance"
 import ShelterGeneralInfo from "../components/ShelterGeneralInfo"
-import type { ShelterLocationMapHandle } from "../components/ShelterLocationMap"
+import type {
+  ShelterLocationMapHandle,
+  ShelterLocationMapStatus,
+} from "../components/ShelterLocationMap"
 import ShelterSaveToggle from "../components/ShelterSaveToggle"
 import { useAddresses } from "../context/addressContext"
 import { useMode } from "../context/modeContext"
@@ -43,7 +46,11 @@ function Field({ label, children }: FieldProps) {
  * online and offline alike. Redirects to the shelter list if the id was never cached, matching
  * DetailedCrisisCard's not-found pattern. Fields missing from the source data are omitted rather
  * than shown empty. The map itself is online-only (see ShelterLocationMap.tsx) - offline, this
- * page falls back to the "Plats" field above it instead of attempting a broken/blank map.
+ * page falls back to the "Plats" field above it instead of attempting a broken/blank map. That
+ * "online" check is just `navigator.onLine`, though, which says nothing about whether the tile
+ * host specifically is reachable - mapStatus (from ShelterLocationMap's onStatusChange) covers
+ * that gap by keeping "Spara kartbild" disabled, and showing an error, until the map has actually
+ * finished loading rather than merely being allowed to try.
  *
  * Arriving from AllSheltersMap.tsx's popup carries the map's camera as navigation state
  * (mapView) - when present, the back link returns to "Kartan" with that exact view instead of
@@ -104,10 +111,15 @@ function ShelterDetailPage() {
   // approach) - avoids a lingering "Kommentar sparad." from the previous shelter's page.
   const [confirmationForId, setConfirmationForId] = useState(id)
   const [mapImageConfirmation, setMapImageConfirmation] = useState("")
+  // Starts "loading", not "ready" - ShelterLocationMap only reports "ready" once its map has
+  // actually finished loading (see ShelterLocationMapStatus), so "Spara kartbild" stays disabled
+  // until there's a real map to capture, rather than defaulting to enabled.
+  const [mapStatus, setMapStatus] = useState<ShelterLocationMapStatus>("loading")
   if (id !== confirmationForId) {
     setConfirmationForId(id)
     setCommentConfirmation("")
     setMapImageConfirmation("")
+    setMapStatus("loading")
   }
   const handleToggleSave = useCallback(() => {
     if (!shelter) return
@@ -239,13 +251,19 @@ function ShelterDetailPage() {
                       </p>
                     }
                   >
-                    <ShelterLocationMap ref={mapHandleRef} shelter={shelter} origin={origin} />
+                    <ShelterLocationMap
+                      ref={mapHandleRef}
+                      shelter={shelter}
+                      origin={origin}
+                      onStatusChange={setMapStatus}
+                    />
                   </Suspense>
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <button
                       type="button"
                       onClick={handleSaveMapImage}
-                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-center font-semibold text-blue-900 hover:bg-blue-50"
+                      disabled={mapStatus !== "ready"}
+                      className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-blue-900 bg-white px-5 py-3 text-center font-semibold text-blue-900 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Spara kartbild
                     </button>
@@ -255,6 +273,11 @@ function ShelterDetailPage() {
                       </div>
                     )}
                   </div>
+                  {mapStatus === "error" && (
+                    <p role="alert" className="mt-2 text-sm font-medium text-red-800">
+                      Kartan kunde inte laddas. Kartbilden går inte att spara just nu.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <p className="mt-3 text-slate-600">

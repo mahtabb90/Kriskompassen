@@ -21,20 +21,38 @@ export const SHELTER_SIGN = `
   <path d="M12 7 L17 16 H7 Z" fill="#1E3A8A" />
 `
 
+/** Rendered marker sizes in CSS pixels - matches each &lt;svg&gt; element's width/height below, and
+ * is reused by ShelterLocationMap's captureImage() to scale the rasterized marker it draws onto
+ * the saved snapshot to the same on-screen size. */
+export const SHELTER_MARKER_SIZE = 32
+export const ORIGIN_MARKER_SIZE = 24
+
+/** Raw markup for the two marker elements below - also handed to mapSnapshot.ts's loadSvgImage()
+ * so captureImage() can rasterize the same marker onto the saved snapshot. See that function's
+ * doc comment for why the live DOM markers can't just be captured directly. */
+export const SHELTER_MARKER_SVG = `
+    <svg aria-hidden="true" focusable="false" width="${SHELTER_MARKER_SIZE}" height="${SHELTER_MARKER_SIZE}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      ${SHELTER_SIGN}
+    </svg>
+  `.trim()
+
+export const ORIGIN_MARKER_SVG = `
+    <svg aria-hidden="true" focusable="false" width="${ORIGIN_MARKER_SIZE}" height="${ORIGIN_MARKER_SIZE}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" fill="#1E3A8A" fill-opacity="0.25" />
+      <circle cx="12" cy="12" r="6" fill="#1E3A8A" stroke="white" stroke-width="2" />
+    </svg>
+  `.trim()
+
 function elementFromSvg(svg: string): HTMLDivElement {
   const wrapper = document.createElement("div")
-  wrapper.innerHTML = svg.trim()
+  wrapper.innerHTML = svg
   return wrapper
 }
 
 /** Builds the plain shelter marker element shown on ShelterLocationMap - always alone, so no
  * selection ring or nearest badge variant is needed here. */
 export function shelterMarkerElement(): HTMLDivElement {
-  return elementFromSvg(`
-    <svg aria-hidden="true" focusable="false" width="32" height="32" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      ${SHELTER_SIGN}
-    </svg>
-  `)
+  return elementFromSvg(SHELTER_MARKER_SVG)
 }
 
 /**
@@ -42,10 +60,5 @@ export function shelterMarkerElement(): HTMLDivElement {
  * the shelter sign so the two are never confused at a glance.
  */
 export function originMarkerElement(): HTMLDivElement {
-  return elementFromSvg(`
-    <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" fill="#1E3A8A" fill-opacity="0.25" />
-      <circle cx="12" cy="12" r="6" fill="#1E3A8A" stroke="white" stroke-width="2" />
-    </svg>
-  `)
+  return elementFromSvg(ORIGIN_MARKER_SVG)
 }
