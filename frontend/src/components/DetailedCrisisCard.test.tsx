@@ -142,3 +142,24 @@ describe("DetailedCrisisCard asynchronous content", () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 })
+
+describe("DetailedCrisisCard offline action", () => {
+  it("switches to the red outlined removal variant after saving", async () => {
+    const item = crisisItems[0]
+    mountDetail()
+    const button = await screen.findByRole("button", { name: `Spara offline: ${item.title}` })
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false))
+    expect(button.classList).toContain("bg-blue-900")
+
+    fireEvent.click(button)
+
+    expect(await screen.findByRole("button", { name: `Ta bort offlinekopia: ${item.title}` })).toBe(
+      button
+    )
+    expect(saveOffline).toHaveBeenCalledWith(expect.objectContaining({ id: item.id }))
+    for (const token of ["border-red-800", "bg-white", "text-red-800"]) {
+      expect(button.classList).toContain(token)
+    }
+    expect(button.classList).not.toContain("bg-blue-900")
+  })
+})

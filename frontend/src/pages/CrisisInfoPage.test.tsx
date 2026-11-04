@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import DetailedCrisisCard from "../components/DetailedCrisisCard"
@@ -11,6 +11,7 @@ import {
   getOfflineItem,
   getOfflineItems,
   isSavedOffline,
+  removeOffline,
   saveOffline,
 } from "../services/offlineService"
 import CrisisInfoPage from "./CrisisInfoPage"
@@ -125,7 +126,7 @@ describe("CrisisInfoPage card icons", () => {
     vi.mocked(isSavedOffline).mockResolvedValue(true)
     mountPage("/crisis")
     fireEvent.click(savedSwitch())
-    await screen.findAllByText("Sparad offline")
+    await screen.findAllByText("Sparad offline", { selector: ":not([aria-hidden='true'])" })
 
     const first = crisisItems[0]
     const heading = screen.getByRole("heading", { name: first.title, level: 2 })
@@ -139,6 +140,159 @@ describe("CrisisInfoPage card icons", () => {
   })
 })
 
+describe("CrisisInfoPage offline action styles", () => {
+  const visibleConfirmation = "[role=status] > [aria-hidden='true']"
+  const spokenConfirmation = "[role=status] > .sr-only"
+
+  it.each([false, true])(
+    "places reading before the right-hand offline action when saved is %s",
+    async (saved) => {
+      vi.mocked(isSavedOffline).mockResolvedValue(saved)
+      mountPage("/crisis")
+      const item = crisisItems[0]
+      const button = await screen.findByRole("button", {
+        name: `${saved ? "Ta bort offlinekopia" : "Spara offline"}: ${item.title}`,
+      })
+      await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false))
+      const readMore = screen.getByRole("link", { name: `Läs mer om ${item.title}` })
+      expect(readMore.parentElement).toBe(button.parentElement)
+      expect(Array.from(button.parentElement?.children ?? [])).toEqual([readMore, button])
+    }
+  )
+
+  it("uses the destructive variant for removal and keeps saving and reading blue", async () => {
+    mountPage("/crisis")
+    const item = crisisItems[0]
+    const button = await screen.findByRole("button", { name: `Spara offline: ${item.title}` })
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false))
+    const initialStatus = within(button.parentElement!.parentElement!).getByRole("status")
+    expect(initialStatus.textContent).toBe("")
+    expect(button.classList).toContain("border-blue-900")
+    expect(button.classList).toContain("bg-blue-900")
+
+    fireEvent.click(button)
+
+    await screen.findByRole("button", { name: `Ta bort offlinekopia: ${item.title}` })
+    expect(
+      screen.getByText("Sparad offline", { selector: ":not([aria-hidden='true'])" })
+    ).toBeTruthy()
+    const savedMessage = `"${item.title}" har sparats för offlineåtkomst.`
+    const confirmation = (await screen.findByText(savedMessage, { selector: spokenConfirmation }))
+      .parentElement!
+    expect(confirmation).toBe(initialStatus)
+    expect(screen.getByText(savedMessage, { selector: visibleConfirmation }).parentElement).toBe(
+      confirmation
+    )
+    expect(confirmation.classList).not.toContain("sr-only")
+    expect(confirmation.parentElement?.classList).toContain("text-green-800")
+    expect(confirmation.closest("[aria-hidden='true']")).toBeNull()
+    for (const token of ["border-red-800", "bg-white", "text-red-800", "hover:bg-red-50"]) {
+      expect(button.classList).toContain(token)
+    }
+    expect(button.classList).not.toContain("border-blue-900")
+    expect(button.classList).not.toContain("text-blue-900")
+    const readMore = screen.getByRole("link", { name: `Läs mer om ${item.title}` })
+    expect(readMore.classList).toContain("border-blue-900")
+    expect(readMore.classList).toContain("text-blue-900")
+
+    fireEvent.click(button)
+
+    await screen.findByRole("button", { name: `Spara offline: ${item.title}` })
+    const removedMessage = `"${item.title}" har tagits bort från offlinelagringen.`
+    for (const selector of [spokenConfirmation, visibleConfirmation]) {
+      expect(screen.getByText(removedMessage, { selector }).parentElement).toBe(confirmation)
+    }
+    expect(confirmation.classList).not.toContain("sr-only")
+    expect(removeOffline).toHaveBeenCalledWith(item.id)
+    expect(button.classList).toContain("border-blue-900")
+    expect(button.classList).toContain("bg-blue-900")
+    expect(button.classList).not.toContain("border-red-800")
+    expect(button.classList).not.toContain("text-red-800")
+  })
+
+  it("keeps only sizing copies hidden and waits for storage before confirming success", async () => {
+    let finishSave!: () => void
+    mountPage("/crisis")
+    const item = crisisItems[0]
+    const button = await screen.findByRole("button", { name: `Spara offline: ${item.title}` })
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false))
+    const status = within(button.parentElement!.parentElement!).getByRole("status")
+    const sizingCopies = status.parentElement!.querySelectorAll(":scope > [aria-hidden='true']")
+    expect(Array.from(sizingCopies, (node) => node.textContent)).toEqual([
+      `"${item.title}" har sparats för offlineåtkomst.`,
+      `"${item.title}" har tagits bort från offlinelagringen.`,
+    ])
+    for (const copy of sizingCopies) expect(copy.classList).toContain("invisible")
+    expect(status.textContent).toBe("")
+
+    vi.mocked(saveOffline).mockImplementationOnce(
+      () => new Promise<void>((resolve) => (finishSave = resolve))
+    )
+    fireEvent.click(button)
+
+    expect(button.hasAttribute("disabled")).toBe(true)
+    expect(status.textContent).toBe("")
+    await act(async () => finishSave())
+    for (const selector of [":scope > [aria-hidden='true']", ":scope > .sr-only"]) {
+      expect(status.querySelector(selector)?.textContent).toBe(
+        `"${item.title}" har sparats för offlineåtkomst.`
+      )
+    }
+    expect(status.classList).not.toContain("sr-only")
+  })
+
+  it("keeps storage failures visible without announcing success", async () => {
+    vi.mocked(saveOffline).mockRejectedValueOnce(new Error("Storage unavailable"))
+    mountPage("/crisis")
+    const item = crisisItems[0]
+    const button = await screen.findByRole("button", { name: `Spara offline: ${item.title}` })
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false))
+    const control = button.parentElement!.parentElement!
+
+    fireEvent.click(button)
+
+    const alert = within(control).getByRole("alert")
+    await waitFor(() => expect(alert.textContent).toContain("Det gick inte att spara"))
+    expect(alert.classList).not.toContain("sr-only")
+    expect(alert.closest("[aria-hidden='true']")).toBeNull()
+    expect(within(control).getByRole("status").textContent).toBe("")
+    expect(screen.getByRole("button", { name: `Spara offline: ${item.title}` })).toBe(button)
+  })
+
+  it("shortens only the visible confirmation name and announces the full title", async () => {
+    const title = "Toalett och hygien"
+    vi.mocked(fetch).mockResolvedValue(Response.json([{ ...crisisItems[0], title }]))
+    mountPage("/crisis")
+    const button = await screen.findByRole("button", { name: `Spara offline: ${title}` })
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false))
+
+    fireEvent.click(button)
+
+    const spokenSaved = await screen.findByText(`"${title}" har sparats för offlineåtkomst.`, {
+      selector: spokenConfirmation,
+    })
+    expect(
+      screen.getByText('"Toalett…" har sparats för offlineåtkomst.', {
+        selector: visibleConfirmation,
+      }).parentElement
+    ).toBe(spokenSaved.parentElement)
+    expect(screen.getByRole("heading", { level: 2, name: title })).toBeTruthy()
+    expect(screen.getByRole("link", { name: `Läs mer om ${title}` })).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: `Ta bort offlinekopia: ${title}` }))
+    expect(
+      await screen.findByText(`"${title}" har tagits bort från offlinelagringen.`, {
+        selector: spokenConfirmation,
+      })
+    ).toBeTruthy()
+    expect(
+      screen.getByText('"Toalett…" har tagits bort från offlinelagringen.', {
+        selector: visibleConfirmation,
+      })
+    ).toBeTruthy()
+    expect(screen.getByRole("button", { name: `Spara offline: ${title}` })).toBe(button)
+  })
+})
+
 describe("CrisisInfoPage focus after removing an offline item", () => {
   async function openOfflineList(count: number) {
     const saved = crisisItems.slice(0, count)
@@ -146,7 +300,7 @@ describe("CrisisInfoPage focus after removing an offline item", () => {
     vi.mocked(isSavedOffline).mockResolvedValue(true)
     mountPage("/crisis")
     fireEvent.click(savedSwitch())
-    await screen.findAllByText("Sparad offline")
+    await screen.findAllByText("Sparad offline", { selector: ":not([aria-hidden='true'])" })
     return saved
   }
 
@@ -215,7 +369,7 @@ describe("CrisisInfoPage Läs mer links", () => {
     for (const item of crisisItems) {
       const link = screen.getByRole("link", { name: `Läs mer om ${item.title}` })
       expect(link.getAttribute("href")).toBe(`/crisis/${item.id}`)
-      expect(link.textContent).toBe("Läs mer")
+      expect(within(link).getByText("Läs mer", { exact: true })).toBeTruthy()
       expect(link.closest("a")).toBe(link)
       expect(link.parentElement?.closest("a")).toBe(null)
     }

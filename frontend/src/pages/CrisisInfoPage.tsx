@@ -18,6 +18,9 @@ import type { CrisisItem } from "../types/crisis"
  * Late results cannot cross modes. Removing an offline item moves keyboard focus to the next
  * remaining card, the previous one, or the page heading when none remain. Redirect notices are
  * shown only in the mode that produced them, including retained history state after a reload.
+ * From `sm`, equal fractional grid rows size all cards from the tallest card at the current
+ * width and text size, including cards on different rows. The single-column layout keeps each
+ * card at its natural height.
  */
 function CrisisInfoPage() {
   const { mode } = useMode()
@@ -120,7 +123,7 @@ function CrisisInfoPage() {
       {state.status === "ready" && state.data.length > 0 && (
         <div
           ref={mode === "offline" ? gridRef : undefined}
-          className="mt-6 grid gap-6 sm:grid-cols-2"
+          className="mt-6 grid gap-6 sm:auto-rows-fr sm:grid-cols-2"
         >
           {state.data.map((item) => (
             <CrisisCard
