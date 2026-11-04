@@ -7,9 +7,12 @@ interface BottomNavigationProps {
 }
 
 /**
- * Renders the primary links in normal flow beneath the header from 48rem upwards.
+ * Renders the primary links beneath the header from 48rem upwards.
  *
- * Below 48rem this bar is hidden and MobileMenu provides the same links. The links come from the
+ * From 48rem the bar is sticky: the header scrolls away while the bar stays pinned directly below
+ * the measured VMA banner, on a solid white surface stacked above page content and the sticky app
+ * update notice but below the VMA banner. CSS cannot detect when it is pinned, so its subtle shadow
+ * is always shown. Below 48rem this bar is hidden and MobileMenu provides the same links. The links come from the
  * shared navigationItems list and wrap onto further rows instead of scrolling. The current page
  * is decided by `isNavigationItemActive`, so an item can stay current on its subpages.
  *
@@ -24,7 +27,8 @@ function BottomNavigation({ navigationRef }: BottomNavigationProps) {
       aria-label="Huvudnavigation"
       className={
         "border-t-2 border-b border-t-[#D7E2EF] border-b-slate-200 bg-white " +
-        "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] max-md:hidden"
+        "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] max-md:hidden " +
+        "md:sticky md:top-[var(--vma-banner-height,0px)] md:z-20 md:shadow-sm"
       }
     >
       <ul className="mx-auto flex w-full max-w-4xl flex-wrap gap-2 px-4 py-3 sm:px-6">
