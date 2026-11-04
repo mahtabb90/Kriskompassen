@@ -475,6 +475,44 @@ describe("AppLayout VMA integration", () => {
     )
   })
 
+  it("publishes the sticky desktop navigation's measured height and restores it on unmount", async () => {
+    const originalStyle = window.getComputedStyle.bind(window)
+    vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+      const style = originalStyle(element)
+      if (element.getAttribute("aria-label") === "Huvudnavigation") {
+        style.setProperty("position", "sticky")
+      }
+      return style
+    })
+    fetchMock.mockResolvedValue(Response.json(feed([])))
+    const { unmount } = mountLayout()
+    await screen.findByRole("heading", { name: "Hem" })
+    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
+    vi.spyOn(navigation, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 1024, 72.4))
+    for (const measure of measureCallbacks) measure()
+    await waitFor(() =>
+      expect(document.documentElement.style.getPropertyValue("--sticky-navigation-height")).toBe(
+        "73px"
+      )
+    )
+    unmount()
+    expect(document.documentElement.style.getPropertyValue("--sticky-navigation-height")).toBe("")
+  })
+
+  it("reserves no sticky navigation height while the desktop navigation is not sticky", async () => {
+    fetchMock.mockResolvedValue(Response.json(feed([])))
+    mountLayout()
+    await screen.findByRole("heading", { name: "Hem" })
+    const navigation = screen.getByRole("navigation", { name: "Huvudnavigation" })
+    vi.spyOn(navigation, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 390, 72))
+    for (const measure of measureCallbacks) measure()
+    await waitFor(() =>
+      expect(document.documentElement.style.getPropertyValue("--sticky-navigation-height")).toBe(
+        "0px"
+      )
+    )
+  })
+
   it("closes the mobile menu on navigation and leaves focus to the new page heading", async () => {
     vi.stubGlobal("matchMedia", () => ({
       matches: false,

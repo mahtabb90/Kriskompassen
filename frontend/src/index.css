@@ -67,7 +67,8 @@ html {
 @media (height >= 40rem) {
   .pwa-update-slot {
     position: sticky;
-    top: var(--vma-banner-height, 0px);
+    /* Below the VMA notice and, from 48rem, the sticky desktop navigation. */
+    top: calc(var(--vma-banner-height, 0px) + var(--sticky-navigation-height, 0px));
     z-index: 10;
   }
 

@@ -20,7 +20,9 @@ import type { VmaMessage } from "../types/vma"
  * reveal it; initial loads and hash-only changes preserve browser focus. This is the only route
  * focus owner; the mobile menu closes without focusing anything when a route is selected. The
  * measured mobile menu bar, VMA and app-update heights reserve scroll space around focused
- * content, and the bar reserves none from 48rem upwards. The shared `Footer` follows `main`
+ * content, and the bar reserves none from 48rem upwards. From 48rem the desktop navigation's
+ * measured height is published as `--sticky-navigation-height` while it is sticky (0 otherwise),
+ * so the sticky app-update notice is placed below it. The shared `Footer` follows `main`
  * and is followed by a spacer for the menu bar's reserve, so it ends visibly above the bar. VMA requests and the update
  * subscription belong to this persistent layout, not individual routes.
  * Resize notifications defer measurement to avoid resizing observed elements during delivery.
@@ -71,6 +73,7 @@ function AppLayout() {
     const previousHeight = root.style.getPropertyValue("--navigation-height")
     const previousBannerHeight = root.style.getPropertyValue("--vma-banner-height")
     const previousUpdateHeight = root.style.getPropertyValue("--pwa-update-height")
+    const previousStickyNavigationHeight = root.style.getPropertyValue("--sticky-navigation-height")
     let focusFrame = 0
     let measurementFrame = 0
 
@@ -126,6 +129,11 @@ function AppLayout() {
         getComputedStyle(updateNotice).position === "sticky"
           ? Math.ceil(updateNotice.getBoundingClientRect().height)
           : 0
+      // The desktop navigation is sticky from 48rem and display: none below it.
+      const stickyNavigationHeight =
+        getComputedStyle(navigation).position === "sticky"
+          ? Math.ceil(navigation.getBoundingClientRect().height)
+          : 0
 
       // A mobile browser's address bar hiding/showing during scroll fires its own resize
       // events without any reserved space changing. Only re-run the focus check when one of
@@ -134,11 +142,13 @@ function AppLayout() {
       const changed =
         root.style.getPropertyValue("--navigation-height") !== `${height}px` ||
         root.style.getPropertyValue("--vma-banner-height") !== `${bannerHeight}px` ||
-        root.style.getPropertyValue("--pwa-update-height") !== `${updateHeight}px`
+        root.style.getPropertyValue("--pwa-update-height") !== `${updateHeight}px` ||
+        root.style.getPropertyValue("--sticky-navigation-height") !== `${stickyNavigationHeight}px`
 
       root.style.setProperty("--navigation-height", `${height}px`)
       root.style.setProperty("--vma-banner-height", `${bannerHeight}px`)
       root.style.setProperty("--pwa-update-height", `${updateHeight}px`)
+      root.style.setProperty("--sticky-navigation-height", `${stickyNavigationHeight}px`)
       if (changed) scheduleFocusCheck()
     }
 
@@ -150,6 +160,7 @@ function AppLayout() {
     observer.observe(mobileFooter)
     observer.observe(banner)
     observer.observe(updateNotice)
+    observer.observe(navigation)
     const onViewportResize = () => {
       cancelAnimationFrame(measurementFrame)
       updateReservedSpace()
@@ -180,6 +191,11 @@ function AppLayout() {
         root.style.setProperty("--pwa-update-height", previousUpdateHeight)
       } else {
         root.style.removeProperty("--pwa-update-height")
+      }
+      if (previousStickyNavigationHeight) {
+        root.style.setProperty("--sticky-navigation-height", previousStickyNavigationHeight)
+      } else {
+        root.style.removeProperty("--sticky-navigation-height")
       }
     }
   }, [])
