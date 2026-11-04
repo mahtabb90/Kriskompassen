@@ -361,9 +361,9 @@ function CrisisKitPage() {
               <span>Visa varor att se över</span>
               <span
                 aria-hidden="true"
-                className="shrink-0 text-2xl leading-none transition-transform group-open:rotate-180"
+                className="shrink-0 text-lg transition-transform group-open:rotate-180"
               >
-                ⌄
+                ▾
               </span>
             </summary>
 
