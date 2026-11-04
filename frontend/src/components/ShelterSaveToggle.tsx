@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 interface ShelterSaveToggleProps {
   saved: boolean
   onToggle: () => void
-  /** Extra controls rendered in the same row as the save/remove button, e.g. "Visa detaljer". */
+  /** Extra controls rendered before the right-hand save/remove button, e.g. "Visa detaljer". */
   actions?: ReactNode
   /** Shows a short warning under the remove button that removing the bookmark also deletes its
    * saved map image - true only when this shelter actually has one, so removal stays an
@@ -14,39 +14,57 @@ interface ShelterSaveToggleProps {
 /**
  * Shows whether a shelter is bookmarked and lets the user save or remove it.
  *
- * Mirrors OfflineToggle's status-line-plus-button pattern used for saved crisis articles, so
- * the two save/bookmark controls in the app look and behave the same way. The button always
- * names the action available ("Spara skyddsrum" / "Ta bort sparat skyddsrum"), not the current
- * state - the status line above it does that instead.
+ * Uses a status line above a right-aligned action: blue for saving, red outlined for removal.
+ * The button always names the action available ("Spara skyddsrum" / "Ta bort sparat skyddsrum"),
+ * not the current state - the status line above it does that instead.
  *
- * The button and `actions` share an equal-width grid row, not a flex row, specifically because
- * "Spara skyddsrum" and "Ta bort sparat skyddsrum" are very different lengths - a flex row lets
- * the shorter state's row stay on one line while the longer one wraps, misaligning the two
- * buttons between cards. A grid row keeps both cells (and therefore both buttons' height) the
- * same regardless of which text wraps.
+ * Invisible, aria-hidden sizing labels reserve the longer saved-state text in both states,
+ * so neither the status nor action row grows when saving. The detail link reserves the same
+ * label, giving both controls equal intrinsic minimum widths. They share a row while whole
+ * words fit and wrap into separate rows when needed, without splitting words. Extra actions
+ * come first in both visual and keyboard order.
  */
 function ShelterSaveToggle({ saved, onToggle, actions, hasMapImage }: ShelterSaveToggleProps) {
   return (
     <div className="flex flex-col gap-3">
-      <p className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <span aria-hidden="true">{saved ? "✓" : "○"}</span>
-        {saved ? "Sparat skyddsrum" : "Inte sparat"}
+      <p className="grid grid-cols-1 items-center text-sm font-semibold wrap-normal text-slate-700">
+        <span className="invisible col-start-1 row-start-1 select-none" aria-hidden="true">
+          <span className="mr-2 inline-block w-4 text-center">✓</span>
+          Sparat skyddsrum
+        </span>
+        <span className="col-start-1 row-start-1">
+          <span className="mr-2 inline-block w-4 text-center" aria-hidden="true">
+            {saved ? "✓" : "○"}
+          </span>
+          {saved ? "Sparat skyddsrum" : "Inte sparat"}
+        </span>
       </p>
-      <div className={actions ? "grid grid-cols-2 gap-3" : "flex"}>
+      <div
+        className={
+          actions
+            ? "flex flex-wrap justify-end gap-3 *:min-w-min *:flex-1 *:px-2"
+            : "flex justify-end"
+        }
+      >
+        {actions}
         <button
           type="button"
           onClick={onToggle}
           className={
-            "inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl " +
-            "border-2 border-blue-900 px-5 py-3 text-center font-semibold " +
+            "inline-grid min-h-12 w-fit min-w-12 shrink-0 items-center justify-items-center rounded-xl wrap-normal " +
+            "border-2 px-5 py-3 text-center font-semibold max-sm:px-2 " +
             (saved
-              ? "bg-white text-blue-900 hover:bg-blue-50"
-              : "bg-blue-900 text-white hover:bg-blue-950")
+              ? "border-red-800 bg-white text-red-800 hover:bg-red-50"
+              : "border-blue-900 bg-blue-900 text-white hover:bg-blue-950")
           }
         >
-          {saved ? "Ta bort sparat skyddsrum" : "Spara skyddsrum"}
+          <span className="invisible col-start-1 row-start-1 select-none" aria-hidden="true">
+            Ta bort sparat skyddsrum
+          </span>
+          <span className="col-start-1 row-start-1">
+            {saved ? "Ta bort sparat skyddsrum" : "Spara skyddsrum"}
+          </span>
         </button>
-        {actions}
       </div>
       {saved && hasMapImage && (
         <p className="text-sm text-slate-600">Den sparade kartbilden tas också bort.</p>

@@ -141,7 +141,7 @@ describe("ShelterListItem save toggle", () => {
     const onToggleSave = vi.fn()
     renderItem(fullShelter, { distanceMeters: 350, saved: false, onToggleSave })
 
-    expect(screen.getByText("Inte sparat")).toBeTruthy()
+    expect(screen.getByText("Inte sparat", { ignore: '[aria-hidden="true"]' })).toBeTruthy()
     const saveButton = screen.getByRole("button", { name: "Spara skyddsrum" })
     fireEvent.click(saveButton)
     expect(onToggleSave).toHaveBeenCalledOnce()
@@ -150,15 +150,21 @@ describe("ShelterListItem save toggle", () => {
   it("shows the saved status and remove button when already saved", () => {
     renderItem(fullShelter, { distanceMeters: 350, saved: true, onToggleSave: vi.fn() })
 
-    expect(screen.getByText("Sparat skyddsrum")).toBeTruthy()
+    expect(screen.getByText("Sparat skyddsrum", { ignore: '[aria-hidden="true"]' })).toBeTruthy()
     expect(screen.getByRole("button", { name: "Ta bort sparat skyddsrum" })).toBeTruthy()
   })
 
-  it("keeps the detail link in the same row as the save button", () => {
-    renderItem(fullShelter, { distanceMeters: 350, saved: false, onToggleSave: vi.fn() })
+  it.each([false, true])("puts the detail link before the toggle when saved=%s", (saved) => {
+    renderItem(fullShelter, { distanceMeters: 350, saved, onToggleSave: vi.fn() })
 
-    expect(screen.getByRole("button", { name: "Spara skyddsrum" })).toBeTruthy()
-    expect(screen.getByRole("link", { name: "Visa detaljer" })).toBeTruthy()
+    const detailsLink = screen.getByRole("link", { name: "Visa detaljer" })
+    const toggle = screen.getByRole("button", {
+      name: saved ? "Ta bort sparat skyddsrum" : "Spara skyddsrum",
+    })
+    expect(detailsLink.parentElement).toBe(toggle.parentElement)
+    expect(
+      detailsLink.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 })
 

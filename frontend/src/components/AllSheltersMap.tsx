@@ -21,7 +21,7 @@ import type { Shelter } from "../types/shelter"
 import type { GeoPoint } from "../utils/distance"
 import { registerShelterIcons, shelterIconIdFor } from "../utils/shelterMapImages"
 import { originMarkerElement } from "../utils/shelterMapIcons"
-import { buildPopupContent } from "./shelterMapPopup"
+import { buildPopupContent, observePopupLayout } from "./shelterMapPopup"
 
 /** The map's own camera, independent of any particular shelter - round-tripped through
  * react-router's navigation state so a visit to a shelter's detail page can hand it back on
@@ -258,20 +258,17 @@ function AllSheltersMap({
         center: { lat: center.lat, lon: center.lng },
         zoom: map.getZoom(),
       }
-      new Popup()
-        .setLngLat(event.lngLat)
-        .setDOMContent(
-          buildPopupContent(
-            shelters,
-            activeAddressRef.current?.municipality,
-            distanceByIdRef.current,
-            (path) => onNavigateRef.current(path, { state: { mapView } }),
-            (id) => isSavedRef.current(id),
-            (shelter) => saveRef.current(shelter),
-            (id) => removeRef.current(id)
-          )
-        )
-        .addTo(map)
+      const content = buildPopupContent(
+        shelters,
+        activeAddressRef.current?.municipality,
+        distanceByIdRef.current,
+        (path) => onNavigateRef.current(path, { state: { mapView } }),
+        (id) => isSavedRef.current(id),
+        (shelter) => saveRef.current(shelter),
+        (id) => removeRef.current(id)
+      )
+      const popup = new Popup().setLngLat(event.lngLat).setDOMContent(content).addTo(map)
+      observePopupLayout(map, popup, content)
     }
 
     const setCursor = (cursor: string) => () => {

@@ -210,7 +210,7 @@ describe("ShelterDetailPage save button", () => {
     renderDetail()
     await screen.findByRole("heading", { name: "Kantarellen 11, Solna kommun" })
 
-    expect(screen.getByText("Inte sparat")).toBeTruthy()
+    expect(screen.getByText("Inte sparat", { ignore: '[aria-hidden="true"]' })).toBeTruthy()
     const saveButton = screen.getByRole("button", { name: "Spara skyddsrum" })
 
     vi.mocked(getSavedShelters).mockResolvedValue([
@@ -227,7 +227,9 @@ describe("ShelterDetailPage save button", () => {
     fireEvent.click(saveButton)
 
     expect(saveShelter).toHaveBeenCalledExactlyOnceWith(fullShelter)
-    expect(await screen.findByText("Sparat skyddsrum")).toBeTruthy()
+    expect(
+      await screen.findByText("Sparat skyddsrum", { ignore: '[aria-hidden="true"]' })
+    ).toBeTruthy()
     expect(await screen.findByRole("button", { name: "Ta bort sparat skyddsrum" })).toBeTruthy()
   })
 
@@ -246,7 +248,7 @@ describe("ShelterDetailPage save button", () => {
     ])
     renderDetail()
 
-    await screen.findByText("Sparat skyddsrum")
+    await screen.findByText("Sparat skyddsrum", { ignore: '[aria-hidden="true"]' })
     const saveButton = screen.getByRole("button", { name: "Ta bort sparat skyddsrum" })
 
     vi.mocked(getSavedShelters).mockResolvedValue([])
@@ -413,7 +415,7 @@ describe("ShelterDetailPage map image", () => {
       },
     ])
     renderDetail()
-    await screen.findByText("Sparat skyddsrum")
+    await screen.findByText("Sparat skyddsrum", { ignore: '[aria-hidden="true"]' })
 
     vi.mocked(getSavedShelters).mockResolvedValue([
       {
@@ -543,7 +545,7 @@ describe("ShelterDetailPage map image", () => {
     ])
     renderDetail()
 
-    await screen.findByText("Sparat skyddsrum")
+    await screen.findByText("Sparat skyddsrum", { ignore: '[aria-hidden="true"]' })
     expect(screen.queryByText("Den sparade kartbilden tas också bort.")).toBeNull()
   })
 })
